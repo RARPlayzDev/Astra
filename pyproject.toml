@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ewsmart"
+version = "0.2.0"
+description = "Smart Scan Strategy for Electronic Warfare - ML-based ES receiver scheduler"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["numpy>=1.26", "matplotlib>=3.8"]
+
+[project.optional-dependencies]
+dash = ["streamlit>=1.36"]
+hf = ["datasets>=2.19"]
+api = ["fastapi>=0.110", "uvicorn>=0.29"]
+dev = ["pytest>=8"]
+
+[project.scripts]
+ewsmart-run = "ewsmart.runner:main"
+ewsmart-experiments = "ewsmart.experiments:main"
+
+[tool.setuptools.packages.find]
+include = ["ewsmart*", "server*"]
