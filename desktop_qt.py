@@ -95,15 +95,13 @@ class _Server:
 
 def _run_app():
     """Main Qt application entry point."""
-    from PySide6.QtCore import Qt, QTimer, QUrl, Signal
+    from PySide6.QtCore import QTimer, QUrl
     from PySide6.QtGui import QAction, QFont, QIcon, QKeySequence
     from PySide6.QtWidgets import (
-        QApplication, QMainWindow, QMenu, QMenuBar,
-        QMessageBox, QSystemTrayIcon, QToolBar, QWidget,
-        QVBoxLayout,
+        QApplication, QMainWindow, QMenu,
+        QMessageBox, QSystemTrayIcon, QWidget,
     )
     from PySide6.QtWebEngineWidgets import QWebEngineView
-    from PySide6.QtWebEngineCore import QWebEngineProfile, QWebEnginePage
 
     # ── Bootstrap server ──────────────────────────────────────────────
     port = _free_port()
@@ -144,13 +142,13 @@ def _run_app():
     )
     win.setCentralWidget(web)
 
-    # ── Menu bar ──────────────────────────────────────────────────────
+    # ── Menu bar (native Qt — replaces React menu bar) ────────────────
     menu_bar = win.menuBar()
 
     # File menu
     file_menu = menu_bar.addMenu("&File")
 
-    new_mission = QAction("New mission window", win)
+    new_mission = QAction("New mission", win)
     new_mission.setShortcut(QKeySequence("Ctrl+N"))
     file_menu.addAction(new_mission)
 
@@ -160,7 +158,7 @@ def _run_app():
 
     file_menu.addSeparator()
 
-    export_action = QAction("Export results (JSON)", win)
+    export_action = QAction("Export results", win)
     export_action.setShortcut(QKeySequence("Ctrl+E"))
     file_menu.addAction(export_action)
 
@@ -170,30 +168,10 @@ def _run_app():
     exit_action.setShortcut(QKeySequence("Ctrl+Q"))
     file_menu.addAction(exit_action)
 
-    # View menu
-    view_menu = menu_bar.addMenu("&View")
-
-    for name, label in [
-        ("home", "Home"), ("operations", "Operations"),
-        ("analysis", "Analysis"), ("intel", "Intelligence"),
-        ("geo", "Geolocation"), ("data", "Data & Sources"),
-    ]:
-        act = QAction(label, win)
-        act.triggered.connect(lambda _, n=name: web.page().runJavaScript(
-            f"window.__astra_nav && window.__astra_nav('{n}')"
-        ))
-        view_menu.addAction(act)
-
-    view_menu.addSeparator()
-
-    fullscreen_action = QAction("Full screen", win)
-    fullscreen_action.setShortcut(QKeySequence("F11"))
-    view_menu.addAction(fullscreen_action)
-
     # Run menu
     run_menu = menu_bar.addMenu("&Run")
 
-    start_action = QAction("Start paired mission", win)
+    start_action = QAction("Start mission", win)
     start_action.setShortcut(QKeySequence("F5"))
     run_menu.addAction(start_action)
 
@@ -235,22 +213,6 @@ def _run_app():
 
     about_action = QAction("About ASTRA", win)
     help_menu.addAction(about_action)
-
-    # ── Toolbar ───────────────────────────────────────────────────────
-    toolbar = QToolBar("Main")
-    toolbar.setMovable(False)
-    toolbar.setToolButtonStyle(Qt.ToolButtonTextOnly)
-    win.addToolBar(toolbar)
-
-    tb_start = toolbar.addAction("▶ Start Mission")
-    tb_stop = toolbar.addAction("⏹ Stop")
-    toolbar.addSeparator()
-    tb_rate = toolbar.addAction("Rate: Normal (400/s)")
-    tb_rate.setCheckable(False)
-    toolbar.addSeparator()
-    tb_diag = toolbar.addAction("Diagnostics")
-    tb_guide = toolbar.addAction("User Guide")
-    toolbar.addSeparator()
 
     # ── Status bar ────────────────────────────────────────────────────
     status_bar = win.statusBar()
@@ -310,12 +272,6 @@ def _run_app():
         import webbrowser
         webbrowser.open(f"{url}/manual")
 
-    def do_fullscreen():
-        if win.isFullScreen():
-            win.showNormal()
-        else:
-            win.showFullScreen()
-
     def do_about():
         QMessageBox.about(
             win, f"About {APP_NAME}",
@@ -332,12 +288,7 @@ def _run_app():
     stop_action.triggered.connect(do_stop)
     diag_action.triggered.connect(do_diag)
     guide_action.triggered.connect(do_guide)
-    fullscreen_action.triggered.connect(do_fullscreen)
     about_action.triggered.connect(do_about)
-    tb_start.triggered.connect(do_start)
-    tb_stop.triggered.connect(do_stop)
-    tb_diag.triggered.connect(do_diag)
-    tb_guide.triggered.connect(do_guide)
 
     # ── Status polling ────────────────────────────────────────────────
     def poll_status():
@@ -361,24 +312,19 @@ def _run_app():
     timer.start(2000)
 
     # ── Bridge: inject navigation functions into the page ─────────────
-    bridge_js = f"""
-    window.__astra_nav = function(persp) {{
-        // Dispatch custom event for React to pick up
-        window.dispatchEvent(new CustomEvent('astra-nav', {{ detail: persp }}));
-    }};
-    window.__astra_start = function() {{
-        // Click the start button if visible
+    bridge_js = """
+    window.__AstraQt = true;
+    window.__astra_start = function() {
         const btn = document.querySelector('.tbtn.primary');
         if (btn) btn.click();
-    }};
-    window.__astra_stop = function() {{
+    };
+    window.__astra_stop = function() {
         const btns = document.querySelectorAll('.tbtn.stop');
         if (btns.length) btns[0].click();
-    }};
-    window.__astra_diag = function() {{
-        // Navigate to tools > diagnostics
+    };
+    window.__astra_diag = function() {
         window.dispatchEvent(new CustomEvent('astra-diag'));
-    }};
+    };
     """
 
     def inject_bridge(ok):

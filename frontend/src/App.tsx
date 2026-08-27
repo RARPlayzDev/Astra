@@ -18,7 +18,7 @@ type DiagState =
 
 const SPEEDS: [string, number][] = [
   ["Slow (120/s)", 120], ["Normal (400/s)", 400], ["Fast (800/s)", 800],
-  ["Maximum (1500/s)", 1500],
+  ["Max (1500/s)", 1500],
 ];
 
 const TABS: [Persp, string][] = [
@@ -29,6 +29,9 @@ const TABS: [Persp, string][] = [
   ["geo",        "Geolocation"],
   ["data",       "Data & Sources"],
 ];
+
+/** Detect if running inside Qt desktop app */
+const isQt = () => !!(window as unknown as Record<string, unknown>).__AstraQt;
 
 export default function App() {
   const [meta, setMeta] = useState<Meta | null>(null);
@@ -94,13 +97,14 @@ export default function App() {
     else window.open(manualUrl, "_blank");
   };
 
+  // ── Menu bar (browser mode only — Qt provides its own native menu) ──
   type Entry = { label: string; hint?: string; action?: () => void; disabled?: boolean; sep?: boolean };
   const MENUS: Record<string, Entry[]> = {
     File: [
-      { label: "New mission", hint: "Ops", action: () => { setResetKey((k) => k + 1); setPersp("operations"); setOpenMenu(null); } },
-      { label: "Open scenario\u2026", hint: "battlefield", action: () => void showScenarios() },
+      { label: "New mission", action: () => { setResetKey((k) => k + 1); setPersp("operations"); setOpenMenu(null); } },
+      { label: "Open scenario\u2026", action: () => void showScenarios() },
       { sep: true, label: "" },
-      { label: "Export results (JSON)", action: () => { void exportResults(); setOpenMenu(null); } },
+      { label: "Export results", action: () => { void exportResults(); setOpenMenu(null); } },
       { label: "Exit", action: () => void doExit() },
     ],
     Run: [
@@ -118,7 +122,7 @@ export default function App() {
     ],
     Help: [
       ...(meta?.manual_available
-        ? [{ label: "User guide", hint: "F1", action: () => { openGuide(); setOpenMenu(null); } }]
+        ? [{ label: "User guide", action: () => { openGuide(); setOpenMenu(null); } }]
         : []),
       { label: "About ASTRA", action: () => { setAbout(true); setOpenMenu(null); } },
     ],
@@ -128,8 +132,9 @@ export default function App() {
 
   return (
     <>
-      {/* ── Menu bar ────────────────────────────────────────────── */}
-      <div className="menubar" onMouseLeave={() => setOpenMenu(null)}>
+      {/* ── Menu bar (browser mode only) ───────────────────────── */}
+      <div className={"menubar" + (isQt() ? " hidden" : "")}
+           onMouseLeave={() => setOpenMenu(null)}>
         <span className="brand">
           <img src="/astra_logo.svg" alt="" />
           ASTRA
@@ -149,38 +154,38 @@ export default function App() {
             )}
           </div>
         ))}
-        <span style={{ marginLeft: "auto", color: "var(--muted)", fontSize: 11, paddingRight: 6 }}>
-          {meta ? `${meta.app} ${meta.version}` : ""}
-        </span>
       </div>
 
-      {/* ── Toolbar ─────────────────────────────────────────────── */}
-      <div className="toolbar">
-        <button className="tbtn primary" onClick={() => void doStart()} disabled={running}>Start Mission</button>
-        <button className="tbtn stop" onClick={() => void doStop()} disabled={!running}>Stop</button>
-        <div className="tb-sep" />
-        <label>Rate</label>
-        <select value={speed} onChange={(e) => setSpeed(Number(e.target.value))}>
-          {SPEEDS.map(([lbl, v]) => <option key={v} value={v}>{lbl}</option>)}
-        </select>
-        <div className="tb-sep" />
-        <button className="tbtn" onClick={() => void showDiag()}>Diagnostics</button>
-        {meta?.manual_available && (
-          <button className="tbtn" onClick={() => openGuide()}>User Guide</button>
-        )}
-        <div className="tb-sep" />
-        <span style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--muted)" }}>
-          {window.location.port ? `:${window.location.port}` : ""}
-        </span>
-      </div>
-
-      {/* ── Tab bar ─────────────────────────────────────────────── */}
-      <div className="tab-bar">
-        {TABS.map(([id, lbl]) => (
-          <button key={id} className={persp === id ? "active" : ""} onClick={() => setPersp(id)}>
-            {lbl}
+      {/* ── Control strip (tabs + action controls, always visible) ── */}
+      <div className="control-strip">
+        <div className="tabs">
+          {TABS.map(([id, lbl]) => (
+            <button key={id} className={persp === id ? "active" : ""}
+                    onClick={() => setPersp(id)}>
+              {lbl}
+            </button>
+          ))}
+        </div>
+        <div className="sep" />
+        <div className="controls">
+          <button className="tbtn primary" onClick={() => void doStart()} disabled={running}>
+            Start
           </button>
-        ))}
+          <button className="tbtn stop" onClick={() => void doStop()} disabled={!running}>
+            Stop
+          </button>
+          <label>Rate</label>
+          <select value={speed} onChange={(e) => setSpeed(Number(e.target.value))}>
+            {SPEEDS.map(([, v]) => <option key={v} value={v}>{v}/s</option>)}
+          </select>
+          <button className="tbtn" onClick={() => void showDiag()}>Diagnostics</button>
+          {meta?.manual_available && (
+            <button className="tbtn" onClick={() => openGuide()}>Guide</button>
+          )}
+          <span className="port-tag">
+            {window.location.port ? `:${window.location.port}` : ""}
+          </span>
+        </div>
       </div>
 
       {/* ── Workspace ───────────────────────────────────────────── */}
@@ -205,7 +210,7 @@ export default function App() {
         <span>{meta ? meta.long : ""}</span>
         <div className="right">
           {meta?.manual_available && (
-            <button className="linklike" onClick={() => openGuide()}>documentation</button>
+            <button className="linklike" onClick={() => openGuide()}>docs</button>
           )}
         </div>
       </div>
@@ -238,11 +243,10 @@ export default function App() {
       {about && (
         <Modal title="About" onClose={() => setAbout(false)}>
           <div className="content">
-            <p style={{ fontFamily: "var(--mono)", fontSize: 18, letterSpacing: 3, color: "var(--accent)", margin: "4px 0" }}>ASTRA</p>
-            <p>{meta?.long ?? "Adaptive Spectrum Threat Recognition & Analysis"} \u2014 version {meta?.version ?? "1.0.0"}.</p>
-            <p>An adaptive scan scheduler for Electronic Support receivers operating without prior reliable intelligence on emitters.</p>
-            <p style={{ color: "var(--muted)", fontSize: 12 }}>
-              Smart India Hackathon 2026 prototype. Simulation-based research software; not operational equipment.
+            <p style={{ fontFamily: "var(--mono)", fontSize: 16, letterSpacing: 2, color: "var(--ink-hi)", margin: "2px 0" }}>ASTRA</p>
+            <p>{meta?.long ?? "Adaptive Spectrum Threat Recognition & Analysis"}</p>
+            <p style={{ color: "var(--muted)", fontSize: 11.5 }}>
+              Version {meta?.version ?? "1.0.0"} &mdash; Smart India Hackathon 2026
             </p>
           </div>
           <footer><button className="tbtn" onClick={() => setAbout(false)}>Close</button></footer>
@@ -252,9 +256,6 @@ export default function App() {
       {scenModal.open && (
         <Modal title="Open scenario" onClose={() => setScenModal({ open: false, items: [] })}>
           <div className="content">
-            <p style={{ marginTop: 0, color: "var(--muted)" }}>
-              Loading a scenario starts a new paired mission with that battlefield definition.
-            </p>
             {scenModal.items.length === 0 && <p>No scenario files found.</p>}
             {scenModal.items.map((s) => (
               <div className="list-item" key={s.name}>
