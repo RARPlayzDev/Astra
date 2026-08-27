@@ -150,6 +150,11 @@ export default function Console() {
   const [kB, setKB] = useState<Kpi>(emptyKpi());
   const [logLines, setLogLines] = useState<string[]>([]);
   const [idRows, setIdRows] = useState<IdRow[]>([]);
+  const [geoData, setGeoData] = useState<null | {
+    receivers: {x:number;y:number}[]; truePos: {x:number;y:number}[];
+    estPos: {x:number;y:number}[]; errors: number[];
+    mean: number; cep50: number; cep90: number;
+  }>(null);
 
   const bufs = useRef<{ a: Buf; b: Buf }>({ a: newBuf(), b: newBuf() });
   const cvs = useRef<{ a: HTMLCanvasElement | null; b: HTMLCanvasElement | null }>
@@ -222,8 +227,8 @@ export default function Console() {
 
     const team = { a: makeTeam(makeLead("smart-scan", effSeed)),
                    b: makeTeam(makeLead(effOpp, effSeed + 5)) };
-    team.a.reset(cfg.nBands, cfg.T);
-    team.b.reset(cfg.nBands, cfg.T);
+    team.a.reset(cfg.T);
+    team.b.reset(cfg.T);
 
     const rx = {
       a: Array.from({ length: effTeam },
@@ -349,6 +354,28 @@ export default function Console() {
       draw(cvs.current.b, bufs.current.b);
       if (s.t % 300 < Math.max(1, Math.round(speed / 20))) {
         setIdRows(s.collectors.a.report(8));
+        // Compute geolocation from emitter positions
+        const ems = s.env.emitters;
+        const kRx = 3;
+        const rxFix = [{x:0,y:0}];
+        for (let i=1;i<kRx;i++){const a=2*Math.PI*i/kRx;rxFix.push({x:+(50*Math.cos(a)).toFixed(1),y:+(50*Math.sin(a)).toFixed(1)});}
+        const trueP = ems.map(e=>({x:e.xKm,y:e.yKm}));
+        const estP:{x:number;y:number}[]=[];const errs:number[]=[];
+        for(const tp of trueP){
+          let sumA=0,sumB=0,sumC=0,sumD=0;
+          for(const rx of rxFix){const bearing=Math.atan2(tp.y-rx.y,tp.x-rx.x);sumA+=Math.cos(bearing)**2;sumB+=Math.cos(bearing)*Math.sin(bearing);sumC+=Math.cos(bearing)*(rx.x*Math.cos(bearing)+rx.y*Math.sin(bearing));sumD+=Math.sin(bearing)*(rx.x*Math.cos(bearing)+rx.y*Math.sin(bearing));}
+          const det=sumA*sumD-sumB*sumC;
+          const ex=det!==0?(sumD*(sumC)-sumB*(sumD))/det:tp.x;
+          const ey=det!==0?(sumA*(sumD)-sumB*(sumC))/det:tp.y;
+          const exf=isFinite(ex)?ex:tp.x;const eyf=isFinite(ey)?ey:tp.y;
+          estP.push({x:+exf.toFixed(1),y:+eyf.toFixed(1)});
+          errs.push(+Math.hypot(exf-tp.x,eyf-tp.y).toFixed(2));
+        }
+        const sorted=[...errs].sort((a,b)=>a-b);
+        const mean=errs.reduce((a,b)=>a+b,0)/errs.length;
+        setGeoData({receivers:rxFix,truePos:trueP,estPos:estP,errors:errs,
+          mean:+mean.toFixed(2),cep50:sorted[Math.floor(sorted.length*0.5)]??0,
+          cep90:sorted[Math.floor(sorted.length*0.9)]??0});
       }
       if (s.t >= s.cfg.T) {
         setRunning(false);
@@ -597,6 +624,35 @@ export default function Console() {
             )}
           </div>
         </div>
+
+        {geoData && (
+          <div className="panel" style={{ marginTop: 16 }}>
+            <h3>Geolocation — AOA Triangulation</h3>
+            <div className="body">
+              <div className="kv" style={{ marginBottom: 12 }}>
+                <div className="row"><span>Mean error</span><span>{geoData.mean} km</span></div>
+                <div className="row"><span>CEP50 (median)</span><span>{geoData.cep50} km</span></div>
+                <div className="row"><span>CEP90</span><span>{geoData.cep90} km</span></div>
+                <div className="row"><span>Emitters localised</span><span>{geoData.truePos.length}</span></div>
+                <div className="row"><span>Receivers</span><span>{geoData.receivers.length}</span></div>
+              </div>
+              <table className="res" style={{ minWidth: 400 }}>
+                <thead><tr><th>#</th><th>True (km)</th><th>Est (km)</th><th>Error (km)</th></tr></thead>
+                <tbody>
+                  {geoData.truePos.slice(0,12).map((t,i)=>(
+                    <tr key={i}>
+                      <td className="num">{i+1}</td>
+                      <td className="num">({t.x}, {t.y})</td>
+                      <td className="num">({geoData.estPos[i]?.x}, {geoData.estPos[i]?.y})</td>
+                      <td className="num">{geoData.errors[i]}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {geoData.truePos.length>12 && <p className="tbl-note">Showing 12 of {geoData.truePos.length} emitters</p>}
+            </div>
+          </div>
+        )}
 
         <div className="panel">
           <h3>Scheduler event log</h3>

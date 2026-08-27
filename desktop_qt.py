@@ -131,6 +131,13 @@ def _run_app():
     win.setMinimumSize(1080, 680)
     win.resize(1380, 880)
 
+    # Set window icon
+    _icon_path = Path(__file__).parent / "assets" / "astra_logo.png"
+    if not _icon_path.exists():
+        _icon_path = Path(__file__).parent / "assets" / "astra_logo.svg"
+    if _icon_path.exists():
+        win.setWindowIcon(QIcon(str(_icon_path)))
+
     # ── Central widget: embedded browser ──────────────────────────────
     web = QWebEngineView()
     page = web.page()
@@ -228,7 +235,9 @@ def _run_app():
 
     # ── System tray ───────────────────────────────────────────────────
     # Try to load the app icon; fall back to standard icon if unavailable
-    icon_path = Path(__file__).parent / "frontend" / "public" / "astra_logo.svg"
+    icon_path = Path(__file__).parent / "assets" / "astra_logo.png"
+    if not icon_path.exists():
+        icon_path = Path(__file__).parent / "assets" / "astra_logo.svg"
     if icon_path.exists():
         tray_icon = QIcon(str(icon_path))
     else:
@@ -269,17 +278,18 @@ def _run_app():
         )
 
     def do_guide():
-        import webbrowser
-        webbrowser.open(f"{url}/manual")
+        web.page().setUrl(QUrl(f"{url}/docs/manual.md"))
 
     def do_about():
         QMessageBox.about(
             win, f"About {APP_NAME}",
-            f"<h2>{APP_NAME}</h2>"
+            f"<h3>{APP_NAME}</h3>"
             f"<p>{APP_LONG}</p>"
-            f"<p>Version {APP_VERSION}</p>"
-            f"<p>Smart India Hackathon 2026 prototype.<br>"
+            f"<p><b>Version:</b> {APP_VERSION}</p>"
+            f"<p><b>Build:</b> SIH 2026 Prototype</b></p>"
+            f"<p>Adaptive scan scheduling for Electronic Support receivers.<br>"
             f"Simulation-based research software; not operational equipment.</p>"
+            f"<hr><p>Smart India Hackathon 2026</p>"
         )
 
     # Wire up actions
@@ -330,6 +340,9 @@ def _run_app():
     def inject_bridge(ok):
         if ok:
             web.page().runJavaScript(bridge_js)
+            print(f"[{APP_NAME}] page loaded, bridge injected")
+        else:
+            print(f"[{APP_NAME}] page failed to load")
 
     web.loadFinished.connect(inject_bridge)
 

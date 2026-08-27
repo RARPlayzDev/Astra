@@ -118,10 +118,18 @@ const GALLERY: [string, string][] = [
 export default function Analysis() {
   const [s, setS] = useState<Summary | null>(null);
   const [figs, setFigs] = useState<string[]>([]);
+  const [lightbox, setLightbox] = useState<{ src: string; caption: string } | null>(null);
   useEffect(() => {
     getSummary().then(setS).catch(() => undefined);
     getFigures().then((f) => setFigs(f.figures)).catch(() => undefined);
   }, []);
+
+  useEffect(() => {
+    if (!lightbox) return;
+    const h = (e: KeyboardEvent) => { if (e.key === "Escape") setLightbox(null); };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [lightbox]);
 
   return (
     <>
@@ -140,7 +148,7 @@ export default function Analysis() {
             {figs.filter((f) => GALLERY.some(([g]) => g === f))
               .sort((a, b) => GALLERY.findIndex(([g]) => g === a) - GALLERY.findIndex(([g]) => g === b))
               .map((f) => (
-                <figure key={f}>
+                <figure key={f} onClick={() => setLightbox({ src: figureUrl(f), caption: GALLERY.find(([g]) => g === f)?.[1] ?? f })}>
                   <img src={figureUrl(f)} alt={f} loading="lazy" />
                   <figcaption>{GALLERY.find(([g]) => g === f)?.[1]}</figcaption>
                 </figure>
@@ -148,6 +156,13 @@ export default function Analysis() {
           </div>
         </div>
       </>)}
+
+      {lightbox && (
+        <div className="lightbox-overlay" onClick={() => setLightbox(null)}>
+          <img src={lightbox.src} alt={lightbox.caption} />
+          <div className="caption">{lightbox.caption}</div>
+        </div>
+      )}
     </>
   );
 }

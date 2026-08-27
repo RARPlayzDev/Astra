@@ -3,16 +3,17 @@ import { getGeolocation, type GeoResult } from "../api";
 
 function GeoMap({ data }: { data: GeoResult }) {
   const svgRef = useRef<SVGSVGElement>(null);
-  const km = data.scene_km;
+  const km = data.scene_km || 50;
   const pad = 40;
   const size = 500;
-  const scale = (size - 2 * pad) / (2 * km);
+  const scale = km > 0 ? (size - 2 * pad) / (2 * km) : 1;
   const cx = size / 2;
   const cy = size / 2;
-  const toSvg = (p: { x: number; y: number }) => ({
-    x: cx + p.x * scale,
-    y: cy - p.y * scale,
-  });
+  const toSvg = (p: { x: number; y: number }) => {
+    const x = cx + (p?.x ?? 0) * scale;
+    const y = cy - (p?.y ?? 0) * scale;
+    return { x: isFinite(x) ? x : cx, y: isFinite(y) ? y : cy };
+  };
 
   return (
     <svg
@@ -67,14 +68,15 @@ function GeoMap({ data }: { data: GeoResult }) {
       {/* Bearing lines from receivers to estimated positions */}
       {data.estimated_positions.map((est, i) => {
         const trueP = data.true_positions[i];
-        if (!trueP) return null;
+        if (!trueP || trueP.x == null || trueP.y == null) return null;
+        const tp = toSvg(trueP);
         return (
           <line
             key={`bearing-${i}`}
             x1={cx}
             y1={cy}
-            x2={cx + trueP.x * scale}
-            y2={cy - trueP.y * scale}
+            x2={tp.x}
+            y2={tp.y}
             stroke="rgba(111,158,199,0.15)"
             strokeWidth={1}
           />
@@ -112,7 +114,8 @@ function GeoMap({ data }: { data: GeoResult }) {
 
       {/* True positions */}
       {data.true_positions.map((t, i) => {
-        const p = toSvg(t);
+        const pt = typeof t === 'object' && t !== null ? t : { x: 0, y: 0 };
+        const p = toSvg(pt);
         return (
           <g key={`true-${i}`}>
             <polygon
@@ -211,17 +214,17 @@ export default function Geolocation() {
                 <div className="stats" style={{ gridTemplateColumns: "1fr" }}>
                   <div className="stat">
                     <div className="k">Mean error</div>
-                    <div className="v">{data.cep.mean.toFixed(1)} km</div>
+                    <div className="v">{data.cep?.mean?.toFixed(1) ?? "\u2014"} km</div>
                     <div className="s">average localization error</div>
                   </div>
                   <div className="stat">
                     <div className="k">CEP50 (median)</div>
-                    <div className="v">{data.cep.cep50.toFixed(1)} km</div>
+                    <div className="v">{data.cep?.cep50?.toFixed(1) ?? "\u2014"} km</div>
                     <div className="s">50th percentile error</div>
                   </div>
                   <div className="stat">
                     <div className="k">CEP90</div>
-                    <div className="v">{data.cep.cep90.toFixed(1)} km</div>
+                    <div className="v">{data.cep?.cep90?.toFixed(1) ?? "\u2014"} km</div>
                     <div className="s">90th percentile error</div>
                   </div>
                   <div className="stat">
@@ -245,13 +248,13 @@ export default function Geolocation() {
                       <tr key={i}>
                         <td className="num">{i + 1}</td>
                         <td className="num">
-                          ({t.x.toFixed(1)}, {t.y.toFixed(1)})
+                          ({t.x?.toFixed(1) ?? "?"}, {t.y?.toFixed(1) ?? "?"})
                         </td>
                         <td className="num">
-                          ({data.estimated_positions[i]?.x.toFixed(1)},{" "}
-                          {data.estimated_positions[i]?.y.toFixed(1)})
+                          ({data.estimated_positions[i]?.x?.toFixed(1) ?? "?"},{" "}
+                          {data.estimated_positions[i]?.y?.toFixed(1) ?? "?"})
                         </td>
-                        <td className="num">{data.errors[i]?.toFixed(1)}</td>
+                        <td className="num">{data.errors[i]?.toFixed(1) ?? "\u2014"}</td>
                       </tr>
                     ))}
                   </tbody>

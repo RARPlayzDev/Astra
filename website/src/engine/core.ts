@@ -31,6 +31,9 @@ export interface Emitter {
   period: number;
   onLen: number;
   offset: number;
+  pwUs: number;
+  xKm: number;
+  yKm: number;
 }
 
 export interface Scenario {
@@ -109,6 +112,9 @@ export class RFEnvironment {
         period: p,
         onLen: 2 + Math.floor(r() * 4),
         offset: Math.floor(r() * Math.max(1, p)),
+        pwUs: +(0.5 + r() * 4).toFixed(1),
+        xKm: +(rad * Math.cos(ang)).toFixed(2),
+        yKm: +(rad * Math.sin(ang)).toFixed(2),
       });
     };
 

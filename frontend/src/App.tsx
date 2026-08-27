@@ -182,9 +182,6 @@ export default function App() {
           {meta?.manual_available && (
             <button className="tbtn" onClick={() => openGuide()}>Guide</button>
           )}
-          <span className="port-tag">
-            {window.location.port ? `:${window.location.port}` : ""}
-          </span>
         </div>
       </div>
 

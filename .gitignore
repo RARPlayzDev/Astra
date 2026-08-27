@@ -1,0 +1,55 @@
+# ── Python ─────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+dist/
+build/
+*.spec
+
+# ── Node.js ────────────────────────────────────────────────────────────
+node_modules/
+frontend/dist/
+website/dist/
+docs/node_modules/
+docs/.vitepress/dist/
+docs/.vitepress/cache/
+
+# ── PyInstaller build output ───────────────────────────────────────────
+build/
+dist/ASTRA/
+
+# ── IDE / OS ───────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── Logs ───────────────────────────────────────────────────────────────
+*.log
+astra_service.log
+
+# ── Data / runtime ─────────────────────────────────────────────────────
+models/*.npz
+results/
+results.json
+.scenario_cache/
+
+# ── Installer / binaries ───────────────────────────────────────────────
+installer/*.exe
+installer/*.msi
+website/public/*.exe
+
+# ── Freebuff / local ───────────────────────────────────────────────────
+.freebuff/
+.streamlit/
+
+# ── Environment ────────────────────────────────────────────────────────
+.env
+.venv/
+venv/

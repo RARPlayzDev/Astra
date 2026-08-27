@@ -317,6 +317,8 @@ td.txt { white-space: normal; }
 }
 .badge.pass { color: var(--good); background: rgba(106,153,85,.12); }
 .badge.fail { color: var(--bad); background: rgba(241,76,76,.1); }
+.badge.warn { color: var(--warn); background: rgba(220,220,170,.12); }
+.badge.pending { color: var(--muted); background: rgba(133,133,133,.12); }
 
 /* ── Meters ─────────────────────────────────────────────────────────── */
 .meter { background: var(--surface3); border-radius: 2px; height: 6px; min-width: 90px; }
@@ -398,8 +400,8 @@ canvas {
   flex-wrap: wrap;
   margin: 8px 0;
 }
-.form-row input, .form-row select {
-  background: var(--bg);
+select, .form-row input, .form-row select {
+  background: var(--surface2);
   color: var(--ink);
   border: 1px solid var(--border);
   border-radius: 2px;
@@ -407,6 +409,11 @@ canvas {
   font-size: 11.5px;
   font-family: var(--sans);
 }
+select:focus, .form-row input:focus, .form-row select:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+option { background: var(--surface2); color: var(--ink); }
 .form-row input { width: 110px; }
 
 .err-text { color: var(--bad); font-size: 11.5px; margin: 5px 0; }
@@ -446,9 +453,26 @@ canvas {
 
 /* ── Gallery ────────────────────────────────────────────────────────── */
 .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
-.gallery figure { margin: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 2px; padding: 6px; }
+.gallery figure { margin: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 2px; padding: 6px; cursor: pointer; transition: border-color .15s; }
+.gallery figure:hover { border-color: var(--accent); }
 .gallery img { width: 100%; display: block; border-radius: 2px; }
 .gallery figcaption { font-size: 11px; color: var(--muted); padding: 5px 2px 0; line-height: 1.4; }
+
+/* lightbox */
+.lightbox-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.85);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 300; cursor: pointer;
+}
+.lightbox-overlay img {
+  max-width: 92vw; max-height: 90vh; border-radius: 4px;
+  box-shadow: 0 8px 40px rgba(0,0,0,.6);
+}
+.lightbox-overlay .caption {
+  position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
+  color: var(--ink-hi); font-size: 13px; background: rgba(0,0,0,.6);
+  padding: 6px 16px; border-radius: 4px;
+}
 
 /* ── Status bar ─────────────────────────────────────────────────────── */
 .statusbar {
@@ -544,3 +568,95 @@ code.inline {
   border-radius: 2px;
   padding: 1px 4px;
 }
+
+/* ── Documentation page content styling ────────────────────────────── */
+.docpage article h2 {
+  font-size: 20px; font-weight: 600; color: #e0e0e0;
+  margin: 32px 0 12px; padding-bottom: 8px;
+  border-bottom: 1px solid #333;
+}
+.docpage article h3 {
+  font-size: 16px; font-weight: 600; color: #d0d0d0;
+  margin: 24px 0 8px;
+}
+.docpage article p {
+  margin: 8px 0; line-height: 1.65;
+}
+.docpage article ul, .docpage article ol {
+  margin: 8px 0 8px 20px;
+}
+.docpage article li {
+  margin: 4px 0; line-height: 1.55;
+}
+.docpage article code {
+  font-family: var(--mono); font-size: 12px;
+  background: #1e1e1e; border: 1px solid #333;
+  border-radius: 2px; padding: 1px 5px;
+}
+.docpage article pre {
+  background: #1e1e1e; border: 1px solid #333;
+  border-radius: 3px; padding: 12px 14px;
+  overflow-x: auto; margin: 12px 0;
+}
+.docpage article pre code {
+  background: none; border: none; padding: 0; font-size: 12px;
+}
+.docpage article table {
+  border-collapse: collapse; width: 100%;
+  margin: 12px 0; font-size: 13px;
+}
+.docpage article th {
+  text-align: left; padding: 8px 12px;
+  background: #252526; border: 1px solid #333;
+  font-size: 11px; text-transform: uppercase;
+  letter-spacing: .5px; color: #888;
+}
+.docpage article td {
+  padding: 7px 12px; border: 1px solid #333;
+}
+.docpage article tr:nth-child(even) td { background: #222; }
+.docpage article blockquote {
+  border-left: 3px solid #4a90d9; margin: 12px 0;
+  padding: 4px 16px; background: rgba(74,144,217,.06);
+}
+.docpage article a { color: #5aa0e9; }
+.docpage article a:hover { color: #7dbaf0; }
+
+/* ── Documentation content styling ─────────────────────────────────── */
+.doc-content h2 {
+  font-size: 20px; font-weight: 600; color: #e0e0e0;
+  margin: 28px 0 10px; padding-bottom: 6px;
+  border-bottom: 1px solid #3c3c3c;
+}
+.doc-content h3 {
+  font-size: 15px; font-weight: 600; color: #d0d0d0;
+  margin: 20px 0 6px;
+}
+.doc-content p { margin: 6px 0; line-height: 1.65; }
+.doc-content ul, .doc-content ol { margin: 6px 0 6px 20px; }
+.doc-content li { margin: 3px 0; line-height: 1.5; }
+.doc-content code {
+  font-family: var(--mono); font-size: 12px;
+  background: #2d2d30; border: 1px solid #3c3c3c;
+  border-radius: 2px; padding: 1px 5px;
+}
+.doc-content pre {
+  background: #2d2d30; border: 1px solid #3c3c3c;
+  border-radius: 3px; padding: 10px 12px;
+  overflow-x: auto; margin: 10px 0;
+}
+.doc-content pre code { background: none; border: none; padding: 0; }
+.doc-content table {
+  border-collapse: collapse; width: 100%;
+  margin: 10px 0; font-size: 13px;
+}
+.doc-content th {
+  text-align: left; padding: 7px 10px;
+  background: #252526; border: 1px solid #3c3c3c;
+  font-size: 11px; text-transform: uppercase;
+  letter-spacing: .5px; color: #858585;
+}
+.doc-content td { padding: 6px 10px; border: 1px solid #3c3c3c; }
+.doc-content tr:nth-child(even) td { background: #222; }
+.doc-content a { color: #5aa0e9; }
+.doc-content a:hover { color: #7dbaf0; }

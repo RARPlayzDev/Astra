@@ -24,7 +24,8 @@ function threatColor(t: string): string {
 
 function threatBadge(t: string): string {
   if (t === "HIGH") return "fail";
-  if (t === "MEDIUM") return "fail";
+  if (t === "MEDIUM") return "warn";
+  if (t === "UNKNOWN") return "pending";
   return "pass";
 }
 
@@ -105,6 +106,11 @@ export default function Intelligence() {
           <div className="k">Identified</div>
           <div className="v">{rows.filter((r) => r.correct).length}/{rows.length}</div>
           <div className="s">matched against library</div>
+        </div>
+        <div className="stat">
+          <div className="k">Unidentified</div>
+          <div className="v">{rows.filter((r) => r.threat === "UNKNOWN").length}</div>
+          <div className="s">streams pending analysis</div>
         </div>
         <div className="stat">
           <div className="k">HIGH threats</div>

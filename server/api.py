@@ -33,6 +33,7 @@ FIGDIR = ROOT / "figures"
 SCENARIOS = ROOT / "scenarios"
 MODELS = ROOT / "models"
 DOCS = ROOT / "docs" / "ASTRA_Software_Documentation.md"
+WEBSITE_DOCS_HTML = ROOT / "website" / "src" / "content" / "docsHtml.ts"
 DIST = ROOT / "frontend" / "dist"
 
 app = FastAPI(title=f"{APP_NAME} - {APP_LONG}", version=APP_VERSION,
@@ -267,17 +268,20 @@ def geolocation(k_rx: int = 3, seed: int = 42) -> dict:
     if not runners:
         raise HTTPException(404, "No active mission — start one first")
     env = runners[0].env
-    receivers = [(0.0, 0.0)]
+    # Tuples for computation (geo.py expects indexable tuples)
+    rx_tuples = [(0.0, 0.0)]
     for i in range(1, k_rx):
         a = 2 * np.pi * i / k_rx
-        receivers.append((50.0 * np.cos(a), 50.0 * np.sin(a)))
-    true_pts = [(e.x_km, e.y_km) for e in env.emitters]
+        rx_tuples.append((round(50.0 * np.cos(a), 2), round(50.0 * np.sin(a), 2)))
+    # Dict format for JSON response
+    receivers = [{"x": t[0], "y": t[1]} for t in rx_tuples]
+    true_pts = [{"x": e.x_km, "y": e.y_km} for e in env.emitters]
     est_pts = []
     for e in env.emitters:
-        lines = simulate_bearings((e.x_km, e.y_km), receivers, 2.0, rng)
+        lines = simulate_bearings((e.x_km, e.y_km), rx_tuples, 2.0, rng)
         x, y, res = triangulate(lines)
         est_pts.append({"x": x, "y": y, "residual_km": res})
-    errors = [float(np.hypot(p["x"] - t[0], p["y"] - t[1]))
+    errors = [float(np.hypot(p["x"] - t["x"], p["y"] - t["y"]))
               for p, t in zip(est_pts, true_pts)]
     cs = cep_stats(errors)
     return {
@@ -299,7 +303,22 @@ def identification() -> dict:
         raise HTTPException(404, "No active mission — start one first")
     r = runners[0]
     rows = r.identification_rows()
-    return {"rows": rows, "n_streams": len(r.streams)}
+    # Also include unidentified streams
+    identified_eids = {row["eid"] for row in rows}
+    all_streams = []
+    for eid, pulses in r.streams.items():
+        if eid not in identified_eids:
+            e = next((x for x in r.env.emitters if x.eid == eid), None)
+            all_streams.append({
+                "eid": eid, "identified": "Unknown",
+                "cls": None, "threat": "UNKNOWN",
+                "confidence": 0.0, "pulses": len(pulses),
+                "ground_truth": f"Emitter {eid} ({e.kind})" if e else f"Emitter {eid}",
+                "correct": False
+            })
+    all_rows = rows + all_streams
+    all_rows.sort(key=lambda r: (-r["confidence"], -r["pulses"]))
+    return {"rows": all_rows, "n_streams": len(r.streams)}
 
 
 # ------------------------------------------------------------- sources hub
@@ -433,15 +452,27 @@ _MANUAL_TEMPLATE = """<!doctype html>
 
 @app.get("/manual", response_class=HTMLResponse)
 def manual():
-    if not DOCS.exists():
-        return HTMLResponse("<h1>Manual not found</h1>", status_code=404)
-    text = DOCS.read_text(encoding="utf-8")
-    try:
-        import markdown
-        html_body = markdown.markdown(text, extensions=["tables", "fenced_code"])
-    except ImportError:
-        html_body = f"<pre>{text}</pre>"
-    return HTMLResponse(_MANUAL_TEMPLATE.format(body=html_body))
+    # Try the original markdown file first
+    if DOCS.exists():
+        text = DOCS.read_text(encoding="utf-8")
+        try:
+            import markdown
+            html_body = markdown.markdown(text, extensions=["tables", "fenced_code"])
+        except ImportError:
+            html_body = f"<pre>{text}</pre>"
+        return HTMLResponse(_MANUAL_TEMPLATE.format(body=html_body))
+    # Fall back to extracting HTML from website docsHtml.ts
+    if WEBSITE_DOCS_HTML.exists():
+        ts_text = WEBSITE_DOCS_HTML.read_text(encoding="utf-8")
+        import re
+        m = re.search(r'export const DOCS_HTML\s*=\s*"(.*)";', ts_text, re.DOTALL)
+        if m:
+            html_body = m.group(1)
+            # Unescape JS string escapes
+            html_body = html_body.replace('\\n', '\n').replace('\\"', '"')
+            html_body = html_body.encode().decode('unicode_escape', errors='replace')
+            return HTMLResponse(_MANUAL_TEMPLATE.format(body=html_body))
+    return HTMLResponse("<h1>Manual not found</h1><p>The documentation file is missing. Rebuild the project to regenerate.</p>", status_code=404)
 
 
 @app.post("/api/shutdown")

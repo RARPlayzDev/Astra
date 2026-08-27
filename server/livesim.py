@@ -252,7 +252,7 @@ class _Runner:
                                        "correct": r["correct"]}
                     for r in rep.get("rows", [])]
             rows.sort(key=lambda r: (-r["confidence"], -r["pulses"]))
-            return rows[:10]
+            return rows
         except Exception:
             return []
 
