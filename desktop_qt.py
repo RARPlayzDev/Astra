@@ -265,7 +265,13 @@ def _run_app():
     )
 
     # ── System tray ───────────────────────────────────────────────────
-    tray = QSystemTrayIcon(QIcon(), win)
+    # Try to load the app icon; fall back to standard icon if unavailable
+    icon_path = Path(__file__).parent / "frontend" / "public" / "astra_logo.svg"
+    if icon_path.exists():
+        tray_icon = QIcon(str(icon_path))
+    else:
+        tray_icon = QIcon.fromTheme("application-exit")
+    tray = QSystemTrayIcon(tray_icon, win)
     tray_menu = QMenu()
     tray_menu.addAction("Show", win.show)
     tray_menu.addAction("Exit", lambda: app.quit())

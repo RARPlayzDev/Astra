@@ -162,7 +162,7 @@ export default function Intelligence() {
                         </span>
                       </td>
                       <td className="num">
-                        {(r.confidence * 100).toFixed(0)}%
+                        {r.confidence != null ? `${(r.confidence * 100).toFixed(0)}%` : "\u2014"}
                       </td>
                       <td className="num">{r.pulses}</td>
                       <td className="txt">{r.ground_truth}</td>
@@ -213,7 +213,7 @@ export default function Intelligence() {
                   <i style={{ width: `${selected.confidence * 100}%`, background: selected.confidence > 0.8 ? "var(--good)" : "var(--warn)" }} />
                 </div>
                 <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 4 }}>
-                  {(selected.confidence * 100).toFixed(1)}%
+                  {selected.confidence != null ? `${(selected.confidence * 100).toFixed(1)}%` : "\u2014"}
                 </div>
               </div>
               <div>

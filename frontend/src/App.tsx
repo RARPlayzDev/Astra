@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   getMeta, getSummary, getScenarios, getDiagnostics, exportResults,
   startMission, stopMission, shutdownApp, manualUrl, liveStatus,
@@ -21,13 +21,13 @@ const SPEEDS: [string, number][] = [
   ["Maximum (1500/s)", 1500],
 ];
 
-const NAV_ITEMS: { id: Persp; icon: string; label: string }[] = [
-  { id: "home",       icon: "⬡", label: "Home" },
-  { id: "operations", icon: "▶",  label: "Operations" },
-  { id: "analysis",   icon: "📊", label: "Analysis" },
-  { id: "intel",      icon: "🎯", label: "Intelligence" },
-  { id: "geo",        icon: "🌐", label: "Geolocation" },
-  { id: "data",       icon: "⚙",  label: "Data & Sources" },
+const TABS: [Persp, string][] = [
+  ["home",       "Home"],
+  ["operations", "Operations"],
+  ["analysis",   "Analysis"],
+  ["intel",      "Intelligence"],
+  ["geo",        "Geolocation"],
+  ["data",       "Data & Sources"],
 ];
 
 export default function App() {
@@ -63,11 +63,15 @@ export default function App() {
       setPersp("operations");
       setRunning(true);
       setOpenMenu(null);
-    } catch { /* surfaced via status bar */ }
+    } catch { /* ignore */ }
   };
-  const doStop = async () => { await stopMission().catch(() => undefined); setRunning(false); };
+  const doStop = async () => {
+    await stopMission().catch(() => undefined);
+    setRunning(false);
+  };
   const showDiag = async () => {
-    setOpenMenu(null); setDiag({ open: true, loading: true, data: null });
+    setOpenMenu(null);
+    setDiag({ open: true, loading: true, data: null });
     const data = await getDiagnostics().catch(() => null);
     setDiag({ open: true, loading: false, data });
   };
@@ -77,31 +81,27 @@ export default function App() {
     setScenModal({ open: true, items: r.scenarios });
   };
   const doExit = async () => {
-    type PyWeb = { pywebview?: { api?: { exit_app?: () => Promise<void>; open_manual?: () => void } } };
-    const pw = (window as unknown as PyWeb).pywebview;
-    if (pw?.api?.exit_app) {
-      await pw.api.exit_app();
-      return;
-    }
+    type PW = { pywebview?: { api?: { exit_app?: () => Promise<void> } } };
+    const pw = (window as unknown as PW).pywebview;
+    if (pw?.api?.exit_app) { await pw.api.exit_app(); return; }
     await shutdownApp().catch(() => undefined);
     window.close();
   };
-
   const openGuide = () => {
-    type PyWeb = { pywebview?: { api?: { open_manual?: () => void } } };
-    const pw = (window as unknown as PyWeb).pywebview;
-    if (pw?.api?.open_manual) { pw.api.open_manual(); }
-    else { window.open(manualUrl, "_blank"); }
+    type PW = { pywebview?: { api?: { open_manual?: () => void } } };
+    const pw = (window as unknown as PW).pywebview;
+    if (pw?.api?.open_manual) pw.api.open_manual();
+    else window.open(manualUrl, "_blank");
   };
 
   type Entry = { label: string; hint?: string; action?: () => void; disabled?: boolean; sep?: boolean };
   const MENUS: Record<string, Entry[]> = {
     File: [
-      { label: "New mission", hint: "Operations", action: () => { setResetKey((k) => k + 1); setPersp("operations"); setOpenMenu(null); } },
-      { label: "Open scenario...", hint: "load battlefield", action: () => void showScenarios() },
+      { label: "New mission", hint: "Ops", action: () => { setResetKey((k) => k + 1); setPersp("operations"); setOpenMenu(null); } },
+      { label: "Open scenario\u2026", hint: "battlefield", action: () => void showScenarios() },
       { sep: true, label: "" },
-      { label: "Export results (JSON)", hint: "benchmarks", action: () => { void exportResults(); setOpenMenu(null); } },
-      { label: "Exit", hint: "shut down", action: () => void doExit() },
+      { label: "Export results (JSON)", action: () => { void exportResults(); setOpenMenu(null); } },
+      { label: "Exit", action: () => void doExit() },
     ],
     Run: [
       { label: "Start paired mission", action: () => void doStart() },
@@ -110,12 +110,11 @@ export default function App() {
       ...SPEEDS.map(([lbl, v]) => ({
         label: `Rate: ${lbl}`,
         hint: speed === v ? "\u2713" : undefined,
-        action: () => { setSpeed(v); if (running) void doStart(); setOpenMenu(null); },
+        action: () => { setSpeed(v); setOpenMenu(null); },
       })),
     ],
     Tools: [
-      { label: "Diagnostics...", hint: "self-test", action: () => void showDiag() },
-      { label: "Export results", hint: "JSON file", action: () => { void exportResults(); setOpenMenu(null); } },
+      { label: "Diagnostics\u2026", action: () => void showDiag() },
     ],
     Help: [
       ...(meta?.manual_available
@@ -125,11 +124,11 @@ export default function App() {
     ],
   };
 
-  const statusText = running ? `RUNNING — slot ${slot}/${slotT}` : "READY";
+  const statusText = running ? `RUNNING \u2014 slot ${slot}/${slotT}` : "READY";
 
   return (
     <>
-      {/* ── Header ──────────────────────────────────────────────── */}
+      {/* ── Menu bar ────────────────────────────────────────────── */}
       <div className="menubar" onMouseLeave={() => setOpenMenu(null)}>
         <span className="brand">
           <img src="/astra_logo.svg" alt="" />
@@ -150,94 +149,39 @@ export default function App() {
             )}
           </div>
         ))}
-        <div className="header-right">
-          <span className="version">{meta ? `${meta.app} ${meta.version}` : ""}</span>
-        </div>
+        <span style={{ marginLeft: "auto", color: "var(--muted)", fontSize: 11, paddingRight: 6 }}>
+          {meta ? `${meta.app} ${meta.version}` : ""}
+        </span>
       </div>
 
-      {/* ── Sidebar ─────────────────────────────────────────────── */}
-      <nav className="sidebar">
-        <div className="sidebar-section">
-          <div className="sidebar-label">Navigation</div>
-          {NAV_ITEMS.map((item) => (
-            <button
-              key={item.id}
-              className={"nav-item" + (persp === item.id ? " active" : "")}
-              onClick={() => setPersp(item.id)}
-            >
-              <span className="icon">{item.icon}</span>
-              <span className="label">{item.label}</span>
-            </button>
-          ))}
-        </div>
+      {/* ── Toolbar ─────────────────────────────────────────────── */}
+      <div className="toolbar">
+        <button className="tbtn primary" onClick={() => void doStart()} disabled={running}>Start Mission</button>
+        <button className="tbtn stop" onClick={() => void doStop()} disabled={!running}>Stop</button>
+        <div className="tb-sep" />
+        <label>Rate</label>
+        <select value={speed} onChange={(e) => setSpeed(Number(e.target.value))}>
+          {SPEEDS.map(([lbl, v]) => <option key={v} value={v}>{lbl}</option>)}
+        </select>
+        <div className="tb-sep" />
+        <button className="tbtn" onClick={() => void showDiag()}>Diagnostics</button>
+        {meta?.manual_available && (
+          <button className="tbtn" onClick={() => openGuide()}>User Guide</button>
+        )}
+        <div className="tb-sep" />
+        <span style={{ fontFamily: "var(--mono)", fontSize: 11, color: "var(--muted)" }}>
+          {window.location.port ? `:${window.location.port}` : ""}
+        </span>
+      </div>
 
-        <div className="sidebar-divider" />
-
-        <div className="sidebar-section">
-          <div className="sidebar-label">Mission Control</div>
-          <button
-            className="nav-item"
-            onClick={() => void doStart()}
-            disabled={running}
-          >
-            <span className="icon" style={{ color: running ? "var(--text-muted)" : "var(--green)" }}>▶</span>
-            <span className="label">{running ? "Running..." : "Start Mission"}</span>
+      {/* ── Tab bar ─────────────────────────────────────────────── */}
+      <div className="tab-bar">
+        {TABS.map(([id, lbl]) => (
+          <button key={id} className={persp === id ? "active" : ""} onClick={() => setPersp(id)}>
+            {lbl}
           </button>
-          <button
-            className="nav-item"
-            onClick={() => void doStop()}
-            disabled={!running}
-          >
-            <span className="icon" style={{ color: !running ? "var(--text-muted)" : "var(--red)" }}>⏹</span>
-            <span className="label">Stop</span>
-          </button>
-        </div>
-
-        <div className="sidebar-divider" />
-
-        <div className="sidebar-section">
-          <div className="sidebar-label">Simulation Rate</div>
-          <div style={{ padding: "4px 14px" }}>
-            <select
-              value={speed}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                setSpeed(v);
-                if (running) {
-                  stopMission().then(() => startMission({ speed: v }))
-                    .then(() => setRunning(true)).catch(() => undefined);
-                }
-              }}
-              style={{
-                width: "100%",
-                background: "var(--bg-surface)",
-                color: "var(--text-primary)",
-                border: "1px solid var(--border-default)",
-                borderRadius: "6px",
-                padding: "7px 10px",
-                fontSize: "12.5px",
-                fontFamily: "var(--font-sans)",
-                cursor: "pointer",
-                outline: "none",
-              }}
-            >
-              {SPEEDS.map(([lbl, v]) => <option key={v} value={v}>{lbl}</option>)}
-            </select>
-          </div>
-        </div>
-
-        {/* Bottom actions */}
-        <div className="sidebar-bottom">
-          <button className="sidebar-btn" onClick={() => void showDiag()}>
-            <span>🔧</span> Diagnostics
-          </button>
-          {meta?.manual_available && (
-            <button className="sidebar-btn" onClick={() => openGuide()}>
-              <span>📖</span> User Guide
-            </button>
-          )}
-        </div>
-      </nav>
+        ))}
+      </div>
 
       {/* ── Workspace ───────────────────────────────────────────── */}
       <main className="workspace">
@@ -255,27 +199,25 @@ export default function App() {
         {persp === "geo" && <Geolocation />}
       </main>
 
-      {/* ── Status Bar ──────────────────────────────────────────── */}
+      {/* ── Status bar ──────────────────────────────────────────── */}
       <div className="statusbar">
         <span><span className={"dot" + (running ? " on" : "")} />{statusText}</span>
         <span>{meta ? meta.long : ""}</span>
         <div className="right">
-          <span>{window.location.port ? `port ${window.location.port}` : "embedded service"}</span>
           {meta?.manual_available && (
-            <button className="linklike" onClick={() => openGuide()}>docs</button>
+            <button className="linklike" onClick={() => openGuide()}>documentation</button>
           )}
         </div>
       </div>
 
       {/* ── Overlays ────────────────────────────────────────────── */}
       {shield && <div className="click-shield"
-        onClick={() => { setOpenMenu(null); setAbout(false); setScenModal({ open: false, items: [] }); }}
-        style={{ zIndex: 40 }} />}
+        onClick={() => { setOpenMenu(null); setAbout(false); setScenModal({ open: false, items: [] }); }} />}
 
       {diag.open && (
-        <Modal title={`Diagnostics — ${diag.data ? `${diag.data.passed}/${diag.data.total} passed` : "running..."}`}
+        <Modal title={diag.data ? `Diagnostics \u2014 ${diag.data.passed}/${diag.data.total} passed` : "Diagnostics"}
                onClose={() => setDiag({ open: false })}>
-          {diag.loading && <div className="content">Running self-tests...</div>}
+          {diag.loading && <div className="content">Running self-tests\u2026</div>}
           {!diag.loading && diag.data && (
             <div className="content">
               {diag.data.checks.map((c) => (
@@ -287,11 +229,6 @@ export default function App() {
                   </div>
                 </div>
               ))}
-              {!diag.data.all_ok && (
-                <p style={{ color: "var(--amber)", marginBottom: 0 }}>
-                  Some checks failed. The service may still run. See the user guide for troubleshooting.
-                </p>
-              )}
             </div>
           )}
           <footer><button className="tbtn" onClick={() => setDiag({ open: false })}>Close</button></footer>
@@ -299,22 +236,13 @@ export default function App() {
       )}
 
       {about && (
-        <Modal title="About ASTRA" onClose={() => setAbout(false)}>
-          <div className="content" style={{ textAlign: "center", padding: "32px 28px" }}>
-            <img src="/astra_logo.svg" alt="ASTRA" style={{ width: 56, height: 56, marginBottom: 16 }} />
-            <p style={{
-              fontFamily: "var(--font-mono)", fontSize: 24, letterSpacing: 4,
-              color: "var(--accent-bright)", margin: "0 0 8px", fontWeight: 700,
-            }}>ASTRA</p>
-            <p style={{ color: "var(--text-secondary)", fontSize: 14, lineHeight: 1.6, marginBottom: 16 }}>
-              {meta?.long ?? "Adaptive Spectrum Threat Recognition & Analysis"}
-            </p>
-            <p style={{ color: "var(--text-muted)", fontSize: 13 }}>
-              Version {meta?.version ?? "1.0.0"}
-            </p>
-            <p style={{ color: "var(--text-muted)", fontSize: 12, marginTop: 16, lineHeight: 1.5 }}>
-              Smart India Hackathon 2026 prototype.<br />
-              Simulation-based research software; not operational equipment.
+        <Modal title="About" onClose={() => setAbout(false)}>
+          <div className="content">
+            <p style={{ fontFamily: "var(--mono)", fontSize: 18, letterSpacing: 3, color: "var(--accent)", margin: "4px 0" }}>ASTRA</p>
+            <p>{meta?.long ?? "Adaptive Spectrum Threat Recognition & Analysis"} \u2014 version {meta?.version ?? "1.0.0"}.</p>
+            <p>An adaptive scan scheduler for Electronic Support receivers operating without prior reliable intelligence on emitters.</p>
+            <p style={{ color: "var(--muted)", fontSize: 12 }}>
+              Smart India Hackathon 2026 prototype. Simulation-based research software; not operational equipment.
             </p>
           </div>
           <footer><button className="tbtn" onClick={() => setAbout(false)}>Close</button></footer>
@@ -322,12 +250,12 @@ export default function App() {
       )}
 
       {scenModal.open && (
-        <Modal title="Open Scenario" onClose={() => setScenModal({ open: false, items: [] })}>
+        <Modal title="Open scenario" onClose={() => setScenModal({ open: false, items: [] })}>
           <div className="content">
-            <p style={{ marginTop: 0, color: "var(--text-secondary)" }}>
-              Load a scenario to start a new paired mission with that battlefield definition.
+            <p style={{ marginTop: 0, color: "var(--muted)" }}>
+              Loading a scenario starts a new paired mission with that battlefield definition.
             </p>
-            {scenModal.items.length === 0 && <p>No scenario files found in /scenarios.</p>}
+            {scenModal.items.length === 0 && <p>No scenario files found.</p>}
             {scenModal.items.map((s) => (
               <div className="list-item" key={s.name}>
                 <div>
@@ -349,8 +277,7 @@ export default function App() {
   );
 }
 
-function Modal(p: { title: string; onClose: () => void;
-                    children?: ReactNode; footer?: ReactNode }) {
+function Modal(p: { title: string; onClose: () => void; children?: ReactNode; footer?: ReactNode }) {
   useEffect(() => {
     const h = (ev: KeyboardEvent) => { if (ev.key === "Escape") p.onClose(); };
     window.addEventListener("keydown", h);
