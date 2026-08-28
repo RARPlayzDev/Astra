@@ -274,6 +274,185 @@ def test_viz_all_plots():
     assert len(pngs) == 6 and all(p.stat().st_size > 0 for p in pngs)
 
 
+# ---------------------------------------------------------------------------
+# Hardening: extreme inputs and deterministic reproducibility
+# ---------------------------------------------------------------------------
+
+import pytest
+
+from ewsmart import exceptions as _exc
+
+
+@pytest.mark.parametrize("overrides", [
+    {"n_bands": 0}, {"n_bands": -3}, {"T": 0}, {"T": -10},
+    {"snr_std_db": -1.0}, {"freq_max_mhz": 100.0},
+    {"period_range": (0, 10)}, {"on_len_range": (5, 2)},
+])
+def test_env_rejects_invalid_config(overrides):
+    with pytest.raises(_exc.ConfigurationError):
+        RFEnvironment(**overrides)
+
+
+def test_env_extreme_many_bands():
+    env = RFEnvironment(n_bands=10000, T=20, seed=0, n_stationary=1,
+                        n_agile=0, n_periodic=0, n_spatial=0, n_clutter=0)
+    assert env.n_bands == 10000
+    assert env.present(9999, 0) in (True, False)
+
+
+def test_env_zero_emitters_metrics_safe():
+    cfg = ScenarioConfig(n_bands=6, T=120, seed=1, n_stationary=0, n_agile=0,
+                         n_periodic=0, n_spatial=0, n_clutter=0)
+    env = RFEnvironment(cfg)
+    assert env.emitters == []
+    m = compute_metrics(env, run_episode(env, SmartScanScheduler(6, seed=2),
+                                         seed=3))
+    assert m["intercept_ratio"] == 0.0
+    assert m["threat_intercept_ratio"] == 0.0
+
+
+def test_env_empty_emitter_list_argument_accepted():
+    # RFEnvironment built from a config that yields zero emitters behaves
+    # like the `emitters=[]` degenerate case: queries stay safe.
+    cfg = ScenarioConfig(n_bands=4, T=60, seed=5, n_stationary=0, n_agile=0,
+                         n_periodic=0, n_spatial=0, n_clutter=0)
+    env = RFEnvironment(cfg)
+    assert env.emitters == []
+    assert env.band_seq.size == 0
+    assert env.present(2, 10) is False
+    assert env.emitters_at(2, 10) == []
+
+
+def test_env_same_seed_fully_reproducible():
+    e1 = RFEnvironment(n_bands=12, T=600, seed=123)
+    e2 = RFEnvironment(n_bands=12, T=600, seed=123)
+    assert np.array_equal(e1.band_seq, e2.band_seq)
+    assert np.array_equal(e1.occupancy, e2.occupancy)
+    assert np.allclose(e1.noise_floor, e2.noise_floor)
+    assert e1.emitters == e2.emitters
+
+
+def test_env_different_seed_different_scene():
+    e1 = RFEnvironment(n_bands=12, T=600, seed=1)
+    e2 = RFEnvironment(n_bands=12, T=600, seed=2)
+    assert not np.array_equal(e1.band_seq, e2.band_seq)
+
+
+def test_scheduler_seed_reproducible_actions():
+    env1 = RFEnvironment(n_bands=10, T=800, seed=7)
+    env2 = RFEnvironment(n_bands=10, T=800, seed=7)
+    tr1 = run_episode(env1, SmartScanScheduler(10, seed=42), seed=5)
+    tr2 = run_episode(env2, SmartScanScheduler(10, seed=42), seed=5)
+    assert tr1.actions == tr2.actions
+    assert tr1.rewards == tr2.rewards
+
+
+def test_deterministic_scenario_config_roundtrip_seed():
+    cfg = ScenarioConfig(n_bands=10, T=400, seed=77)
+    with tempfile.TemporaryDirectory() as td:
+        p = Path(td) / "s.json"
+        cfg.to_json(str(p))
+        cfg2 = ScenarioConfig.from_json(str(p))
+    e1 = RFEnvironment(cfg)
+    e2 = RFEnvironment(cfg2)
+    assert np.array_equal(e1.band_seq, e2.band_seq)
+
+
+# ---------------------------------------------------------------------------
+# Hardening: confidence intervals and SQLite metrics store
+# ---------------------------------------------------------------------------
+
+def test_confidence_interval_stats():
+    from ewsmart.metrics import confidence_interval, aggregate_metrics_ci
+    ci = confidence_interval([1.0, 1.0, 1.0])
+    assert ci["mean"] == 1.0 and ci["sem"] == 0.0 and ci["ci_high"] == 1.0
+    ci = confidence_interval([0.0, 2.0])
+    assert ci["n"] == 2
+    assert ci["ci_low"] < ci["mean"] < ci["ci_high"]
+    assert ci["ci95"] == pytest.approx(ci["ci_high"] - ci["mean"])
+    assert confidence_interval([float("nan"), None])["mean"] is None
+    assert confidence_interval([float("nan"), None])["n"] == 0
+    assert confidence_interval([])["n"] == 0
+    agg = aggregate_metrics_ci([{"a": 1.0}, {"a": 3.0}])
+    assert agg["a"]["mean"] == 2.0
+
+
+def test_metrics_db_roundtrip():
+    from ewsmart.db import MetricsDB
+    with tempfile.TemporaryDirectory() as td:
+        p = Path(td) / "test.db"
+        with MetricsDB(p) as db:
+            for tbl in ("scenarios", "runs", "trials", "aggregates"):
+                assert tbl in db.table_names()
+            sid = db.add_scenario({"n_bands": 8, "T": 100}, name="t")
+            rid = db.start_run(sid, kind="monte-carlo", meta={"trials": 2})
+            db.add_trial(rid, "smart-scan", 0,
+                         {"avg_reward": 0.5, "total_reward": 1.0},
+                         n_bands=8, T=100, seed=1)
+            db.add_trial(rid, "smart-scan", 1,
+                         {"avg_reward": 0.7, "total_reward": 1.4},
+                         n_bands=8, T=100, seed=2)
+            agg = db.finalize_run(rid, ["smart-scan"])
+            a = agg["smart-scan"]["avg_reward"]
+            assert a["mean"] == pytest.approx(0.6)
+            assert a["n"] == 2
+            assert a["ci_low"] < a["mean"] < a["ci_high"]
+            assert len(db.aggregates(rid)) == 2       # 2 metrics
+            assert len(db.trials(rid)) == 2
+            assert db.trials(rid, "smart-scan")[0]["episode"] == 0
+            assert db.trials(rid, "smart-scan")[1]["metrics"]["total_reward"] == 1.4
+        # Reopening the same file keeps schema + data.
+        with MetricsDB(p) as db2:
+            assert "trials" in db2.table_names()
+            assert len(db2.trials(1)) == 2
+
+
+def test_metrics_db_invalid_reward_json_raises_branded():
+    from ewsmart.db import MetricsDB
+    with tempfile.TemporaryDirectory() as td:
+        p = Path(td) / "bad.db"
+        with MetricsDB(p) as db:
+            rid = db.start_run()
+            with pytest.raises(_exc.DatabaseError):
+                db.add_trial(rid, "x", 0, {"k": float("nan")})
+
+
+def test_runner_monte_carlo_streams_to_db():
+    from ewsmart.db import MetricsDB
+    from ewsmart.runner import monte_carlo
+    with tempfile.TemporaryDirectory() as td:
+        p = Path(td) / "mc.db"
+        scheds = [SequentialSweep(6, seed=1), SmartScanScheduler(6, seed=2)]
+        results, ci = monte_carlo(scheds, trials=2, n_bands=6, T=200,
+                                  base_seed=10, db_path=str(p),
+                                  config={"n_bands": 6, "T": 200})
+        assert set(results) == {"openloop-sequential", "smart-scan"}
+        for name in results:
+            assert set(results[name]) == set(ci[name])
+            for a in ci[name].values():
+                assert "ci_low" in a and "ci_high" in a
+                if a["n"]:          # all-NaN metrics legitimately have n == 0
+                    assert a["n"] == 2
+        db = MetricsDB(p)
+        try:
+            n = db.conn.execute("SELECT COUNT(*) FROM trials").fetchone()[0]
+            assert n == 4  # 2 schedulers x 2 trials
+            finished = db.conn.execute(
+                "SELECT finished_at FROM runs").fetchone()[0]
+            assert finished is not None
+        finally:
+            db.close()
+
+
+def test_evaluate_ci_matches_evaluate_means():
+    from ewsmart.runner import evaluate_ci
+    scheds = [SequentialSweep(8, seed=1)]
+    res, ci = evaluate_ci(scheds, episodes=2, n_bands=8, T=300, base_seed=21)
+    for k, a in ci["openloop-sequential"].items():
+        assert res["openloop-sequential"][k] == pytest.approx(
+            a["mean"] if a["mean"] is not None else float("nan"))
+
+
 if __name__ == "__main__":
     fns = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     for fn in fns:

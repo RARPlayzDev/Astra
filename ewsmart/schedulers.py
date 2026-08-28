@@ -11,11 +11,16 @@ All schedulers share a common interface:
 """
 from __future__ import annotations
 
+import math
+
 import numpy as np
 from collections import deque
 
 from . import periodic
 from .dqn import DQNAgent
+from .exceptions import (ConfigurationError, InvalidBandError,
+                         SimulationBoundsError, InvalidDwellResultError,
+                         InvalidRewardError)
 
 
 
@@ -25,17 +30,78 @@ def ang_dist(a1: float, a2: float) -> float:
 
 
 class BaseScheduler:
-    """Common scheduler interface."""
+    """Common scheduler interface.
+
+    All concrete schedulers validate their inputs against the branded
+    exception hierarchy in :mod:`ewsmart.exceptions`:
+
+    * ``n_bands <= 0`` / negative horizons -> :class:`ConfigurationError`
+    * out-of-range band indices            -> :class:`InvalidBandError`
+    * negative time slots                  -> :class:`SimulationBoundsError`
+    * non-numeric / NaN rewards            -> :class:`InvalidRewardError`
+    * result objects missing attributes    -> :class:`InvalidDwellResultError`
+    """
 
     name = "base"
     learnable = False
 
     def __init__(self, n_bands: int, seed: int = 0):
-        self.n_bands = n_bands
+        if not isinstance(n_bands, (int, np.integer)) or isinstance(n_bands, bool) \
+                or n_bands < 1:
+            raise ConfigurationError(
+                f"{type(self).__name__}: n_bands must be a positive integer, "
+                f"got {n_bands!r}")
+        self.n_bands = int(n_bands)
         self.rng = np.random.default_rng(seed)
+
+    @staticmethod
+    def _check_horizon(horizon: int | None) -> None:
+        if horizon is not None and (not isinstance(horizon, (int, np.integer))
+                                    or horizon < 0):
+            raise ConfigurationError(
+                f"horizon must be a non-negative integer or None, got "
+                f"{horizon!r}")
+
+    def _check_t(self, t: int) -> None:
+        if t < 0:
+            raise SimulationBoundsError(
+                f"{type(self).__name__}.select: time slot must be >= 0, "
+                f"got {t!r}")
+
+    def _check_band(self, band: int) -> None:
+        if not 0 <= band < self.n_bands:
+            raise InvalidBandError(
+                f"{type(self).__name__}: band index {band!r} out of range "
+                f"[0, {self.n_bands})")
+
+    @staticmethod
+    def _check_reward(r) -> float:
+        try:
+            v = float(r)
+        except (TypeError, ValueError) as exc:
+            raise InvalidRewardError(
+                f"reward must be a real number, got {r!r}") from exc
+        if not math.isfinite(v):
+            raise InvalidRewardError(f"reward must be finite, got {r!r}")
+        return v
+
+    @staticmethod
+    def _check_res(res) -> tuple[bool, tuple]:
+        """Validate a dwell result object; return ``(hit, detections)``."""
+        try:
+            hit = bool(res.hit)
+            fa = bool(res.false_alarm)
+            dets = res.detections
+        except AttributeError as exc:
+            raise InvalidDwellResultError(
+                f"dwell result {type(res).__name__} is missing required "
+                f"attributes (band, t, hit, false_alarm, detections): {exc}"
+                ) from exc
+        return hit and not fa, dets
 
     def reset(self, horizon: int | None = None) -> None:
         """Prepare internal state for a new episode of ``horizon`` slots."""
+        self._check_horizon(horizon)
 
     def select(self, t: int) -> int:
         """Return the band to observe at slot ``t``."""
@@ -43,6 +109,9 @@ class BaseScheduler:
 
     def update(self, t: int, band: int, res, r: float = 0.0) -> None:
         """Update internal statistics from one dwell."""
+        self._check_band(band)
+        self._check_reward(r)
+        self._check_res(res)
 
     def predict(self, t: int, band: int) -> bool:
         """Belief that ``band`` is occupied at slot ``t``."""
@@ -58,6 +127,7 @@ class SequentialSweep(BaseScheduler):
     name = "openloop-sequential"
 
     def select(self, t: int) -> int:
+        self._check_t(t)
         return int(t % self.n_bands)
 
 
@@ -67,6 +137,7 @@ class RandomScan(BaseScheduler):
     name = "openloop-random"
 
     def select(self, t: int) -> int:
+        self._check_t(t)
         return int(self.rng.integers(self.n_bands))
 
 
@@ -75,6 +146,9 @@ class PrioritySweep(BaseScheduler):
 
     Models a receiver driven by prior (possibly stale) intelligence: priority
     bands are visited every cycle, remaining bands fill the gaps.
+
+    Raises:
+        InvalidBandError: if any priority band is outside ``[0, n_bands)``.
     """
 
     name = "openloop-priority"
@@ -82,9 +156,14 @@ class PrioritySweep(BaseScheduler):
     def __init__(self, n_bands: int, priority_bands: tuple | list, seed: int = 0):
         super().__init__(n_bands, seed)
         prio = list(priority_bands)
+        for b in prio:
+            if not 0 <= b < self.n_bands:
+                raise InvalidBandError(
+                    f"priority band {b!r} out of range [0, {self.n_bands})")
         self.route = prio + [b for b in range(n_bands) if b not in set(prio)]
 
     def select(self, t: int) -> int:
+        self._check_t(t)
         return self.route[t % len(self.route)]
 
 
@@ -99,14 +178,19 @@ class UCBScheduler(BaseScheduler):
     name = "bandit-ucb"
 
     def reset(self, horizon: int | None = None) -> None:
+        self._check_horizon(horizon)
         self.n = np.ones(self.n_bands)
         self.mu = np.full(self.n_bands, 1e-3)
 
     def select(self, t: int) -> int:
+        self._check_t(t)
         bonus = 0.6 * np.sqrt(np.log(t + 2) / self.n)
         return int(np.argmax(self.mu + bonus))
 
     def update(self, t: int, band: int, res, r: float = 0.0) -> None:
+        self._check_band(band)
+        r = self._check_reward(r)
+        self._check_res(res)
         self.n[band] += 1
         self.mu[band] += (r - self.mu[band]) / self.n[band]
 
@@ -137,6 +221,7 @@ class LinearQLearning(BaseScheduler):
         self.reset()
 
     def reset(self, horizon: int | None = None) -> None:
+        self._check_horizon(horizon)
         self.disc_hit = np.zeros(self.n_bands)
         self.disc_n = np.zeros(self.n_bands)
         self.last_visit = np.full(self.n_bands, -100.0)
@@ -151,19 +236,36 @@ class LinearQLearning(BaseScheduler):
         return np.array([1.0, prior * conf, recency,
                          self.disc_hit[band] / 10.0, 0.0])
 
+    def _feature_matrix(self, t: int) -> np.ndarray:
+        """Vectorised ``(n_bands, FEATURE_DIM)`` feature matrix at slot ``t``."""
+        recency = 1.0 / (1.0 + np.maximum(0.0, t - self.last_visit))
+        prior = self.disc_hit / (self.disc_n + 0.25)
+        sqrt_n = np.sqrt(self.disc_n)
+        conf = sqrt_n / (1.0 + sqrt_n)
+        X = np.empty((self.n_bands, FEATURE_DIM))
+        X[:, 0] = 1.0
+        X[:, 1] = prior * conf
+        X[:, 2] = recency
+        X[:, 3] = self.disc_hit / 10.0
+        X[:, 4] = 0.0
+        return X
+
     def _q_all(self, t: int) -> np.ndarray:
-        return np.array([self.theta @ self._features(b, t) for b in range(self.n_bands)])
+        return self._feature_matrix(t) @ self.theta
 
     def select(self, t: int) -> int:
+        self._check_t(t)
         if self.rng.random() < self.eps:
             return int(self.rng.integers(self.n_bands))
         return int(np.argmax(self._q_all(t)))
 
     def update(self, t: int, band: int, res, r: float = 0.0) -> None:
+        self._check_band(band)
+        r = self._check_reward(r)
+        hit, _ = self._check_res(res)
         x = self._features(band, t)
         q = float(self.theta @ x)
         decay = 0.98
-        hit = res.hit and not res.false_alarm
         if hit:
             self.disc_hit[band] = decay * self.disc_hit[band] + 1.0
             self.disc_n[band] = decay * self.disc_n[band] + 1.0
@@ -195,9 +297,10 @@ def build_state(band_stats: dict, n_bands: int) -> np.ndarray:
     feats[:, 1] /= max(1.0, feats[:, 1].max())
     feats[:, 2] = np.asarray(band_stats["recency"], dtype=np.float32)
     feats[:, 3] = np.asarray(band_stats["since_hit"], dtype=np.float32)
-    for key, idx in (("locked", 4), ("pred_on", 5), ("persistent", 6), ("burst", 7)):
-        arr = np.asarray(band_stats[key], dtype=np.float32)
-        feats[:, idx] = arr
+    feats[:, 4] = np.asarray(band_stats["locked"], dtype=np.float32)
+    feats[:, 5] = np.asarray(band_stats["pred_on"], dtype=np.float32)
+    feats[:, 6] = np.asarray(band_stats["persistent"], dtype=np.float32)
+    feats[:, 7] = np.asarray(band_stats["burst"], dtype=np.float32)
     return feats.reshape(-1)
 
 
@@ -223,6 +326,7 @@ class DQNScheduler(BaseScheduler):
         self.reset()
 
     def reset(self, horizon: int | None = None) -> None:
+        self._check_horizon(horizon)
         self.mu = np.full(self.n_bands, 0.01)
         self.n = np.ones(self.n_bands)
         self.last_visit = np.zeros(self.n_bands)
@@ -230,6 +334,9 @@ class DQNScheduler(BaseScheduler):
         self.band_hits = [[] for _ in range(self.n_bands)]
         self.est: dict[int, dict] = {}
         self.new_hits = np.zeros(self.n_bands)
+        self._lock_try: dict[int, int] = {}
+        self._cached_state: np.ndarray | None = None
+        self._cached_t: int = -10 ** 9
         self.prev_state: np.ndarray | None = None
         self.prev_action: int | None = None
 
@@ -237,19 +344,32 @@ class DQNScheduler(BaseScheduler):
         self.agent.end_episode()
         self.prev_state = None
         self.prev_action = None
+        self._cached_state = None
+        self._cached_t = -10 ** 9
 
-    def _maybe_lock(self, band: int) -> None:
-        """Lightweight phase-lock on the agent's own hit stream."""
+    def _maybe_lock(self, band: int, t: int) -> None:
+        """Lightweight phase-lock on the agent's own hit stream.
+
+        A per-band cooldown between estimation attempts bounds the cost of
+        repeatedly scanning non-periodic bands that keep producing hits.
+        """
         if len(self.band_hits[band]) < self.lock_hits:
             return
         if band in self.est and self.new_hits[band] < 4:
             return
+        if t - self._lock_try.get(band, -10 ** 9) < 60:
+            return
+        self._lock_try[band] = t
         est = periodic.best_period([t for t, _, _ in self.band_hits[band]])
         if est is not None:
             self.est[band] = est
             self.new_hits[band] = 0
 
     def _state(self, t: int) -> np.ndarray:
+        # select(t+1) rebuilds the exact state update(t) produced; caching
+        # removes that duplicate construction from the hot path.
+        if self._cached_state is not None and self._cached_t == t:
+            return self._cached_state
         recency = 1.0 / (1.0 + np.maximum(0.0, t - self.last_visit))
         since_hit = np.clip((t - self.last_hit) / 1000.0, 0.0, 3.0)
         locked = np.zeros(self.n_bands)
@@ -258,19 +378,26 @@ class DQNScheduler(BaseScheduler):
             locked[b] = 1.0
             if periodic.predict_on(e, t):
                 pred_on[b] = 1.0
-        return build_state({"mu": self.mu, "n": self.n, "recency": recency,
-                            "since_hit": since_hit, "locked": locked,
-                            "pred_on": pred_on,
-                            "persistent": np.zeros(self.n_bands),
-                            "burst": np.zeros(self.n_bands)}, self.n_bands)
+        s = build_state({"mu": self.mu, "n": self.n, "recency": recency,
+                         "since_hit": since_hit, "locked": locked,
+                         "pred_on": pred_on,
+                         "persistent": np.zeros(self.n_bands),
+                         "burst": np.zeros(self.n_bands)}, self.n_bands)
+        self._cached_state = s
+        self._cached_t = t
+        return s
 
     def select(self, t: int) -> int:
+        self._check_t(t)
         s = self._state(t)
         self.prev_state = s
         self.prev_action = self.agent.act(s)
         return self.prev_action
 
     def update(self, t: int, band: int, res, r: float = 0.0) -> None:
+        self._check_band(band)
+        r = self._check_reward(r)
+        hit, _ = self._check_res(res)
         s2 = self._state(t + 1)
         if self.prev_state is not None and self.prev_action is not None:
             self.agent.observe(self.prev_state, self.prev_action,
@@ -279,12 +406,16 @@ class DQNScheduler(BaseScheduler):
         self.mu[band] += (r - self.mu[band]) / self.n[band]
         self.mu *= 0.999
         self.last_visit[band] = t
-        if res.hit and not res.false_alarm:
+        if hit:
             self.last_hit[band] = t
             for snr, aoa in res.detections:
                 self.band_hits[band].append((t, snr, aoa))
+            # Bound the fingerprint history so phase-lock rescans stay O(1)
+            # in the number of recent hits rather than growing unbounded.
+            if len(self.band_hits[band]) > 400:
+                del self.band_hits[band][:-200]
             self.new_hits[band] += len(res.detections) or 1
-            self._maybe_lock(band)
+            self._maybe_lock(band, t)
 
     def get_weights(self) -> dict:
         w = self.agent.get_weights()
@@ -330,6 +461,7 @@ class SmartScanScheduler(BaseScheduler):
         self.reset()
 
     def reset(self, horizon: int | None = None) -> None:
+        self._check_horizon(horizon)
         self.horizon = horizon
         self.mu = np.full(self.n_bands, 0.01)
         self.n = np.ones(self.n_bands)
@@ -347,6 +479,7 @@ class SmartScanScheduler(BaseScheduler):
         self.persistent: set[int] = set()
         self.dense_count = np.zeros(self.n_bands)
         self.iso_streams: dict = {}
+        self._lock_try: dict[int, int] = {}
         # --- knowledge-state predictor (hard-confirmation policy) ---
         self.visit_hits: list[deque] = [
             deque(maxlen=10) for _ in range(self.n_bands)]
@@ -363,27 +496,46 @@ class SmartScanScheduler(BaseScheduler):
         separated when either fingerprint differs, giving the scheduler
         spatial awareness: two streams sharing an AOA are likely the same
         physical emitter (or a family), regardless of band.
-        """
-        pts = sorted(points, key=lambda p: p[1])
-        clusters, cur = [], [pts[0]]
-        for p in pts[1:]:
-            ref = cur[-1]
-            same = (abs(p[1] - ref[1]) <= tol_db and
-                    (len(ref) < 3 or ang_dist(p[2], ref[2]) <= tol_aoa))
-            if same:
-                cur.append(p)
-            else:
-                clusters.append(cur)
-                cur = [p]
-        clusters.append(cur)
-        return clusters
 
-    def _maybe_lock(self, band: int) -> None:
-        """Attempt (or refine) a periodic phase-lock from clustered hits."""
+        Vectorised with NumPy: the input is sorted once, then cluster
+        boundaries are found with a single vectorised comparison of the
+        SNR differences and circular AOA distances (no Python loop over
+        points).
+        """
+        if not points:
+            return []
+        pts = sorted(points, key=lambda p: p[1])
+        arr = np.asarray(pts, dtype=float)
+        if arr.ndim == 1:
+            arr = arr[None, :]
+        n = len(pts)
+        if n == 1:
+            return [list(pts)]
+        snr = arr[:, 1]
+        new_cluster = np.empty(n, dtype=bool)
+        new_cluster[0] = True
+        d_snr = np.abs(np.diff(snr))
+        if arr.shape[1] >= 3:
+            d_aoa = np.abs((np.diff(arr[:, 2]) + 180.0) % 360.0 - 180.0)
+            new_cluster[1:] = (d_snr > tol_db) | (d_aoa > tol_aoa)
+        else:
+            new_cluster[1:] = d_snr > tol_db
+        bounds = np.flatnonzero(new_cluster)
+        return [pts[a:b] for a, b in zip(bounds, list(bounds[1:]) + [n])]
+
+    def _maybe_lock(self, band: int, t: int) -> None:
+        """Attempt (or refine) a periodic phase-lock from clustered hits.
+
+        A per-band cooldown between estimation attempts bounds the cost of
+        repeatedly scanning non-periodic bands that keep producing hits.
+        """
         if len(self.band_hits[band]) < self.lock_hits:
             return
         if band in self.est and self.new_hits[band] < 4:
             return
+        if t - self._lock_try.get(band, -10 ** 9) < 60:
+            return
+        self._lock_try[band] = t
         total_visits = max(1, len(self.visit_times[band]))
         best = None
         for cl in self._cluster_hits(self.band_hits[band]):
@@ -488,6 +640,7 @@ class SmartScanScheduler(BaseScheduler):
         return self.exploit_ramp * progress
 
     def select(self, t: int) -> int:
+        self._check_t(t)
         if t < self.recon_steps:
             return int(t % self.n_bands)
         for b, dl in list(self.burst.items()):
@@ -570,18 +723,23 @@ class SmartScanScheduler(BaseScheduler):
         return False
 
     def update(self, t: int, band: int, res, r: float = 0.0) -> None:
+        self._check_band(band)
+        r = self._check_reward(r)
+        hit, _ = self._check_res(res)
         self.visit_times[band].append(t)
         self.last_visit[band] = t
-        hit = res.hit and not res.false_alarm
         # knowledge-state bookkeeping (hard confirmation / demotion)
         self.visit_hits[band].append(1 if hit else 0)
         for snr, aoa in (res.detections if not res.false_alarm else ()):
             self.band_hits[band].append((t, snr, aoa))
+            # Bound the fingerprint history (see DQNScheduler.update).
+            if len(self.band_hits[band]) > 400:
+                del self.band_hits[band][:-200]
             self._update_burst(t, band, snr, aoa)
         if hit:
             self.hit_times[band].append(t)
             self.new_hits[band] += len(res.detections) or 1
-            self._maybe_lock(band)
+            self._maybe_lock(band, t)
         self._validate_locks(t, band, hit)
         self.mu[band] += (r - self.mu[band]) / self.n[band]
         self.mu *= 0.999

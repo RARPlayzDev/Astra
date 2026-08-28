@@ -155,6 +155,63 @@ def periodic_next_on(est, t_now):
 
 
 # ---------------------------------------------------------------------------
+# Cross-run statistics: standard error and confidence intervals
+# ---------------------------------------------------------------------------
+
+def confidence_interval(values, confidence: float = 0.95) -> dict:
+    """Mean, standard error and CI for one metric across Monte Carlo runs.
+
+    Non-finite values (``None`` / NaN / inf) are excluded, matching the
+    NaN-tolerant aggregation used elsewhere.  The interval is a normal
+    approximation, ``mean +/- z * SEM`` with ``z = Phi^-1((1+c)/2)``, which is
+    the standard choice for the episode-level Monte Carlo aggregates here.
+
+    Args:
+        values: per-episode values of one metric.
+        confidence: coverage probability in ``(0, 1)`` (default 95%).
+
+    Returns:
+        ``{"mean", "sem", "ci95", "ci_low", "ci_high", "n"}`` where every
+        field is ``None`` when no finite values exist.
+    """
+    from statistics import NormalDist
+    if not 0.0 < confidence < 1.0:
+        raise ValueError(f"confidence must lie in (0, 1), got {confidence!r}")
+    vals = np.asarray([float(v) for v in values
+                       if v is not None and np.isfinite(v)], dtype=float)
+    n = int(vals.size)
+    if n == 0:
+        return {"mean": None, "sem": None, "ci95": None,
+                "ci_low": None, "ci_high": None, "n": 0}
+    mean = float(vals.mean())
+    sem = float(vals.std(ddof=1) / np.sqrt(n)) if n > 1 else 0.0
+    z = float(NormalDist().inv_cdf(0.5 * (1.0 + confidence)))
+    half = z * sem
+    return {"mean": mean, "sem": sem, "ci95": half,
+            "ci_low": mean - half, "ci_high": mean + half, "n": n}
+
+
+def aggregate_metrics_ci(per_ep: list[dict], confidence: float = 0.95) -> dict:
+    """Aggregate per-episode metric dicts with means and confidence intervals.
+
+    Args:
+        per_ep: list of metric dicts as produced by :func:`compute_metrics`,
+            one per Monte Carlo episode.
+        confidence: coverage probability for the intervals.
+
+    Returns:
+        ``{metric: confidence_interval(values)}`` for every metric key present
+        in the first episode dict.
+    """
+    if not per_ep:
+        return {}
+    out: dict[str, dict] = {}
+    for k in per_ep[0]:
+        out[k] = confidence_interval([m.get(k) for m in per_ep], confidence)
+    return out
+
+
+# ---------------------------------------------------------------------------
 # Mission Effectiveness Score (MES) with KPP gating
 # ---------------------------------------------------------------------------
 # Mirrors defence T&E practice: a system must first satisfy every Key

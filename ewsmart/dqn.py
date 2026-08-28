@@ -10,16 +10,23 @@ import numpy as np
 
 
 def _he(fan_in: int, fan_out: int, rng: np.random.Generator) -> np.ndarray:
-    return rng.normal(0.0, np.sqrt(2.0 / fan_in), size=(fan_in, fan_out))
+    return rng.normal(0.0, np.sqrt(2.0 / fan_in),
+                      size=(fan_in, fan_out)).astype(np.float32)
 
 
 class MLP:
-    """Two-hidden-layer ReLU network with a linear head."""
+    """Two-hidden-layer ReLU network with a linear head.
+
+    Weights are kept in ``float32`` throughout: the state vector produced by
+    ``build_state`` is already ``float32`` and the replay buffer stores
+    ``float32``, so single precision avoids per-matmul upcasts and roughly
+    halves the cost of the training step (the perf-critical path).
+    """
 
     def __init__(self, dims: tuple, seed: int = 0):
         rng = np.random.default_rng(seed)
         self.W = [_he(dims[i], dims[i + 1], rng) for i in range(len(dims) - 1)]
-        self.b = [np.zeros(d) for d in dims[1:]]
+        self.b = [np.zeros(d, dtype=np.float32) for d in dims[1:]]
 
     def forward(self, x: np.ndarray) -> np.ndarray:
         """Forward pass; returns activations of every layer."""
@@ -28,6 +35,17 @@ class MLP:
             acts.append(np.maximum(acts[-1] @ W + b, 0.0))
         acts.append(acts[-1] @ self.W[-1] + self.b[-1])
         return acts
+
+    def q_values(self, x: np.ndarray) -> np.ndarray:
+        """Greedy Q-values for one state (no activation bookkeeping).
+
+        Faster than :meth:`forward` for inference: avoids building the
+        per-layer activation list on every decision tick.
+        """
+        a = x
+        for W, b in zip(self.W[:-1], self.b[:-1]):
+            a = np.maximum(a @ W + b, 0.0)
+        return a @ self.W[-1] + self.b[-1]
 
     def copy_from(self, other: "MLP") -> None:
         """Hard-update weights from another network."""
@@ -80,17 +98,25 @@ class DQNAgent:
         lr: SGD learning rate.
         batch: replay minibatch size.
         target_sync: steps between hard target-network syncs.
+        train_every: run one gradient step every N observations (staggered
+            training keeps per-step decision latency low; N > 1 amortises
+            the replay update).
         eps_start/min/decay: epsilon-greedy schedule (decayed per episode).
     """
 
     def __init__(self, n_bands: int, state_dim: int, hidden=(64, 64),
                  gamma: float = 0.9, lr: float = 5e-4, batch: int = 32,
-                 target_sync: int = 400, eps_start: float = 0.30,
+                 target_sync: int = 400, train_every: int = 3,
+                 eps_start: float = 0.30,
                  eps_min: float = 0.10, eps_decay: float = 0.97, seed: int = 0):
+        if not isinstance(train_every, (int, np.integer)) or train_every < 1:
+            raise ValueError(f"train_every must be a positive integer, "
+                             f"got {train_every!r}")
         self.n_bands = n_bands
         self.state_dim = state_dim
         self.gamma, self.lr, self.batch = gamma, lr, batch
         self.target_sync = target_sync
+        self.train_every = int(train_every)
         self.eps, self.eps_min, self.eps_decay = eps_start, eps_min, eps_decay
         self.rng = np.random.default_rng(seed)
         self.q = MLP((state_dim, *hidden, n_bands), seed=seed)
@@ -110,16 +136,21 @@ class DQNAgent:
             bonus = 0.6 * np.sqrt(np.log(self.step_count + 2) / self.visit_counts)
             ucb = self.band_rewards / self.visit_counts + bonus
             return int(np.argmax(ucb))
-        q = self.q.forward(state[None, :])[-1][0]
+        q = self.q.q_values(state[None, :])[0]
         return int(np.argmax(q))
 
     def observe(self, s, a, r, s2, done: bool) -> None:
-        """Store one transition and run one training step when warm."""
+        """Store one transition and run one training step when warm.
+
+        Gradient steps are staggered (every ``train_every`` observations) to
+        keep the per-step decision latency under the real-time budget.
+        """
         self.buffer.add(s, a, r, s2, done)
         self.step_count += 1
         self.visit_counts[a] += 1
         self.band_rewards[a] += r
-        if len(self.buffer) >= self.batch:
+        if len(self.buffer) >= self.batch \
+                and self.step_count % self.train_every == 0:
             self._train_step()
         if self.step_count % self.target_sync == 0:
             self.target.copy_from(self.q)
@@ -165,7 +196,7 @@ class DQNAgent:
 
     def set_weights(self, w: dict) -> None:
         """Restore parameters from :meth:`get_weights` output."""
-        self.q.W = [np.asarray(x) for x in w["W"]]
-        self.q.b = [np.asarray(x) for x in w["b"]]
+        self.q.W = [np.asarray(x, dtype=np.float32) for x in w["W"]]
+        self.q.b = [np.asarray(x, dtype=np.float32) for x in w["b"]]
         self.target.copy_from(self.q)
         self.eps = w.get("eps", self.eps)

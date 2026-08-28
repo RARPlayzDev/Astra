@@ -12,8 +12,68 @@ import numpy as np
 from dataclasses import dataclass
 
 from .config import ScenarioConfig
+from .exceptions import (ConfigurationError, SimulationBoundsError,
+                         InvalidBandError)
 
 KINDS = ("stationary", "agile", "periodic", "spatial", "evasive")
+
+_INT_FIELDS = ("n_bands", "T", "seed", "n_stationary", "n_agile",
+               "n_periodic", "n_spatial", "n_evasive", "n_clutter")
+_RANGE_FIELDS = ("period_range", "on_len_range", "hop_set_range",
+                 "dwell_range")
+
+
+def _validate_config(cfg: ScenarioConfig) -> None:
+    """Runtime validation of a scenario configuration.
+
+    Raises:
+        ConfigurationError: if any field falls outside its documented domain.
+    """
+    def _is_int(v) -> bool:
+        return isinstance(v, (int, np.integer)) and not isinstance(v, bool)
+
+    for f in _INT_FIELDS:
+        v = getattr(cfg, f, None)
+        if v is None:
+            continue
+        if not _is_int(v) or v < 0:
+            raise ConfigurationError(
+                f"ScenarioConfig.{f} must be a non-negative integer, got {v!r}")
+    if cfg.n_bands < 1:
+        raise ConfigurationError(
+            f"ScenarioConfig.n_bands must be >= 1, got {cfg.n_bands}")
+    if cfg.T < 1:
+        raise ConfigurationError(f"ScenarioConfig.T must be >= 1, got {cfg.T}")
+    for f in ("sens_db", "snr_mean_db", "freq_min_mhz", "freq_max_mhz"):
+        v = float(getattr(cfg, f))
+        if not np.isfinite(v):
+            raise ConfigurationError(f"ScenarioConfig.{f} must be finite")
+    for f in ("snr_std_db", "noise_floor_scale"):
+        v = float(getattr(cfg, f))
+        if not np.isfinite(v) or v < 0:
+            raise ConfigurationError(
+                f"ScenarioConfig.{f} must be a finite non-negative number, "
+                f"got {v!r}")
+    if cfg.freq_max_mhz <= cfg.freq_min_mhz:
+        raise ConfigurationError(
+            "ScenarioConfig.freq_max_mhz must exceed freq_min_mhz "
+            f"(got {cfg.freq_min_mhz} .. {cfg.freq_max_mhz})")
+    for f in _RANGE_FIELDS:
+        r = getattr(cfg, f)
+        if (not isinstance(r, (tuple, list)) or len(r) != 2
+                or not _is_int(r[0]) or not _is_int(r[1])
+                or r[0] < 1 or r[0] > r[1]):
+            raise ConfigurationError(
+                f"ScenarioConfig.{f} must be a (lo, hi) pair of integers "
+                f"with 1 <= lo <= hi, got {r!r}")
+    # Forward compatibility: any probability-like field must lie in [0, 1].
+    for f in cfg.__dataclass_fields__:
+        if f.endswith("_prob"):
+            v = float(getattr(cfg, f))
+            if not np.isfinite(v) or not 0.0 <= v <= 1.0:
+                raise ConfigurationError(
+                    f"ScenarioConfig.{f} is a probability and must lie in "
+                    f"[0.0, 1.0], got {v!r}")
 
 
 @dataclass(frozen=True)
@@ -55,6 +115,33 @@ class EmitterSpec:
     pri_us: float = 100.0
     pw_us: float = 1.0
 
+    def __post_init__(self) -> None:
+        if self.kind not in KINDS:
+            raise ConfigurationError(
+                f"EmitterSpec.kind must be one of {KINDS}, got {self.kind!r}")
+        if not isinstance(self.eid, int) or self.eid < 0:
+            raise ConfigurationError(
+                f"EmitterSpec.eid must be a non-negative integer, got {self.eid!r}")
+        if not (isinstance(self.home_band, (int, np.integer))
+                and self.home_band >= 0):
+            raise ConfigurationError(
+                f"EmitterSpec.home_band must be a non-negative integer, "
+                f"got {self.home_band!r}")
+        if not np.isfinite(self.snr_db):
+            raise ConfigurationError(
+                f"EmitterSpec(eid={self.eid}).snr_db must be finite, "
+                f"got {self.snr_db!r}")
+        if self.period < 1 or self.on_len < 1 or self.dwell < 1:
+            raise ConfigurationError(
+                f"EmitterSpec(eid={self.eid}) period/on_len/dwell must be >= 1 "
+                f"(got period={self.period}, on_len={self.on_len}, "
+                f"dwell={self.dwell})")
+        for b in self.hop_set:
+            if not isinstance(b, (int, np.integer)) or b < 0:
+                raise ConfigurationError(
+                    f"EmitterSpec(eid={self.eid}).hop_set contains an invalid "
+                    f"band index {b!r}")
+
 
 def _band_to_freq(band: int, n_bands: int, fmin: float, fmax: float) -> float:
     return fmin + (fmax - fmin) * (band + 0.5) / n_bands
@@ -66,6 +153,7 @@ class RFEnvironment:
     def __init__(self, config: ScenarioConfig | None = None, **overrides):
         cfg = (config or ScenarioConfig()).scaled(**overrides) if overrides or config \
             else ScenarioConfig()
+        _validate_config(cfg)
         self.cfg = cfg
         self.n_bands = cfg.n_bands
         self.T = cfg.T
@@ -206,7 +294,16 @@ class RFEnvironment:
         protocol: the emitter shifts its rotation phase or swaps to a new
         frequency hop-set.  The band sequence is dynamically overwritten from
         ``t`` onward to reflect the new behaviour.
+
+        Raises:
+            SimulationBoundsError: if ``eid`` or ``t`` is out of range.
         """
+        if not 0 <= eid < len(self.emitters):
+            raise SimulationBoundsError(
+                f"emitter id {eid!r} out of range [0, {len(self.emitters)})")
+        if not 0 <= t < self.T:
+            raise SimulationBoundsError(
+                f"time slot {t!r} out of range [0, {self.T})")
         spec = self.emitters[eid]
         if spec.kind != "evasive":
             return
@@ -250,16 +347,48 @@ class RFEnvironment:
         self.occupancy[self.band_seq[rows, cols], cols] = 1
 
     def emitters_at(self, band: int, t: int) -> list[EmitterSpec]:
-        """Return emitters transmitting in ``band`` at slot ``t``."""
+        """Return emitters transmitting in ``band`` at slot ``t``.
+
+        Raises:
+            InvalidBandError: if ``band`` is outside ``[0, n_bands)``.
+            SimulationBoundsError: if ``t`` is outside ``[0, T)``.
+        """
+        if not 0 <= band < self.n_bands:
+            raise InvalidBandError(
+                f"band {band!r} out of range [0, {self.n_bands})")
+        if not 0 <= t < self.T:
+            raise SimulationBoundsError(
+                f"time slot {t!r} out of range [0, {self.T})")
         col = self.band_seq[:, t]
         return [self.emitters[i] for i in np.flatnonzero(col == band)]
 
     def present(self, band: int, t: int) -> bool:
-        """Whether any emitter transmits in ``band`` at slot ``t``."""
+        """Whether any emitter transmits in ``band`` at slot ``t``.
+
+        Raises:
+            InvalidBandError: if ``band`` is outside ``[0, n_bands)``.
+            SimulationBoundsError: if ``t`` is outside ``[0, T)``.
+        """
+        if not 0 <= band < self.n_bands:
+            raise InvalidBandError(
+                f"band {band!r} out of range [0, {self.n_bands})")
+        if not 0 <= t < self.T:
+            raise SimulationBoundsError(
+                f"time slot {t!r} out of range [0, {self.T})")
         return bool((self.band_seq[:, t] == band).any())
 
     def next_on_start(self, eid: int, after_t: int) -> int | None:
-        """Next rising edge of emitter ``eid``'s transmission after ``after_t``."""
+        """Next rising edge of emitter ``eid``'s transmission after ``after_t``.
+
+        Raises:
+            SimulationBoundsError: if ``eid`` or ``after_t`` is out of range.
+        """
+        if not 0 <= eid < len(self.emitters):
+            raise SimulationBoundsError(
+                f"emitter id {eid!r} out of range [0, {len(self.emitters)})")
+        if not 0 <= after_t < self.T:
+            raise SimulationBoundsError(
+                f"time slot {after_t!r} out of range [0, {self.T})")
         row = self.band_seq[eid]
         band = self.emitters[eid].home_band
         prev = row[after_t] == band if after_t < self.T else False

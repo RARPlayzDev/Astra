@@ -97,6 +97,118 @@ def test_evaluation_pipeline_runs():
     assert all(np.isfinite(m["avg_reward"]) for m in res.values())
 
 
+# ---------------------------------------------------------------------------
+# Hardening: phase-lock & burst-camping must never stall on pure clutter
+# ---------------------------------------------------------------------------
+
+import time as _time
+
+from ewsmart.config import ScenarioConfig
+from ewsmart.receiver import DwellResult
+
+
+def _noise_env(n_bands=8, T=1500, seed=11):
+    """Environment with zero emitters: only receiver false alarms remain."""
+    cfg = ScenarioConfig(n_bands=n_bands, T=T, seed=seed, n_stationary=0,
+                         n_agile=0, n_periodic=0, n_spatial=0, n_clutter=0)
+    return RFEnvironment(cfg)
+
+
+def test_smartscan_never_locks_onto_pure_noise():
+    env = _noise_env()
+    s = SmartScanScheduler(env.n_bands, seed=12)
+    tr = run_episode(env, s, seed=13)
+    assert s.est == {}, "phase-lock acquired on a scene with no emitters"
+    assert not any(tr.predictions), "predicted ON on a scene with no emitters"
+    assert s.persistent == set()
+
+
+def test_smartscan_terminates_on_adversarial_random_noise():
+    """Feeding 50% random detection noise must neither hang nor corrupt state.
+
+    Random SNR/AOA fingerprints make every cluster tiny and every period
+    estimate spurious; the scheduler must keep selecting valid bands and
+    finish all 5000 updates within a sane wall-clock budget.
+    """
+    rng = np.random.default_rng(0)
+    s = SmartScanScheduler(8, seed=1)
+    s.reset(horizon=5000)
+    t0 = _time.perf_counter()
+    for t in range(5000):
+        b = s.select(t)
+        hit = bool(rng.random() < 0.5)
+        dets = ((10.0 + rng.normal(0, 0.1), rng.uniform(0, 360)),) if hit else ()
+        res = DwellResult(band=b, t=t, hit=hit or bool(rng.random() < 1e-3),
+                          false_alarm=False, snr_db=10.0 if hit else -np.inf,
+                          truth_present=hit, detections=dets)
+        s.update(t, b, res, 0.3 if hit else -0.05)
+        assert 0 <= b < 8
+    elapsed = _time.perf_counter() - t0
+    assert elapsed < 30.0, f"5000 noisy updates took {elapsed:.1f}s (stall?)"
+
+
+def _hit_res(band, t, snr=9.0, aoa=30.0):
+    return DwellResult(band=band, t=t, hit=True, false_alarm=False,
+                       snr_db=snr, truth_present=True,
+                       detections=((snr, aoa),))
+
+
+def test_burst_camp_arms_and_expires():
+    """Two isolated, fingerprint-distinct detections arm a burst; it expires."""
+    s = SmartScanScheduler(8, seed=3)
+    s.reset(horizon=2000)
+    # First isolated detection: no burst yet (single stray hit).
+    s.update(100, 5, _hit_res(5, 100, snr=12.0, aoa=45.0), 0.3)
+    assert 5 not in s.burst, "single stray detection must not arm a burst"
+    # Second isolated detection on the same stream (neighbouring fingerprint
+    # bucket): burst camping arms through the emitter's next cycle.
+    s.update(200, 5, _hit_res(5, 200, snr=12.6, aoa=45.0), 0.3)
+    assert 5 in s.burst, "two isolated detections should arm burst camping"
+    # During the burst window (past recon) select must camp on band 5.
+    s.recon_steps = 0
+    s.explore_eps = 0.0
+    s.exploit_ramp = 0.0
+    assert s.select(201) == 5
+    # After the burst deadline the camp is dropped.
+    b = s.select(200 + s.burst_horizon + 1)
+    assert b != 5 or 5 in s.est
+
+
+def test_burst_camp_never_diverted_by_dense_noise():
+    """Dense multi-window activity blacklists the stream instead of camping."""
+    s = SmartScanScheduler(8, seed=4)
+    s.reset(horizon=2000)
+    for t in (100, 110, 120, 130, 140, 150, 160):
+        s.update(t, 2, _hit_res(2, t, snr=9.0, aoa=30.0), 0.3)
+    assert 2 in s.persistent
+    assert 2 not in s.burst
+    assert 2 not in s.est, "dense always-on clutter must not be phase-locked"
+
+
+def test_cluster_hits_vectorised_matches_reference():
+    """The NumPy-vectorised clustering matches the naive reference splitter."""
+    rng = np.random.default_rng(9)
+    pts = [(float(t), float(rng.normal(10, 4)), float(rng.uniform(0, 360)))
+           for t in range(120)]
+    clusters = SmartScanScheduler._cluster_hits(pts)
+    # reference implementation
+    pts_sorted = sorted(pts, key=lambda p: p[1])
+    ref, cur = [], [pts_sorted[0]]
+    for p in pts_sorted[1:]:
+        r = cur[-1]
+        same = (abs(p[1] - r[1]) <= 1.5
+                and abs((p[2] - r[2] + 180.0) % 360.0 - 180.0) <= 12.0)
+        if same:
+            cur.append(p)
+        else:
+            ref.append(cur)
+            cur = [p]
+    ref.append(cur)
+    assert clusters == ref
+    assert SmartScanScheduler._cluster_hits([]) == []
+    assert SmartScanScheduler._cluster_hits([pts[0]]) == [[pts[0]]]
+
+
 if __name__ == "__main__":
     fns = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     for fn in fns:

@@ -40,6 +40,13 @@ results/
 results.json
 .scenario_cache/
 
+# ── Test / coverage artifacts ──────────────────────────────────────────
+.coverage
+coverage.xml
+htmlcov/
+.pytest_cache/
+ewsmart.db
+
 # ── Installer / binaries ───────────────────────────────────────────────
 installer/*.exe
 installer/*.msi
