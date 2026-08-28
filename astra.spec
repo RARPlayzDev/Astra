@@ -50,6 +50,7 @@ exe = EXE(
     exclude_binaries=True,
     name="ASTRA",
     icon="assets/astra.ico",
+    version="tools/version_info.txt",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -64,5 +65,3 @@ coll = COLLECT(
     upx=False,
     name="ASTRA",
 )
-
-

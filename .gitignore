@@ -52,6 +52,10 @@ installer/*.exe
 installer/*.msi
 website/public/*.exe
 
+# ── Signing certificates (NEVER commit) ──────────────────────────────
+*.pfx
+*.p12
+
 # ── Freebuff / local ───────────────────────────────────────────────────
 .freebuff/
 .streamlit/
