@@ -674,7 +674,7 @@ export default function Console() {
         </p>
       </div>
       <footer className="site"><div className="wrap">
-        <p>ASTRA v1.0.0 - SIH 2026 prototype. In-browser tester; not operational equipment.</p>
+        <p>ASTRA v2.0.0 - SIH 2026 prototype. In-browser tester; not operational equipment.</p>
       </div></footer>
     </>
   );

@@ -11,7 +11,8 @@ hiddenimports = (
        "ewsmart.schedulers", "ewsmart.periodic", "ewsmart.metrics",
        "ewsmart.runner", "ewsmart.live", "ewsmart.dataset",
        "ewsmart.persistence", "ewsmart.identification", "ewsmart.geo",
-       "ewsmart.sigtests", "ewsmart.multireceiver", "markdown"]
+       "ewsmart.sigtests", "ewsmart.multireceiver", "ewsmart.db",
+       "ewsmart.exceptions", "ewsmart.live", "markdown"]
 )
 
 webview_lib = []
@@ -35,7 +36,9 @@ a = Analysis(
     hookspath=[],
     runtime_hooks=[],
     excludes=["tkinter", "streamlit", "matplotlib", "pandas", "pytest",
-              "PyInstaller"],
+              "PyInstaller", "torch", "torchvision", "transformers",
+              "tokenizers", "datasets", "scipy", "sklearn", "pyarrow",
+              "dask", "PIL", "cv2", "tensorflow", "seaborn"],
     noarchive=False,
 )
 pyz = PYZ(a.pure)

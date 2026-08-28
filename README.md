@@ -79,7 +79,7 @@ python -m uvicorn server.api:app --port 8000
 
 ```powershell
 python desktop_qt.py
-# Pre-built installer available at: installer/ASTRA-Setup-1.0.0.exe
+# Pre-built installer available at: installer/ASTRA-Setup-2.0.0.exe
 ```
 
 ### Docker (One Command)

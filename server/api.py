@@ -25,10 +25,11 @@ from .sources import SourceHub
 
 APP_NAME = "ASTRA"
 APP_LONG = "Adaptive Spectrum Threat Recognition & Analysis"
-APP_VERSION = "1.0.0"
+APP_VERSION = "2.0.0"
 
 ROOT = Path(__file__).resolve().parent.parent
 RESULTS = ROOT / "results" / "suite_results.json"
+DB_PATH = ROOT / "ewsmart.db"
 FIGDIR = ROOT / "figures"
 SCENARIOS = ROOT / "scenarios"
 MODELS = ROOT / "models"
@@ -46,12 +47,84 @@ hub = SourceHub()
 ARENA_SCHEDULERS = ("smart-scan", "openloop-sequential")
 
 
-def _load_results() -> dict:
+_EMPTY_SECTIONS = {
+    "mission_effectiveness": None,
+    "significance": [],
+    "significance_gated_mes": [],
+    "learning": {},
+    "identification": {},
+    "roc": {},
+    "sensitivity": {},
+    "ablation": {},
+    "multireceiver": {},
+    "geolocation": {},
+}
+
+
+def _load_file_results() -> dict:
+    """Experiment-suite payload from ``results/suite_results.json`` (or {})."""
     if not RESULTS.exists():
-        raise HTTPException(404, "results/suite_results.json not found - "
-                                 "run `python -m ewsmart.experiments --suite full`")
+        return {}
     with open(RESULTS, "r", encoding="utf-8") as f:
         return json.load(f)
+
+
+def _db_mc_results() -> dict | None:
+    """Monte-Carlo aggregates from the SQLite metrics database.
+
+    Returns ``{"monte_carlo": ..., "monte_carlo_means": ...}`` shaped exactly
+    like the payload the experiment suite produces, or ``None`` when the
+    database has no aggregate rows (e.g. ``ewsmart-run --trials`` was never
+    executed or no run was finalised).  Reading is best-effort: any storage
+    error degrades to ``None`` so the endpoint never 500s on a partial DB.
+    """
+    if not DB_PATH.exists():
+        return None
+    try:
+        from ewsmart.db import MetricsDB
+        with MetricsDB(DB_PATH) as db:
+            row = db.conn.execute(
+                "SELECT id FROM runs ORDER BY id DESC LIMIT 1").fetchone()
+            if row is None:
+                return None
+            rows = db.aggregates(int(row[0]))
+    except Exception:
+        return None
+    if not rows:
+        return None
+    mc: dict[str, dict] = {}
+    for r in rows:
+        half = None
+        if r["ci_low"] is not None and r["ci_high"] is not None:
+            half = round((r["ci_high"] - r["ci_low"]) / 2.0, 6)
+        mc.setdefault(r["scheduler"], {})[r["metric"]] = {
+            "mean": r["mean"], "ci95": half}
+    means = {n: {k: v["mean"] for k, v in d.items()} for n, d in mc.items()}
+    return {"monte_carlo": mc, "monte_carlo_means": means}
+
+
+@app.get("/api/summary")
+def summary() -> dict:
+    """Benchmark payload for the dashboard.
+
+    Monte-Carlo means/intervals are served from the SQLite metrics database
+    (the canonical store for ``ewsmart-run --trials``); the sections the
+    database does not contain (mission effectiveness, significance, learning,
+    ROC, ...) still come from ``results/suite_results.json`` when present.
+    Every section key is always returned so the dashboard is never stale.
+    """
+    db_mc = _db_mc_results()
+    out: dict = {}
+    if db_mc:
+        out["monte_carlo"] = db_mc["monte_carlo"]
+        out["monte_carlo_means"] = db_mc["monte_carlo_means"]
+    file_data = _load_file_results()
+    if not db_mc:  # fall back to the experiment-suite monte_carlo
+        out["monte_carlo"] = file_data.get("monte_carlo", {})
+        out["monte_carlo_means"] = file_data.get("monte_carlo_means", {})
+    for key, empty in _EMPTY_SECTIONS.items():
+        out[key] = file_data.get(key, empty)
+    return out
 
 
 def _jsonable(o):
@@ -74,26 +147,6 @@ def meta() -> dict:
     dist_ok = (DIST / "index.html").exists()
     return {"app": APP_NAME, "long": APP_LONG, "version": APP_VERSION,
             "manual_available": DOCS.exists(), "frontend_built": dist_ok}
-
-
-@app.get("/api/summary")
-def summary() -> dict:
-    data = _load_results()
-    mc = data.get("monte_carlo", {})
-    means = {n: {k: v.get("mean") for k, v in d.items()} for n, d in mc.items()}
-    return {
-        "monte_carlo_means": means,
-        "monte_carlo": mc,
-        "mission_effectiveness": data.get("mission_effectiveness"),
-        "significance": data.get("significance", []),
-        "significance_gated_mes": data.get("significance_gated_mes", []),
-        "learning": data.get("learning", {}),
-        "identification": data.get("identification", {}),
-        "ablation": data.get("ablation", {}),
-        "multireceiver": data.get("multireceiver", {}),
-        "geolocation": data.get("geolocation", {}),
-        "roc": data.get("roc", {}),
-    }
 
 
 @app.get("/api/figures")
@@ -387,8 +440,13 @@ def diagnostics() -> dict:
         return res.band == 0, f"environment+receiver boot ok ({env.n_bands} bands)"
 
     def c_results():
-        d = _load_results()
-        return "monte_carlo" in d, f"{len(d)} result sections"
+        d = _load_file_results()
+        has_db = _db_mc_results() is not None
+        present = has_db or "monte_carlo" in d
+        detail = f"{len(d)} file result sections"
+        if has_db:
+            detail += "; sqlite MC aggregates present"
+        return present, detail
 
     def c_figures():
         n = len(list(FIGDIR.glob("*.png")))

@@ -11,7 +11,7 @@
 
 ## Installer (recommended)
 
-1. Download `ASTRA-Setup-1.0.0.exe` from the releases page.
+1. Download `ASTRA-Setup-2.0.0.exe` from the releases page.
 2. Run the installer. ASTRA installs to `C:\Program Files\ASTRA\`.
 3. Double-click **ASTRA.exe** to launch.
 

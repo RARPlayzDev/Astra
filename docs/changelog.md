@@ -1,5 +1,20 @@
 # Changelog
 
+## v2.0.0 (2026-08-28)
+
+### Added
+- **SQLite metrics database**: `ewsmart-run --trials` now streams every trial into `ewsmart.db` (`runs`/`trials`/`aggregates` tables) with mean, SEM and 95% confidence intervals per scheduler/metric
+- **`/api/summary` serves the live database**: Monte-Carlo dashboard data now comes from the SQLite aggregates (latest run), falling back to `results/suite_results.json` for the sections the DB does not hold (mission effectiveness, significance, learning, ROC, ...)
+
+### Fixed
+- **Desktop Help menu (F1)**: Qt app navigated to `/docs/manual.md` (404); now opens the manual at `/manual`
+- **Confidence intervals across Monte Carlo runs** centralised in `metrics.confidence_interval`
+
+### Technical
+- Runtime input validation with branded `EwsmartError` exceptions throughout the scheduler/environment APIs
+- Hard per-decision latency budget enforced (`< 1 ms`) by the performance test suite
+- 221 automated tests passing at 92% coverage
+
 ## v1.0.0 (2026-08-27)
 
 ### Added

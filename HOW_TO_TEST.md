@@ -94,7 +94,7 @@ service simultaneously and confirm both stay in sync.
 
 `powershell
 powershell -File tools\build_exe.ps1        # -> dist\ASTRA\ASTRA.exe (folder bundle)
-# compile installer\ASTRA-Setup-1.0.0.exe with Inno Setup 6 (winget install JRSoftware.InnoSetup)
+# compile installer\ASTRA-Setup-2.0.0.exe with Inno Setup 6 (winget install JRSoftware.InnoSetup)
 & "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe" installer\astra_installer.iss
 ```
 

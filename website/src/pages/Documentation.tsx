@@ -84,7 +84,7 @@ export default function Documentation() {
           <Logo size={22} />
           <span style={{ fontFamily: "monospace", fontWeight: 700, color: "#ccc", letterSpacing: 2, fontSize: 13 }}>ASTRA</span>
         </a>
-        <span style={{ color: "#858585", fontSize: 13 }}>Documentation &mdash; v1.0.0</span>
+        <span style={{ color: "#858585", fontSize: 13 }}>Documentation &mdash; v2.0.0</span>
         <div style={{ marginLeft: "auto", display: "flex", gap: 10 }}>
           <a href="/docs/manual.md" download style={{
             padding: "6px 14px", fontSize: 12, border: "1px solid #3c3c3c",

@@ -201,9 +201,9 @@ export default function Home() {
             <div className="dl-grid">
               <ol className="dl-steps">
                 <li>
-                  Download <b>ASTRA-Setup-1.0.0.exe</b>{" "}
+                  Download <b>ASTRA-Setup-2.0.0.exe</b>{" "}
                   <a
-                    href="/ASTRA-Setup-1.0.0.exe"
+                    href="/ASTRA-Setup-2.0.0.exe"
                     download
                     style={{ color: "var(--accent)", textDecoration: "underline" }}
                   >

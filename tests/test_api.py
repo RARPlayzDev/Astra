@@ -3,6 +3,8 @@ import pathlib
 import sys
 import time
 
+import pytest
+
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 
 try:
@@ -34,6 +36,35 @@ def test_summary_shape():
         me = data["mission_effectiveness"]
         assert me["ranking"][0] == "smart-scan"
         assert me["scores"]["smart-scan"]["mission_capable"] is True
+
+
+def test_summary_serves_db_aggregates(tmp_path, monkeypatch):
+    """/api/summary must source Monte-Carlo data from the SQLite metrics DB."""
+    if not _HAS_API:
+        return _skip()
+    import server.api as api
+    from ewsmart.db import MetricsDB
+    dbp = pathlib.Path(tmp_path) / "agg.db"
+    with MetricsDB(dbp) as db:
+        rid = db.start_run(kind="monte-carlo")
+        db.add_trial(rid, "smart-scan", 0,
+                     {"avg_reward": 0.7, "total_reward": 1.0},
+                     n_bands=6, T=100, seed=1)
+        db.add_trial(rid, "smart-scan", 1,
+                     {"avg_reward": 0.9, "total_reward": 1.8},
+                     n_bands=6, T=100, seed=2)
+        db.finalize_run(rid, ["smart-scan"])
+    monkeypatch.setattr(api, "DB_PATH", dbp)
+    monkeypatch.setattr(api, "RESULTS",
+                        pathlib.Path(tmp_path) / "missing" / "suite_results.json")
+    r = client.get("/api/summary")
+    assert r.status_code == 200          # no 404 / 500 even without the file
+    data = r.json()
+    mc = data["monte_carlo"]["smart-scan"]["avg_reward"]
+    assert mc["mean"] == pytest.approx(0.8)
+    assert mc["ci95"] is not None and mc["ci95"] > 0
+    assert data["monte_carlo_means"]["smart-scan"]["avg_reward"] == pytest.approx(0.8)
+    assert data["mission_effectiveness"] is None  # graceful empty section
 
 
 def test_figures_endpoint():

@@ -48,7 +48,7 @@ export function Nav() {
           <a href="#results">Results</a>
           <a href="/console.html">Console</a>
           <a href="/documentation.html">Docs</a>
-          <a className="nav-download" href="/ASTRA-Setup-1.0.0.exe" download>Download</a>
+          <a className="nav-download" href="/ASTRA-Setup-2.0.0.exe" download>Download</a>
         </div>
       </div>
     </nav>
@@ -70,7 +70,7 @@ export function Footer() {
         <h4>Product</h4>
         <a href="/console.html">Console</a>
         <a href="/documentation.html">Documentation</a>
-        <a href="/ASTRA-Setup-1.0.0.exe" download>Download</a>
+        <a href="/ASTRA-Setup-2.0.0.exe" download>Download</a>
         <a href="#results">Results</a>
       </div>
       <div className="footer-col">
