@@ -139,8 +139,11 @@ class RFEnvironment:
         if kind == "stationary":
             return EmitterSpec(eid, kind, band, **common)
         if kind == "agile":
-            k = int(self.rng.integers(hlo, min(hhi, c.n_bands) + 1))
-            k = max(2, k)
+            if c.n_bands < 2:
+                return EmitterSpec(eid, kind, band, hop_set=(band,), dwell=int(self.rng.integers(dlo, dhi + 1)), **common)
+            hi_k = max(hlo + 1, min(hhi, c.n_bands) + 1)
+            k = int(self.rng.integers(hlo, hi_k))
+            k = max(2, min(k, c.n_bands))
             hops = tuple(sorted(int(x) for x in self.rng.choice(c.n_bands, size=k, replace=False)))
             return EmitterSpec(eid, kind, hops[0], hop_set=hops,
                                dwell=int(self.rng.integers(dlo, dhi + 1)), **common)
@@ -158,6 +161,10 @@ class RFEnvironment:
         if kind == "evasive":
             # Evasive emitters behave like periodic but with a hop set they
             # can switch to when evading.
+            if c.n_bands < 2:
+                return EmitterSpec(eid, kind, band, hop_set=(band,),
+                                   period=int(self.rng.integers(lo, min(hi, 100))),
+                                   on_len=int(self.rng.integers(olo, ohi + 1)), dwell=1, **common)
             k = max(2, int(self.rng.integers(3, min(6, c.n_bands) + 1)))
             hops = tuple(sorted(int(x) for x in self.rng.choice(c.n_bands, size=k, replace=False)))
             period = int(self.rng.integers(lo, min(hi, 100)))

@@ -12,7 +12,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/python-≥3.10-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python" />
   <img src="https://img.shields.io/badge/license-MIT-22c55e?style=for-the-badge" alt="License" />
-  <img src="https://img.shields.io/badge/tests-57_passing-10b981?style=for-the-badge" alt="Tests" />
+  <img src="https://img.shields.io/badge/tests-62_passing-10b981?style=for-the-badge" alt="Tests" />
   <img src="https://img.shields.io/badge/docker-ready-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" />
   <img src="https://img.shields.io/badge/SIH_2026-submission-f59e0b?style=for-the-badge" alt="SIH 2026" />
 </p>
@@ -57,7 +57,7 @@ git clone https://github.com/RARPlayzDev/Astra.git
 cd Astra
 
 # Install core dependencies
-pip install -e ".[dash,api,dev]"
+pip install -e ".[api,dev]"
 
 # Run a single episode with all schedulers
 python -m ewsmart.runner --scenario scenarios/demo.json --save-dir models --json-out results.json
@@ -65,8 +65,6 @@ python -m ewsmart.runner --scenario scenarios/demo.json --save-dir models --json
 # Run the full Monte Carlo evaluation suite
 python -m ewsmart.experiments --suite full
 
-# Launch the Streamlit dashboard
-streamlit run dashboard.py
 ```
 
 ### React Command Centre
@@ -199,9 +197,6 @@ Following defence T&E practice — hard Key Performance Parameters gate first, t
 │  DESKTOP APP (Qt WebEngine)          │  WEBSITE (Vite + Vercel) │
 │  System tray · Native window         │  Docs · Console          │
 ├──────────────────────────────────────────────────────────────────┤
-│  STREAMLIT DASHBOARD (6 pages)                                   │
-│  Overview · Live Radar · Sim Lab · Benchmarks · Dataset · Models│
-├──────────────────────────────────────────────────────────────────┤
 │  LIVE INGESTION (simulated feed │ UDP bridge │ log tail)         │
 ├──────────────────────────────────────────────────────────────────┤
 │  EXPLOITATION (ID library matching │ AOA triangulation)          │
@@ -245,14 +240,14 @@ astra/
 │
 ├── frontend/                 # React + Vite command centre UI
 ├── website/                  # Presentation website (Vite + Vercel)
-├── dashboard.py              # Streamlit operations dashboard
+
 ├── desktop_qt.py             # Qt-based desktop application
 │
 ├── scenarios/                # JSON battle configurations
 ├── models/                   # Trained scheduler weights (.npz)
 ├── results/                  # Generated evaluation data
 ├── figures/                  # Publication-quality charts
-├── tests/                    # 57 automated tests
+├── tests/                    # 62 automated tests
 ├── tools/                    # Utilities
 │   ├── sdr_bridge.py         # UDP/CSV bridge for real SDR hardware
 │   ├── pdw_generator.py      # Synthetic PDW stream generator
@@ -295,7 +290,7 @@ Then select **UDP bridge (real hardware)** on the Live Radar page.
 |---|---|---|
 | **Desktop Application** | `dist/ASTRA/`, `installer/` | Native Windows app with system tray, WebView2, Start Menu entry |
 | **React Command Centre** | `frontend/` | Mission · Benchmarks · Live A/B Arena · Traceability |
-| **Streamlit Dashboard** | `dashboard.py` | 6-page operations dashboard with live radar & simulation lab |
+
 | **Presentation Website** | `website/` | Static site deployable to Vercel with documentation & console |
 | **Software Manual** | `docs/` | Complete A-Z documentation (VitePress) |
 
@@ -303,7 +298,7 @@ Then select **UDP bridge (real hardware)** on the Live Radar page.
 
 ## 🧪 Testing
 
-57 automated tests covering all layers of the system:
+62 automated tests covering all layers of the system:
 
 ```powershell
 # Run all tests
@@ -312,7 +307,7 @@ python -X utf8 tests/test_modules.py
 python -X utf8 tests/test_live.py
 python -X utf8 tests/test_mission.py
 python -X utf8 tests/test_api.py
-python -X utf8 tests/test_dashboard_ui.py
+python -X utf8 tests/test_software.py
 python -X utf8 tests/test_id_geo_stats.py
 python -X utf8 tests/test_software.py
 ```
@@ -324,7 +319,7 @@ python -X utf8 tests/test_software.py
 | `test_live.py` | Live radar streaming, UDP round-trip |
 | `test_mission.py` | KPP/MES scoring engine |
 | `test_api.py` | FastAPI endpoints + live arena |
-| `test_dashboard_ui.py` | Streamlit AppTest UI interactions |
+
 | `test_id_geo_stats.py` | Identification, geolocation, statistical tests |
 | `test_software.py` | JSON safety, model artifacts, engineering guarantees |
 

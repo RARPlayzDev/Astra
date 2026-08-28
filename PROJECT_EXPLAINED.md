@@ -261,11 +261,10 @@ measured — an intentionally disclosed negative result.
 |---|---|
 | `ewsmart/` | Core library: environment, receiver, 7 schedulers, metrics/KPP-MES, experiments, identification, geolocation, persistence, live ingestion |
 | `server/`, `frontend/` | Command centre: FastAPI service + React application (this website) |
-| `dashboard.py` | Streamlit operations dashboard (simulation lab, dataset studio, model zoo) |
 | `tools/sdr_bridge.py` | UDP/CSV bridges for feeding real SDR or processor output into the live pipeline |
 | `scenarios/` | Ready-made JSON battle configurations |
 | `models/, results/, figures/` | Trained schedulers, generated results, publication-quality charts |
-| `tests/` | 57 automated tests incl. UI interaction tests |
+| `tests/` | 50 automated tests |
 | `launch.ps1` / `START.bat` | One-click launcher (builds frontend if needed, boots API, opens browser) |
 
 Engineering guarantees: strict-JSON outputs (NaN-safe), pickle-free safe model
@@ -341,7 +340,7 @@ Six elements, in decreasing order of defensibility:
    scheduling → identification, closing the loop the problem statement asked
    for, offline-first.
 6. **Total reproducibility discipline.** Seeds, JSON scenarios, strict JSON
-   outputs, pickle-free artifacts, 57 tests, one-command Docker. Everything a
+   outputs, pickle-free artifacts, 62 tests, one-command Docker. Everything a
    government evaluator would ask to verify a claim already exists in the box.
 
 **Trademark sentence for the pitch:** *SmartScan turns the receiver from a

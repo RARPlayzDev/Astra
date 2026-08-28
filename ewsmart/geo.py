@@ -50,7 +50,9 @@ def triangulate(bearing_lines: list) -> tuple:
         th = np.radians(theta_deg)
         u = np.array([np.cos(th), np.sin(th)])
         d = np.array([x[0] - px, x[1] - py])
-        resid.append(abs(float(np.cross(u, d))))
+        u3 = np.array([np.cos(th), np.sin(th), 0.0])
+        d3 = np.array([x[0] - px, x[1] - py, 0.0])
+        resid.append(abs(float(np.linalg.norm(np.cross(u3, d3)))))
     rms = float(np.sqrt(np.mean(np.square(resid))))
     return float(x[0]), float(x[1]), rms
 

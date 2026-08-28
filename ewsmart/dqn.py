@@ -98,11 +98,18 @@ class DQNAgent:
         self.target.copy_from(self.q)
         self.buffer = ReplayBuffer(50000, state_dim)
         self.step_count = 0
+        self.visit_counts = np.ones(n_bands)
+        self.band_rewards = np.zeros(n_bands)
 
     def act(self, state: np.ndarray, greedy: bool = False) -> int:
-        """Epsilon-greedy action selection."""
+        """Epsilon-greedy with UCB warm-up before the replay buffer fills."""
         if not greedy and self.rng.random() < self.eps:
             return int(self.rng.integers(self.n_bands))
+        # Before enough experience, bias toward under-explored bands
+        if len(self.buffer) < self.batch:
+            bonus = 0.6 * np.sqrt(np.log(self.step_count + 2) / self.visit_counts)
+            ucb = self.band_rewards / self.visit_counts + bonus
+            return int(np.argmax(ucb))
         q = self.q.forward(state[None, :])[-1][0]
         return int(np.argmax(q))
 
@@ -110,7 +117,9 @@ class DQNAgent:
         """Store one transition and run one training step when warm."""
         self.buffer.add(s, a, r, s2, done)
         self.step_count += 1
-        if len(self.buffer) >= 500:
+        self.visit_counts[a] += 1
+        self.band_rewards[a] += r
+        if len(self.buffer) >= self.batch:
             self._train_step()
         if self.step_count % self.target_sync == 0:
             self.target.copy_from(self.q)
@@ -119,6 +128,8 @@ class DQNAgent:
         """Called at episode end: decay exploration and soft-sync target."""
         self.eps = max(self.eps_min, self.eps * self.eps_decay)
         self.target.soft_update(self.q, tau=0.05)
+        self.visit_counts = np.ones(self.n_bands)
+        self.band_rewards = np.zeros(self.n_bands)
 
     def _train_step(self) -> None:
         s, a, r, s2, d = self.buffer.sample(self.batch, self.rng)

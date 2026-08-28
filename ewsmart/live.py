@@ -6,7 +6,7 @@ warning receiver, a log file, or a UDP feed from a signal processor - can be
 plugged in.  Three source adapters are provided:
 
 * :class:`SimulatedLiveSource` - streams PDWs from a simulated environment
-  (demo mode, also used for the dashboard's live view).
+  (demo mode, also used for the command centre's live view).
 * :class:`UDPSource` - receives JSON PDWs on a UDP port (the recommended path
   for real radar/SDR front-ends; see ``tools/sdr_bridge.py``).
 * :class:`FileTailSource` - follows a growing JSONL/CSV log written by

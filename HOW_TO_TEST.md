@@ -17,7 +17,6 @@ python -X utf8 tests\test_id_geo_stats.py   # identification, geolocation, stati
 python -X utf8 tests\test_mission.py        # KPP gate + MES scoring engine
 python -X utf8 tests\test_software.py       # ASTRA app layer: sources, diagnostics, manual
 python -X utf8 tests\test_api.py            # API endpoints + live arena advance
-python -X utf8 tests\test_dashboard_ui.py   # Streamlit operations dashboard (AppTest)
 ```
 
 All must print `... passed`. If any fails, that is a real regression â€” stop and

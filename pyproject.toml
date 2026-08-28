@@ -11,7 +11,6 @@ requires-python = ">=3.10"
 dependencies = ["numpy>=1.26", "matplotlib>=3.8"]
 
 [project.optional-dependencies]
-dash = ["streamlit>=1.36"]
 hf = ["datasets>=2.19"]
 api = ["fastapi>=0.110", "uvicorn>=0.29"]
 dev = ["pytest>=8"]

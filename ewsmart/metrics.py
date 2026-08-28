@@ -194,13 +194,13 @@ def _mes_components(m: dict, set_max: dict) -> dict:
     rew_max = max(set_max.get("avg_reward", 0.0), 1e-12)
     err_max = max(set_max.get("avg_intercept_time_error", 0.0), 1e-12)
     return {
-        "Pd (threat coverage)": float(m["threat_intercept_ratio"]),
-        "1 - Pfa (rel.)": float(1.0 - m["false_alarm_rate"] / far_max),
-        "Avg intercept rate": float(m["intercept_rate"]),
-        "Reward (rel.)": float(max(0.0, m["avg_reward"]) / rew_max),
-        "Prediction accuracy": float(m["pct_correct_predictions"]),
+        "Pd (threat coverage)": float(m.get("threat_intercept_ratio", 0.0)),
+        "1 - Pfa (rel.)": float(1.0 - m.get("false_alarm_rate", 0.0) / far_max),
+        "Avg intercept rate": float(m.get("intercept_rate", 0.0)),
+        "Reward (rel.)": float(max(0.0, m.get("avg_reward", 0.0)) / rew_max),
+        "Prediction accuracy": float(m.get("pct_correct_predictions", 0.0)),
         "Intercept-time error (rel.)":
-            float(max(0.0, 1.0 - m["avg_intercept_time_error"] / err_max)),
+            float(max(0.0, 1.0 - m.get("avg_intercept_time_error", 0.0) / err_max)),
     }
 
 
