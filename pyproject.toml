@@ -21,3 +21,6 @@ ewsmart-experiments = "ewsmart.experiments:main"
 
 [tool.setuptools.packages.find]
 include = ["ewsmart*", "server*"]
+
+[tool.vercel]
+entrypoint = "server.api:app"
