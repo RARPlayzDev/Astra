@@ -12,8 +12,9 @@
 <p align="center">
   <img src="https://img.shields.io/badge/python-≥3.10-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python" />
   <img src="https://img.shields.io/badge/license-MIT-22c55e?style=for-the-badge" alt="License" />
-  <img src="https://img.shields.io/badge/tests-62_passing-10b981?style=for-the-badge" alt="Tests" />
+  <img src="https://img.shields.io/badge/tests-222_passing-10b981?style=for-the-badge&label=tests" alt="Tests" />
   <img src="https://img.shields.io/badge/docker-ready-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" />
+  <img src="https://img.shields.io/badge/installer-131_MB-8b5cf6?style=for-the-badge" alt="Installer" />
   <img src="https://img.shields.io/badge/SIH_2026-submission-f59e0b?style=for-the-badge" alt="SIH 2026" />
 </p>
 
@@ -23,7 +24,7 @@
   <a href="#-how-smartscan-works">SmartScan</a> •
   <a href="#-results">Results</a> •
   <a href="#-architecture">Architecture</a> •
-  <a href="#-documentation">Docs</a>
+  <a href="#-file-formats">Docs</a>
 </p>
 
 ---
@@ -247,7 +248,7 @@ astra/
 ├── models/                   # Trained scheduler weights (.npz)
 ├── results/                  # Generated evaluation data
 ├── figures/                  # Publication-quality charts
-├── tests/                    # 62 automated tests
+├── tests/                    # 222 automated tests
 ├── tools/                    # Utilities
 │   ├── sdr_bridge.py         # UDP/CSV bridge for real SDR hardware
 │   ├── pdw_generator.py      # Synthetic PDW stream generator
@@ -288,17 +289,16 @@ Then select **UDP bridge (real hardware)** on the Live Radar page.
 
 | Deliverable | Location | Description |
 |---|---|---|
-| **Desktop Application** | `dist/ASTRA/`, `installer/` | Native Windows app with system tray, WebView2, Start Menu entry |
+| **Desktop Application** | `dist/ASTRA/`, `installer/` | Native Windows app (~131 MB), signed by Team MCS |
 | **React Command Centre** | `frontend/` | Mission · Benchmarks · Live A/B Arena · Traceability |
-
 | **Presentation Website** | `website/` | Static site deployable to Vercel with documentation & console |
-| **Software Manual** | `docs/` | Complete A-Z documentation (VitePress) |
+| **Software Manual** | `docs/` | Complete A-Z documentation, viewable in-app |
 
 ---
 
 ## 🧪 Testing
 
-62 automated tests covering all layers of the system:
+222 automated tests covering all layers of the system:
 
 ```powershell
 # Run all tests

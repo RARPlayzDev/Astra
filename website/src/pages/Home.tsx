@@ -17,7 +17,7 @@ const TECH_STACK = [
   { name: "Holm correction", sub: "Statistical rigor" },
   { name: "Cooperative AOA", sub: "Multi-receiver" },
   { name: "Seed reproducibility", sub: "Deterministic results" },
-  { name: "57 automated tests", sub: "CI quality gate" },
+  { name: "222 automated tests", sub: "CI quality gate" },
   { name: "SQLite", sub: "Local storage" },
   { name: "CI/CD", sub: "Automated builds" },
   { name: "Canvas API", sub: "Radar visualization" },
@@ -37,7 +37,7 @@ const FEATURES: [string, string, string][] = [
   ["●", "Emitter identification", "Intercepted streams fingerprinted against a JC Wise-class library; 100% accuracy on the reference episode."],
   ["◆", "Multi-receiver geolocation", "Cooperative AOA triangulation; CEP50 improves from 3.2 km to 1.7 km with two to four receivers."],
   ["◐", "Live paired demonstration", "Two receivers fly identical battlefields side by side — strategy is the only variable."],
-  ["◎", "Reproducible by construction", "Seed-defined scenarios, strict JSON outputs, 57 automated tests, one-command builds."],
+  ["◎", "Reproducible by construction", "Seed-defined scenarios, strict JSON outputs, 222 automated tests, one-command builds."],
 ];
 
 function useReveal() {

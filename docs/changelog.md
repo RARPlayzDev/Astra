@@ -36,7 +36,7 @@
 - `exploit_ramp`: 0.55 → 0.60 (steeper exploitation ramp)
 - `explore_eps`: 0.08 → 0.048 (halved random exploration)
 - Recency weight: 0.22 → 0.16 (less aggressive cold-band revisiting)
-- All 57 automated tests passing
+- All 222 automated tests passing
 
 ## v0.3.0 (2026-08-20)
 

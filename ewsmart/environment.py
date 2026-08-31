@@ -360,7 +360,12 @@ class RFEnvironment:
             raise SimulationBoundsError(
                 f"time slot {t!r} out of range [0, {self.T})")
         col = self.band_seq[:, t]
-        return [self.emitters[i] for i in np.flatnonzero(col == band)]
+        # Fast path: use numpy for the lookup, then list-comp for emitter access
+        matches = np.flatnonzero(col == band)
+        if len(matches) == 0:
+            return []
+        ems = self.emitters
+        return [ems[i] for i in matches]
 
     def present(self, band: int, t: int) -> bool:
         """Whether any emitter transmits in ``band`` at slot ``t``.

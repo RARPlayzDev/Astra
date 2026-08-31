@@ -66,6 +66,6 @@ features:
   </p>
   <p style="font-size: 0.9rem; color: var(--vp-c-text-3);">
     7 scheduling policies benchmarked · 200 held-out episodes · 95% confidence intervals
-    · p &lt; 1e-4 statistical significance · 57 automated tests
+    · p &lt; 1e-4 statistical significance · 222 automated tests
   </p>
 </div>

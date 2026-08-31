@@ -3,25 +3,57 @@
 # Build:  pyinstaller --noconfirm --clean astra.spec   ->  dist/ASTRA/ASTRA.exe
 from PyInstaller.utils.hooks import collect_submodules
 
+# Only collect submodules for packages we actually use
 hiddenimports = (
     collect_submodules("uvicorn")
     + collect_submodules("server")
-    + collect_submodules("webview")
     + ["ewsmart.config", "ewsmart.environment", "ewsmart.receiver",
        "ewsmart.schedulers", "ewsmart.periodic", "ewsmart.metrics",
        "ewsmart.runner", "ewsmart.live", "ewsmart.dataset",
        "ewsmart.persistence", "ewsmart.identification", "ewsmart.geo",
        "ewsmart.sigtests", "ewsmart.multireceiver", "ewsmart.db",
-       "ewsmart.exceptions", "ewsmart.live", "markdown"]
+       "ewsmart.exceptions", "markdown"]
 )
 
-webview_lib = []
-import os, glob
-for _p in glob.glob(os.path.join(os.path.dirname(__import__("webview").__file__), "lib", "*.dll")):
-    webview_lib.append((_p, "webview/lib"))
+# Aggressive exclusion of heavy unused packages
+EXCLUDES = [
+    # GUI frameworks we don't use
+    "tkinter", "webview", "webview.platforms",
+    # ML/DL frameworks (not used at runtime)
+    "torch", "torchvision", "torchaudio",
+    "transformers", "tokenizers", "sentencepiece",
+    "datasets", "huggingface_hub",
+    # Scientific libs we don't need in the EXE
+    "scipy", "sklearn", "scikit-learn",
+    "pandas", "dask",
+    # Image/video processing
+    "PIL", "cv2", "opencv-python",
+    # Visualization (not needed at runtime)
+    "matplotlib", "seaborn",
+    # Other unused
+    "pyarrow", "tensorflow", "keras",
+    "streamlit", "PyInstaller",
+    "pytest", "coverage",
+    "lxml", "bs4", "html5lib",
+    "cryptography", "cffi",
+    "notebook", "IPython", "ipykernel",
+    "pygments", "docutils", "sphinx",
+    "networkx", "sympy",
+    "dateutil", "tzdata",
+    # Redundant torch ecosystem
+    "filelock", "fsspec", "jinja2",
+    "mpmath", "networkx", "nvidia-cublas-cu12",
+    "nvidia-cuda-cupti-cu12", "nvidia-cuda-nvrtc-cu12",
+    "nvidia-cuda-runtime-cu12", "nvidia-cudnn-cu12",
+    "nvidia-cufft-cu12", "nvidia-curand-cu12",
+    "nvidia-cusolver-cu12", "nvidia-cusparse-cu12",
+    "nvidia-nccl-cu12", "nvidia-nvjitlink-cu12",
+    "nvidia-nvtx-cu12", "triton",
+    "pythonnet", "tiktoken",
+]
 
 a = Analysis(
-    ["desktop.py"],
+    ["desktop_qt.py"],
     pathex=["."],
     binaries=[],
     datas=[
@@ -31,14 +63,11 @@ a = Analysis(
         ("results/suite_results.json", "results"),
         ("figures", "figures"),
         ("models", "models"),
-    ] + webview_lib,
+    ],
     hiddenimports=hiddenimports,
     hookspath=[],
     runtime_hooks=[],
-    excludes=["tkinter", "streamlit", "matplotlib", "pandas", "pytest",
-              "PyInstaller", "torch", "torchvision", "transformers",
-              "tokenizers", "datasets", "scipy", "sklearn", "pyarrow",
-              "dask", "PIL", "cv2", "tensorflow", "seaborn"],
+    excludes=EXCLUDES,
     noarchive=False,
 )
 pyz = PYZ(a.pure)

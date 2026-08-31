@@ -34,6 +34,7 @@ class DwellResult:
     detections: tuple = ()
     aoa_deg: float | None = None
     pdws: tuple = ()
+    emitters: tuple = ()  # emitters present at dwell (avoids re-fetch)
 
 
 class ESReceiver:
@@ -66,8 +67,13 @@ class ESReceiver:
         z = (snr_db - (self.env.sens_db + self.pd_mid_offset)) / self.pd_k
         return float(0.97 / (1.0 + np.exp(-z)))
 
-    def dwell(self, band: int, t: int) -> DwellResult:
-        """Tune to ``band`` at slot ``t`` and return the measurement result."""
+    def dwell(self, band: int, t: int, build_pdws: bool = True) -> DwellResult:
+        """Tune to ``band`` at slot ``t`` and return the measurement result.
+
+        Args:
+            build_pdws: if False, skip PDW dict creation (faster for bulk
+                simulation where PDWs are not streamed to a client).
+        """
         ems = self.env.emitters_at(band, t)
         det = []
         for e in ems:
@@ -78,13 +84,13 @@ class ESReceiver:
         detections = tuple((s, a) for s, a, _ in det)
         snr = detections[0][0] if detections else -np.inf
         aoa_lead = detections[0][1] if detections else None
-        pdws = tuple({
-            "toa_us": t * 1000.0,
-            "freq_mhz": e.freq_mhz,
-            "pw_us": e.pw_us,
-            "pa_db": s,
-            "aoa_deg": a,
-        } for s, a, e in det)
+        pdws = ()
+        if build_pdws and det:
+            toa_t = t * 1000.0
+            pdws = tuple({
+                "toa_us": toa_t, "freq_mhz": e.freq_mhz,
+                "pw_us": e.pw_us, "pa_db": s, "aoa_deg": a,
+            } for s, a, e in det)
         fa = False
         hit = bool(det)
         if not hit and not ems:
@@ -96,4 +102,4 @@ class ESReceiver:
             for e in ems:
                 self.env.report_intercept(e.eid, t)
         return DwellResult(band, t, hit, fa, snr, bool(ems), detections,
-                           aoa_deg=aoa_lead, pdws=pdws)
+                           aoa_deg=aoa_lead, pdws=pdws, emitters=tuple(ems))

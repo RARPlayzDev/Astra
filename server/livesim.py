@@ -44,7 +44,7 @@ def make_live_scheduler(name: str, n_bands: int, seed: int):
 
 PERSISTABLE = {"smart-scan", "bandit-ucb", "rl-linear-q", "rl-dqn"}
 WINDOW = 320
-CHUNK = 10
+CHUNK = 50  # steps per SSE frame (was 10; 5x faster wall-clock)
 
 
 def _maybe_load_weights(name: str, instance):
@@ -93,6 +93,11 @@ class _Runner:
         self.hits = 0
         self.false_alarms = 0
         self.n_threats = sum(1 for e in env.emitters if e.threat)
+        # Pre-computed caches for hot-path performance
+        self._threat_eids = frozenset(e.eid for e in env.emitters if e.threat)
+        self._eid_lookup = {e.eid: e for e in env.emitters}
+        self._has_evasive = any(e.kind == "evasive" for e in env.emitters)
+        self._n_emitters = len(env.emitters)
         self.first_intercept: dict[int, int] = {}
         self.ttff_all: list[int] = []
         self.threat_ttff: list[int] = []
@@ -144,17 +149,17 @@ class _Runner:
         any_fa = False
         truth_present = False
         before = len(self.first_intercept)
+        toa_t = t * 1000.0  # precompute once
         for res in results:
             r_total += step_reward(self.env, res, self.first_intercept)
             any_hit |= bool(res.hit and not res.false_alarm)
             any_fa |= bool(res.false_alarm)
             truth_present |= bool(res.truth_present)
-            # attribute this dwell's emitters to fingerprint streams
-            ems = self.env.emitters_at(res.band, t)
-            for e in ems:
+            # Use emitters from dwell result (avoids re-fetch)
+            for e in res.emitters:
                 buf = self.streams.setdefault(e.eid, [])
                 if len(buf) < 64:
-                    buf.append({"toa_us": t * 1000.0, "freq_mhz": e.freq_mhz,
+                    buf.append({"toa_us": toa_t, "freq_mhz": e.freq_mhz,
                                 "pw_us": e.pw_us, "pa_db": e.snr_db,
                                 "aoa_deg": e.bearing_deg})
         self.reward_sum += r_total
@@ -165,8 +170,8 @@ class _Runner:
         if newly > 0:
             self.ttff_all.extend([t] * newly)
             for eid in list(self.first_intercept.keys())[before:]:
-                e = next((x for x in self.env.emitters if x.eid == eid), None)
-                if e is not None and e.threat:
+                e = self._eid_lookup.get(eid)
+                if e is not None and e.eid in self._threat_eids:
                     self.threat_ttff.append(t)
 
         preds = [s.predict(t, b) for s, b in zip(self.scheds, bands)]
@@ -175,16 +180,17 @@ class _Runner:
 
         self.scheds[0].update(t, bands[0], results[0], r_total / max(1, len(results)))
 
-        # Update DND tokens
-        self.dnd_bands = self._collect_dnd()
+        # Update DND tokens (only when locks change)
+        if getattr(self.scheds[0], 'est', None):
+            self.dnd_bands = self._collect_dnd()
 
-        # Track evasion events
-        if hasattr(self.env, '_consec_intercepts'):
+        # Track evasion events (skip entirely if no evasive emitters)
+        if self._has_evasive and hasattr(self.env, '_consec_intercepts'):
             for eid, count in self.env._consec_intercepts.items():
                 if count >= 3 and not any(ev.get('eid') == eid and ev.get('slot') == t
                                           for ev in self.evasion_events):
-                    emitter = next((e for e in self.env.emitters if e.eid == eid), None)
-                    if emitter and getattr(emitter, 'kind', '') == 'evasive':
+                    emitter = self._eid_lookup.get(eid)
+                    if emitter and emitter.kind == 'evasive':
                         self.evasion_events.append({
                             'eid': eid, 'slot': t,
                             'kind': 'band_shift',
@@ -202,9 +208,8 @@ class _Runner:
 
     def kpis(self) -> dict:
         n = max(1, self.t)
-        threat_eids = {e.eid for e in self.env.emitters if e.threat}
-        cov = len([e for e in self.first_intercept if e in threat_eids])
-        all_ratio = len(self.first_intercept) / max(1, len(self.env.emitters))
+        cov = len([e for e in self.first_intercept if e in self._threat_eids])
+        all_ratio = len(self.first_intercept) / max(1, self._n_emitters)
         return {"slots": self.t,
                 "avg_reward": round(self.reward_sum / n, 4),
                 "threat_coverage": round(cov / max(1, self.n_threats), 4),
