@@ -10,7 +10,6 @@ build/
 
 # ── Node.js ────────────────────────────────────────────────────────────
 node_modules/
-frontend/dist/
 website/dist/
 docs/node_modules/
 docs/.vitepress/dist/
