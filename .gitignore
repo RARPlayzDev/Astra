@@ -51,6 +51,7 @@ ewsmart.db
 installer/*.exe
 installer/*.msi
 website/public/*.exe
+software/
 
 # ── Signing certificates (NEVER commit) ──────────────────────────────
 *.pfx

@@ -71,7 +71,7 @@ export default function HeroScroll() {
               they appear.
             </p>
             <div className="hero-buttons">
-              <a className="btn-download" href="/ASTRA-Setup-2.0.0.exe" download>
+              <a className="btn-download" href="https://github.com/RARPlayzDev/Astra/releases/download/v2.0.0/ASTRA-Setup-2.0.0.exe" download>
                 Download for Windows
               </a>
               <a className="btn-outline" href="/console.html">Try Console</a>
