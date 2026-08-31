@@ -94,7 +94,8 @@ export type LiveKpis = {
   slots: number; avg_reward: number; threat_coverage: number;
   threats_found: number; n_threats: number; hit_rate: number; false_alarms: number;
   intercept_ratio?: number; mean_ttff?: number | null; threat_mean_ttff?: number | null;
-  pred_accuracy?: number; locks?: number; team?: number; loaded_weights?: boolean;
+  pred_accuracy?: number; pred_active_accuracy?: number; pred_active_count?: number;
+  locks?: number; team?: number; loaded_weights?: boolean;
   dnd_bands?: Record<number, number>; evasion_count?: number;
 };
 export type IdRow = {

@@ -103,6 +103,8 @@ class _Runner:
         self.threat_ttff: list[int] = []
         self.pred_correct = 0
         self.pred_total = 0
+        self.pred_true_pos = 0  # predicted True AND was True
+        self.pred_true_total = 0  # predicted True (total)
         self.streams: dict[int, list[dict]] = {}
         self.evasion_events: list[dict] = []
         self.dnd_bands: dict[int, int] = {}  # band -> receiver index that owns it
@@ -177,6 +179,11 @@ class _Runner:
         preds = [s.predict(t, b) for s, b in zip(self.scheds, bands)]
         self.pred_correct += int(preds[0] == truth_present)
         self.pred_total += 1
+        # Track active predictions (when scheduler actually predicts True)
+        if preds[0]:
+            self.pred_true_total += 1
+            if truth_present:
+                self.pred_true_pos += 1
 
         self.scheds[0].update(t, bands[0], results[0], r_total / max(1, len(results)))
 
@@ -223,6 +230,9 @@ class _Runner:
                 "threat_mean_ttff": round(float(np.mean(self.threat_ttff)), 1)
                                     if self.threat_ttff else None,
                 "pred_accuracy": round(self.pred_correct / n, 4) if n else 0.0,
+                "pred_active_accuracy": round(
+                    self.pred_true_pos / max(1, self.pred_true_total), 4),
+                "pred_active_count": self.pred_true_total,
                 "locks": self._locks(),
                 "team": self.team,
                 "loaded_weights": self.loaded,

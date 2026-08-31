@@ -106,8 +106,8 @@ h1, h2, h3, h4 { font-weight: 700; letter-spacing: -0.02em; }
   margin: 0 0 24px; font-weight: 400;
 }
 .hero-desc {
-  font-size: 17px; color: var(--soft); line-height: 1.85;
-  margin: 0 0 36px; max-width: 480px;
+  font-size: 20px; color: var(--soft); line-height: 1.85;
+  margin: 0 0 36px; max-width: 520px;
 }
 .hero-buttons { display: flex; gap: 12px; flex-wrap: wrap; }
 .btn-download {
@@ -132,8 +132,8 @@ h1, h2, h3, h4 { font-weight: 700; letter-spacing: -0.02em; }
 }
 .metric { display: flex; flex-direction: column; }
 .metric-val {
-  font-size: 26px; font-weight: 800; letter-spacing: -0.5px;
-  font-family: monospace;
+  font-size: 30px; font-weight: 900; letter-spacing: -0.5px;
+  font-family: monospace; color: var(--ink);
 }
 .metric-lbl {
   font-size: 10px; color: var(--muted); letter-spacing: 2px;
@@ -243,8 +243,8 @@ h1, h2, h3, h4 { font-weight: 700; letter-spacing: -0.02em; }
   line-height: 1.12; margin: 0 0 18px;
 }
 .section-desc {
-  color: var(--soft); font-size: 18px; line-height: 1.85;
-  max-width: 660px;
+  color: var(--soft); font-size: 20px; line-height: 1.85;
+  max-width: 720px;
 }
 
 /* ═══════════════════════════ CARDS ═══════════════════════════ */
@@ -270,8 +270,8 @@ h1, h2, h3, h4 { font-weight: 700; letter-spacing: -0.02em; }
 }
 .card-tag.red { color: var(--red); }
 .card-tag.green { color: var(--green); }
-.card h4 { font-size: 20px; margin: 0 0 10px; }
-.card p { font-size: 16px; color: var(--soft); line-height: 1.75; margin: 0; }
+.card h4 { font-size: 21px; margin: 0 0 12px; font-weight: 700; }
+.card p { font-size: 17px; color: var(--soft); line-height: 1.8; margin: 0; }
 .card.border-red { border-left: 2px solid var(--red); }
 .card.border-green { border-left: 2px solid var(--green); }
 
@@ -355,8 +355,8 @@ td.mono { font-family: "JetBrains Mono", Consolas, monospace; }
 }
 .feat:hover { border-color: var(--border-hover); }
 .feat-icon { font-size: 20px; margin-bottom: 10px; color: var(--muted); }
-.feat h4 { font-size: 17px; margin: 0 0 8px; }
-.feat p { font-size: 15px; color: var(--muted); line-height: 1.65; margin: 0; }
+.feat h4 { font-size: 18px; margin: 0 0 10px; font-weight: 700; }
+.feat p { font-size: 16px; color: var(--soft); line-height: 1.75; margin: 0; }
 
 /* ═══════════════════════════ DOWNLOAD ═══════════════════════════ */
 
@@ -370,7 +370,7 @@ td.mono { font-family: "JetBrains Mono", Consolas, monospace; }
 }
 @media (max-width: 860px) { .dl-grid { grid-template-columns: 1fr; } }
 .dl-steps { padding-left: 20px; color: var(--soft); }
-.dl-steps li { margin: 12px 0; font-size: 16px; }
+.dl-steps li { margin: 14px 0; font-size: 17px; line-height: 1.7; }
 .dl-reqs { border-left: 1px solid var(--border); padding-left: 20px; }
 .dl-reqs h4 {
   font-size: 10px; letter-spacing: 2px; text-transform: uppercase;

@@ -144,22 +144,27 @@ export default function Operations({ resetKey, running, onStartMission }: Props)
   }, [finals, names]);
 
   const KpiTable = ({ k }: { k: LiveKpis }) => {
-    const rows: [string, string][] = [
-      ["Threat coverage", `${((k.threat_coverage ?? 0) * 100).toFixed(0)}%`],
-      ["Threats intercepted", `${k.threats_found} of ${k.n_threats}`],
-      ["All-emitter intercept ratio", `${(((k.intercept_ratio ?? 0)) * 100).toFixed(0)}%`],
-      ["Reward per dwell", (k.avg_reward ?? 0).toFixed(3)],
-      ["Hit rate", `${((k.hit_rate ?? 0) * 100).toFixed(0)}%`],
-      ["False alarms", String(k.false_alarms)],
-      ["Mean time to first intercept", k.mean_ttff != null ? `${k.mean_ttff} slots` : "-"],
-      ["Threat TTFF", k.threat_mean_ttff != null ? `${k.threat_mean_ttff} slots` : "-"],
-      ["Prediction accuracy", `${(((k.pred_accuracy ?? 0)) * 100).toFixed(0)}%`],
-      ["Periodic locks", String(k.locks ?? 0)],
+    const smartAcc = k.pred_active_count && k.pred_active_count > 0
+      ? `${((k.pred_active_accuracy ?? 0) * 100).toFixed(0)}% (${k.pred_active_count} predictions)`
+      : "-";
+    const rows: [string, string, boolean][] = [
+      ["Threat coverage", `${((k.threat_coverage ?? 0) * 100).toFixed(0)}%`, true],
+      ["Threats intercepted", `${k.threats_found} of ${k.n_threats}`, false],
+      ["All-emitter intercept ratio", `${(((k.intercept_ratio ?? 0)) * 100).toFixed(0)}%`, false],
+      ["Reward per dwell", (k.avg_reward ?? 0).toFixed(3), true],
+      ["Hit rate", `${((k.hit_rate ?? 0) * 100).toFixed(0)}%`, true],
+      ["False alarms", String(k.false_alarms), false],
+      ["Threat TTFF", k.threat_mean_ttff != null ? `${k.threat_mean_ttff} slots` : "-", true],
+      ["Smart prediction accuracy", smartAcc, true],
+      ["Periodic locks", String(k.locks ?? 0), false],
     ];
     return (
       <div className="kv">
-        {rows.map(([a, b]) => (
-          <div className="row" key={a}><span>{a}</span><span>{b}</span></div>
+        {rows.map(([a, b, bold]) => (
+          <div className="row" key={a}>
+            <span style={bold ? { fontWeight: 600 } : undefined}>{a}</span>
+            <span style={bold ? { fontWeight: 700, color: "var(--accent)" } : undefined}>{b}</span>
+          </div>
         ))}
         {k.team && k.team > 1 && (
           <div className="row"><span>Cooperative team</span><span>{k.team} receivers</span></div>

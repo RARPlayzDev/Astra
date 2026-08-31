@@ -25,17 +25,17 @@ const TECH_STACK = [
 
 const STEPS: [string, string][] = [
   ["Survey", "A fast reconnaissance sweep bootstraps statistics across every band — no prior intelligence required."],
-  ["Learn", "Detection streams fingerprinted by SNR and angle-of-arrival; periodicities estimated with Rayleigh significance testing."],
+  ["Learn", "Detection streams fingerprinted by SNR and angle-of-arrival. Periodicities estimated with Rayleigh significance testing."],
   ["Predict", "Validated locks predict each emitter's next transmission window before it opens."],
   ["Position", "The receiver arrives early and dwells through the predicted window — interception becomes schedule, not luck."],
   ["Rotate", "Remaining time allocated by discounted value with recency guarantees, so no band starves."],
 ];
 
 const FEATURES: [string, string, string][] = [
-  ["◉", "Adaptive scan scheduler", "Five auditable behaviours multiplexed by learned confidence, validated online — stale beliefs self-destruct."],
-  ["◈", "Prediction engine", "Rayleigh period estimation with integer refinement converts periodic emitters from search problems into appointments."],
-  ["●", "Emitter identification", "Intercepted streams fingerprinted against a JC Wise-class library; 100% accuracy on the reference episode."],
-  ["◆", "Multi-receiver geolocation", "Cooperative AOA triangulation; CEP50 improves from 3.2 km to 1.7 km with two to four receivers."],
+  ["◉", "Adaptive scan scheduler", "Five behaviours multiplexed by learned confidence — validated online, stale beliefs self-destruct."],
+  ["◈", "Prediction engine", "Rayleigh period estimation converts periodic emitters from search problems into appointments."],
+  ["●", "Emitter identification", "Streams fingerprinted against a JC Wise-class library with confidence scores and threat classification."],
+  ["◆", "Multi-receiver geolocation", "Cooperative AOA triangulation; CEP improves from 3.2 km to 1.7 km with more receivers."],
   ["◐", "Live paired demonstration", "Two receivers fly identical battlefields side by side — strategy is the only variable."],
   ["◎", "Reproducible by construction", "Seed-defined scenarios, strict JSON outputs, 222 automated tests, one-command builds."],
 ];

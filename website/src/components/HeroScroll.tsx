@@ -74,8 +74,8 @@ export default function HeroScroll() {
               <a className="btn-download" href="/ASTRA-Setup-2.0.0.exe" download>
                 Download for Windows
               </a>
-              <a className="btn-outline" href="/console.html">Console</a>
-              <a className="btn-outline" href="/documentation.html">Docs</a>
+              <a className="btn-outline" href="/console.html">Try Console</a>
+              <a className="btn-outline" href="/documentation.html">Read the Docs</a>
             </div>
             <div className="hero-metrics">
               <div className="metric">
