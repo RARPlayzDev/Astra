@@ -8,11 +8,10 @@ version = "0.2.0"
 description = "Smart Scan Strategy for Electronic Warfare - ML-based ES receiver scheduler"
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = ["numpy>=1.26", "matplotlib>=3.8"]
+dependencies = ["numpy>=1.26", "fastapi>=0.110", "uvicorn>=0.29", "markdown"]
 
 [project.optional-dependencies]
 hf = ["datasets>=2.19"]
-api = ["fastapi>=0.110", "uvicorn>=0.29"]
 dev = ["pytest>=8", "pytest-cov>=5"]
 
 [project.scripts]
