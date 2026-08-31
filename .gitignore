@@ -53,9 +53,21 @@ installer/*.msi
 website/public/*.exe
 software/
 
-# ── Signing certificates (NEVER commit) ──────────────────────────────
+# ── Signing certificates & scripts (NEVER commit) ──────────────────────
 *.pfx
 *.p12
+*.cer
+tools/sign_*.ps1
+tools/trust_*.ps1
+tools/TeamMCS-*
+tools/SELF_SIGNING_GUIDE.md
+
+# ── Template / build artifacts ──────────────────────────────────────────
+SIH2026-IDEA-Presentation-Format.pptx
+website/marquee_fix.py
+website/scripts/
+website/index.html
+website/documentation.html
 
 # ── Freebuff / local ───────────────────────────────────────────────────
 .freebuff/
