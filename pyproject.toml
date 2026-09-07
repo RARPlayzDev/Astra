@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ewsmart"
-version = "0.2.0"
+version = "3.0.0"
 description = "Smart Scan Strategy for Electronic Warfare - ML-based ES receiver scheduler"
 readme = "README.md"
 requires-python = ">=3.10"

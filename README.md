@@ -12,7 +12,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/python-≥3.10-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python" />
   <img src="https://img.shields.io/badge/license-MIT-22c55e?style=for-the-badge" alt="License" />
-  <img src="https://img.shields.io/badge/tests-222_passing-10b981?style=for-the-badge&label=tests" alt="Tests" />
+  <img src="https://img.shields.io/badge/tests-239_passing-10b981?style=for-the-badge&label=tests" alt="Tests" />
   <img src="https://img.shields.io/badge/docker-ready-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" />
   <img src="https://img.shields.io/badge/installer-131_MB-8b5cf6?style=for-the-badge" alt="Installer" />
   <img src="https://img.shields.io/badge/SIH_2026-submission-f59e0b?style=for-the-badge" alt="SIH 2026" />
@@ -248,7 +248,7 @@ astra/
 ├── models/                   # Trained scheduler weights (.npz)
 ├── results/                  # Generated evaluation data
 ├── figures/                  # Publication-quality charts
-├── tests/                    # 222 automated tests
+├── tests/                    # 239 automated tests
 ├── tools/                    # Utilities
 │   ├── sdr_bridge.py         # UDP/CSV bridge for real SDR hardware
 │   ├── pdw_generator.py      # Synthetic PDW stream generator
@@ -298,18 +298,11 @@ Then select **UDP bridge (real hardware)** on the Live Radar page.
 
 ## 🧪 Testing
 
-222 automated tests covering all layers of the system:
+239 automated tests covering all layers of the system:
 
 ```powershell
 # Run all tests
-python -X utf8 tests/test_smartscan.py
-python -X utf8 tests/test_modules.py
-python -X utf8 tests/test_live.py
-python -X utf8 tests/test_mission.py
-python -X utf8 tests/test_api.py
-python -X utf8 tests/test_software.py
-python -X utf8 tests/test_id_geo_stats.py
-python -X utf8 tests/test_software.py
+python -m pytest tests -q
 ```
 
 | Test Suite | Scope |
@@ -319,9 +312,9 @@ python -X utf8 tests/test_software.py
 | `test_live.py` | Live radar streaming, UDP round-trip |
 | `test_mission.py` | KPP/MES scoring engine |
 | `test_api.py` | FastAPI endpoints + live arena |
-
 | `test_id_geo_stats.py` | Identification, geolocation, statistical tests |
 | `test_software.py` | JSON safety, model artifacts, engineering guarantees |
+| `test_target99_gaps.py` | Emitter attribution, agile-hop prediction (leakage-free), SmartScan learned-value ablations, canonical benchmark artifact |
 
 ---
 

@@ -32,6 +32,7 @@ class ScenarioConfig:
     on_len_range: tuple = (2, 5)
     hop_set_range: tuple = (3, 7)
     dwell_range: tuple = (3, 9)
+    agile_mode: str = "random"  # "random" | "markov" (structured hopping)
 
     @classmethod
     def from_json(cls, path: str) -> "ScenarioConfig":

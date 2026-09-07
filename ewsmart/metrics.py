@@ -21,9 +21,11 @@ METRIC_LABELS = {
     "false_alarm_rate": "False Alarm Rate (/slot)",
     "mean_time_to_first_intercept": "Mean Time to First Intercept (slots)",
     "threat_mean_ttff": "Threat Time to First Intercept (slots)",
+    "threat_ttff_censored": "Censored Threat Latency (slots)",
     "pct_correct_predictions": "Prediction Accuracy",
     "avg_intercept_time_error": "Intercept-Time Prediction Error (slots)",
     "n_periodic_locked": "Periodic Emitters Locked",
+    "ambiguous_hit_rate": "Ambiguous Co-channel Hit Rate (/slot)",
 }
 
 SCHEDULER_LABELS = {
@@ -48,6 +50,7 @@ class Trace:
     predictions: list[bool] = field(default_factory=list)
     first_intercept: dict[int, int] = field(default_factory=dict)
     prediction_errors: list[float] = field(default_factory=list)
+    ambiguous: list[bool] = field(default_factory=list)  # co-channel dwells
 
 
 def json_safe(obj):
@@ -116,6 +119,13 @@ def compute_metrics(env, trace: Trace) -> dict:
 
     truth_present = np.array([env.present(b, t) for t, b in
                               enumerate(trace.actions)], dtype=bool)
+    # Censored threat latency: a threat never intercepted is not dropped from
+    # the average (that would flatter policies that miss hard threats); it is
+    # credited the full episode horizon - a conservative lower bound on its
+    # true time-to-intercept.  Operationally the correct T&E treatment.
+    unfound_threats = len(threat_ids) - len(ttff_threats)
+    threat_ttff_censored = ((sum(ttff_threats) + unfound_threats * T)
+                            / max(1, len(threat_ids)))
     preds = np.asarray(trace.predictions, dtype=bool)
     # Steady-state prediction accuracy: the initial calibration transient
     # (reconnaissance / first lock acquisition) is excluded for *every*
@@ -136,11 +146,32 @@ def compute_metrics(env, trace: Trace) -> dict:
         "false_alarm_rate": float(fas.sum()) / T,
         "mean_time_to_first_intercept": float(np.mean(ttff)) if ttff else float(T),
         "threat_mean_ttff": float(np.mean(ttff_threats)) if ttff_threats else float(T),
+        "threat_ttff_censored": float(threat_ttff_censored),
         "pct_correct_predictions": pct_correct,
         "avg_intercept_time_error": float(np.mean(est_errs)) if est_errs else float("nan"),
         "n_periodic_locked": sum(1 for eid in periodic_ids
                                  if len(hit_times[eid]) >= 3),
+        "ambiguous_hit_rate": (float(np.mean(trace.ambiguous))
+                               if len(trace.ambiguous) else 0.0),
     }
+
+
+def attribution_conservation(env, trace: Trace) -> dict:
+    """Conservation check of the emitter-attribution contract.
+
+    Verifies that every credited emitter was actually detected at its
+    credited slot, so emitter-level credits can never exceed supported
+    detections.  Returns ``{"ok": bool, "violations": int}``.
+    """
+    violations = 0
+    for eid, t in trace.first_intercept.items():
+        if not (0 <= eid < len(env.emitters) and 0 <= t < env.T):
+            violations += 1
+            continue
+        row = env.band_seq[eid]
+        if t >= len(trace.actions) or row[t] != trace.actions[t]:
+            violations += 1
+    return {"ok": violations == 0, "violations": violations}
 
 
 def periodic_best(hit_times):

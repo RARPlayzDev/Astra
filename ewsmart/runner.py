@@ -30,18 +30,38 @@ def make_schedulers(n_bands: int, priority_bands: tuple | list,
             SmartScanScheduler(n_bands, seed)]
 
 
+def detected_eids(env: RFEnvironment, res) -> tuple:
+    """Emitters credited for a dwell under the attribution contract.
+
+    Only emitters with an actual detection this dwell are credited; a
+    band-level hit never credits co-channel emitters that were not resolved.
+    Legacy result objects without ``detected_eids`` fall back to all emitters
+    present (documented downgrade, used only by old test doubles).
+    """
+    eids = getattr(res, "detected_eids", None)
+    if eids is not None:
+        return tuple(eids)
+    return tuple(e.eid for e in env.emitters_at(res.band, res.t))
+
+
 def step_reward(env: RFEnvironment, res, first_intercept: dict) -> float:
-    """Reward for one dwell: value-weighted hits with first-intercept bonus."""
+    """Reward for one dwell: value-weighted hits with first-intercept bonus.
+
+    Attribution contract: credit is given only to emitters actually detected
+    in this dwell (``res.detected_eids``), never to silent co-channel
+    emitters sharing the band.
+    """
     if res.false_alarm:
         return REWARD_CFG["false_alarm"]
     if res.hit:
-        ems = env.emitters_at(res.band, res.t)
-        threat = any(e.threat for e in ems)
+        eids = detected_eids(env, res)
+        ems = {e.eid: e for e in env.emitters_at(res.band, res.t)}
+        threat = any(ems[i].threat for i in eids if i in ems)
         r = REWARD_CFG["threat"] if threat else REWARD_CFG["clutter"]
-        for e in ems:
-            if e.eid not in first_intercept:
-                first_intercept[e.eid] = res.t
-                if e.threat:
+        for eid in eids:
+            if eid not in first_intercept:
+                first_intercept[eid] = res.t
+                if ems.get(eid) is not None and ems[eid].threat:
                     r += REWARD_CFG["first_threat_bonus"]
         return r
     return REWARD_CFG["empty"]
@@ -58,10 +78,11 @@ def run_episode(env: RFEnvironment, sched, seed: int = 1) -> Trace:
     T = env.T
     trace = Trace(actions=[0] * T, hits=[False] * T,
                   false_alarms=[False] * T, rewards=[0.0] * T,
-                  predictions=[False] * T)
+                  predictions=[False] * T, ambiguous=[False] * T)
     first_intercept = trace.first_intercept
     actions, hits, fas = trace.actions, trace.hits, trace.false_alarms
     rewards, predictions = trace.rewards, trace.predictions
+    ambiguous = trace.ambiguous
     for t in range(T):
         b = sched.select(t)
         res = rx.dwell(b, t)
@@ -72,6 +93,7 @@ def run_episode(env: RFEnvironment, sched, seed: int = 1) -> Trace:
         fas[t] = res.false_alarm
         rewards[t] = r
         predictions[t] = pred
+        ambiguous[t] = len(detected_eids(env, res)) > 1
         sched.update(t, b, res, r)
     return trace
 

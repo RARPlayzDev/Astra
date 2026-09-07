@@ -26,7 +26,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 APP_NAME = "ASTRA"
 APP_LONG = "Adaptive Spectrum Threat Recognition & Analysis"
-APP_VERSION = "2.0.0"
+APP_VERSION = "3.0.0"
 
 
 def _bootstrap_paths():

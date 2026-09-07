@@ -657,13 +657,41 @@ export default function Console() {
         <div className="panel">
           <h3>Scheduler event log</h3>
           <div className="body">
-            {logLines.length === 0 && (
-              <p className="tbl-note">Lock acquisitions, confirmations and deletions
-              will appear here while the mission runs.</p>)}
-            {logLines.map((l, i) => (
-              <div key={i} style={{ fontFamily: "Consolas, monospace", fontSize: 13,
-                                    color: "var(--soft)", padding: "2px 0" }}>{l}</div>
-            ))}
+            <div className="c-log-bar">
+              <span className="c-pill pass">{logLines.filter((l) => l.includes("CONFIRMED")).length} locks</span>
+              <span className="c-pill fail">{logLines.filter((l) => l.includes("deleted")).length} drops</span>
+              <span className="c-pill pending">{logLines.filter((l) => l.includes("rhythm")).length} probes</span>
+              <span className="c-pill info">{logLines.length} events</span>
+              <button className="c-clear" onClick={() => setLogLines([])}>Clear</button>
+            </div>
+            <div className="c-log">
+              {logLines.length === 0 && (
+                <p className="tbl-note">Lock acquisitions, confirmations and deletions
+                will appear here while the mission runs.</p>)}
+              {(() => {
+                const lvl = (l: string): [string, string] => {
+                  if (l.includes("CONFIRMED")) { return ["LOCK", "pass"]; }
+                  if (l.includes("deleted")) { return ["DROP", "fail"]; }
+                  if (l.includes("rhythm") || l.includes("candidate")) { return ["PROBE", "pending"]; }
+                  if (l.includes("mission complete")) { return ["DONE", "pass"]; }
+                  if (l.includes("demo loaded")) { return ["INFO", "info"]; }
+                  return ["EVENT", "info"];
+                };
+                return logLines.slice(0, 90).map((l, i) => {
+                  const m = l.match(/^slot (\d+):\s*(.*)/);
+                  const [tag, cls] = lvl(l);
+                  const slot = m ? m[1] : "·";
+                  const text = m ? m[2] : l;
+                  return (
+                    <div className="c-row" key={logLines.length - i}>
+                      <span className="c-slot">{slot}</span>
+                      <span className={"c-pill " + cls}>{tag}</span>
+                      <span className="c-txt">{text}</span>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
           </div>
         </div>
 
@@ -674,7 +702,7 @@ export default function Console() {
         </p>
       </div>
       <footer className="site"><div className="wrap">
-        <p>ASTRA v2.0.0 - SIH 2026 prototype. In-browser tester; not operational equipment.</p>
+        <p>ASTRA v3.0.0 - SIH 2026 prototype. In-browser tester; not operational equipment.</p>
       </div></footer>
     </>
   );

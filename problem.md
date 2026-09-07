@@ -131,7 +131,7 @@ requires. The main gap is the depth of each individual algorithm (see Section 3)
    concern.
 
 4. **Reproducibility.** Seed-defined scenarios, strict JSON outputs,
-   pickle-free artifacts, 62 tests, Docker image. Everything can be
+   pickle-free artifacts, 225 tests, Docker image. Everything can be
    independently verified.
 
 5. **The end-to-end chain.** Environment → Receiver → Scheduler → Metrics →
@@ -257,7 +257,7 @@ expecting a formal cost-benefit framework will not find one.
 | **Geolocation** | 7/10 | AOA triangulation works. 2D only. CEP improves with receivers. |
 | **Multi-receiver** | 7/10 | Cooperative de-confliction. Scaling demonstrated (601→1101→1898). No real multi-platform test. |
 | **Live integration** | 5/10 | UDP bridge designed. No real hardware evidence. Simulated PDWs only. |
-| **Software quality** | 8/10 | 62 tests, Docker, strict JSON, pickle-free. Strong for a hackathon project. |
+| **Software quality** | 8/10 | 225 tests, Docker, strict JSON, pickle-free. Strong for a hackathon project. |
 | **Presentation / UX** | 8/10 | React command centre, desktop app, website. Professional-looking. |
 | **Documentation** | 8/10 | PROJECT_EXPLAINED.md, EVALUATION.md, VitePress docs site, README. Thorough. |
 

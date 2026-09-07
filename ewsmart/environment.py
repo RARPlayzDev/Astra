@@ -74,6 +74,10 @@ def _validate_config(cfg: ScenarioConfig) -> None:
                 raise ConfigurationError(
                     f"ScenarioConfig.{f} is a probability and must lie in "
                     f"[0.0, 1.0], got {v!r}")
+    if getattr(cfg, "agile_mode", "random") not in ("random", "markov"):
+        raise ConfigurationError(
+            f"ScenarioConfig.agile_mode must be 'random' or 'markov', "
+            f"got {getattr(cfg, 'agile_mode', None)!r}")
 
 
 @dataclass(frozen=True)
@@ -265,15 +269,39 @@ class RFEnvironment:
         """Build the per-emitter band sequence array ``[E, T]`` (-1 = silent)."""
         E, T = len(self.emitters), self.T
         seq = np.full((E, T), -1, dtype=np.int16)
+        markov_rows: dict[int, np.ndarray] = {}
         for i, e in enumerate(self.emitters):
             if e.kind == "stationary":
                 seq[i, :] = e.home_band
             elif e.kind == "agile":
                 t0 = 0
+                markov = getattr(self.cfg, "agile_mode", "random") == "markov"
+                if markov:
+                    # Draw one sticky Markov transition matrix per emitter:
+                    # high self-transition ("stickiness") plus a structured
+                    # preference for one successor band, making hopping
+                    # learnable from observations alone.
+                    k = len(e.hop_set)
+                    idx = {b: i for i, b in enumerate(e.hop_set)}
+                    stick = float(self.rng.uniform(0.55, 0.85))
+                    succ = idx.get(int(e.home_band) % int(self.n_bands), 0)
+                    row = np.full(k, (1.0 - stick) / max(1, k - 1))
+                    row[succ] = 0.0
+                    row *= (1.0 - stick) / max(row.sum(), 1e-9)
+                    row[succ] = stick
+                    markov_rows[i] = row
+                prev = -1
                 while t0 < T:
                     d = min(e.dwell, T - t0)
-                    b = e.hop_set[self.rng.integers(len(e.hop_set))]
+                    if markov:
+                        row = markov_rows[i]
+                        j = (int(self.rng.choice(k, p=row)) if prev in idx
+                             else int(self.rng.integers(k)))
+                        b = e.hop_set[j]
+                    else:
+                        b = e.hop_set[self.rng.integers(len(e.hop_set))]
                     seq[i, t0:t0 + d] = b
+                    prev = int(b)
                     t0 += d
             else:
                 # periodic, spatial, and evasive all use phase-based windows

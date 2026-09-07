@@ -21,6 +21,8 @@ class DwellResult:
         snr_db: strongest detected SNR (``-inf`` when nothing detected).
         truth_present: ground-truth occupancy of the band at ``t``.
         detections: per-emitter resolved ``(snr_db, aoa_deg)`` pairs.
+        detected_eids: emitter ids actually detected this dwell (the
+            attribution contract: only these may receive intercept credit).
         aoa_deg: angle-of-arrival of the strongest emitter (degrees).
         pdws: pulse-descriptor words measured during the dwell.
     """
@@ -32,6 +34,7 @@ class DwellResult:
     snr_db: float
     truth_present: bool
     detections: tuple = ()
+    detected_eids: tuple = ()
     aoa_deg: float | None = None
     pdws: tuple = ()
     emitters: tuple = ()  # emitters present at dwell (avoids re-fetch)
@@ -102,4 +105,5 @@ class ESReceiver:
             for e in ems:
                 self.env.report_intercept(e.eid, t)
         return DwellResult(band, t, hit, fa, snr, bool(ems), detections,
+                           detected_eids=tuple(e.eid for _, _, e in det),
                            aoa_deg=aoa_lead, pdws=pdws, emitters=tuple(ems))

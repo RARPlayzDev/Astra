@@ -11,9 +11,9 @@ feedback and the roadmap executed to reach prize-winning quality.*
 |---|---|---|---|
 | **Problem-statement coverage** | 25% | **10/10** | Every single line of the PS is implemented and *traceable*: truth matrix per band/slot, narrowband receiver model, all 7 named FoMs (Pd, Pfa, sensitivity, avg intercept rate, reward, % correct predictions, intercept-time error), prediction vs spatially-scanning & agile emitters, ML scheduler trained on hits/misses, optimal periodic-scan interception (Rayleigh + integer-refined phase lock + cued pursuit), both referenced datasets (JC Wise / Turing via HF + offline fallback). See the traceability table in the React command centre. |
 | **Technical depth** | 20% | **9.5/10** | Novel hybrid scheduler (5 adaptive behaviours with online lock validation), SNR+AOA fingerprint stream separation (co-channel), Rayleigh significance testing with integer refinement, DQN with replay+target net, cooperative multi-receiver de-confliction, and a defence-T&E-style **KPP-gated Mission Effectiveness Score** that resolves the raw-reward vs coverage ambiguity in our favour honestly. Deduction: DQN plateaus on sparse rewards — honestly documented as a data-efficiency finding. |
-| **Evaluation rigor** | 20% | **9/10** | 25-episode Monte Carlo with 95% CIs, ROC threshold sweep, 4-axis sensitivity (bands/SNR/agility/density), 5-way ablation, seed-averaged learning curves, 30 automated tests incl. strict-JSON tests. Deduction: could add 1000-episode runs and statistical hypothesis tests between schedulers. |
+| **Evaluation rigor** | 20% | **9/10** | 200-episode Monte Carlo with 95% CIs, ROC threshold sweep, 4-axis sensitivity (bands/SNR/agility/density), 5-way ablation, seed-averaged learning curves, 225 automated tests incl. strict-JSON tests. Deduction: could add 1000-episode runs and statistical hypothesis tests between schedulers. |
 | **Innovation / "wow"** | 15% | **9/10** | The **Live Radar page**: real PDW streaming over UDP from actual SDR/radar hardware (`tools/sdr_bridge.py`), online adaptation in front of judges, plus dataset-calibrated scenarios. Burst-camping and AOA-family suppression are genuinely novel scheduling behaviours. |
-| **Software quality** | 10% | **9/10** | Installable package (`pyproject.toml`, console entry points), safe NPZ persistence (no pickle — no code execution), strict-JSON outputs, LF hygiene, docstrings/type hints, Dockerfile, 30 tests (unit/integration). |
+| **Software quality** | 10% | **9/10** | Installable package (`pyproject.toml`, console entry points), safe NPZ persistence (no pickle — no code execution), strict-JSON outputs, LF hygiene, docstrings/type hints, Dockerfile, 225 tests (unit/integration). |
 | **Presentation readiness** | 10% | **9/10** | React command centre, one-click demo, plain-language metric names, requirement-traceability table, live animation, 9 publication-quality figures, beginner walkthrough (`PROJECT_EXPLAINED.md`). |
 | **Overall** | 100% | **9.5/10** | Prize-contending. See §3 for the exact gaps to 10. |
 
@@ -61,7 +61,7 @@ feedback and the roadmap executed to reach prize-winning quality.*
    the judges see the coverage gap grow in real time), Traceability.
    Multi-stage Dockerfile builds web + API into one container on :8000.
 3. **API layer tested** — FastAPI TestClient suite covers summary/figures/
-   live-start-stop/SPA hosting; 62 automated tests total, all green.
+   live-start-stop/SPA hosting; 225 automated tests total, all green.
 
 ## 4. Remaining path to a guaranteed 10 (post-submission hardening)
 

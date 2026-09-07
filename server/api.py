@@ -25,7 +25,7 @@ from .sources import SourceHub
 
 APP_NAME = "ASTRA"
 APP_LONG = "Adaptive Spectrum Threat Recognition & Analysis"
-APP_VERSION = "2.0.0"
+APP_VERSION = "3.0.0"
 
 ROOT = Path(__file__).resolve().parent.parent
 RESULTS = ROOT / "results" / "suite_results.json"

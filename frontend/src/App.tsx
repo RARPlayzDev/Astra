@@ -138,6 +138,7 @@ export default function App() {
         <span className="brand">
           <img src="/astra_logo.svg" alt="" />
           ASTRA
+          <span className="ver">v{meta?.version ?? "3.0.0"}</span>
         </span>
         {Object.entries(MENUS).map(([name, entries]) => (
           <div key={name} className={"menu-item" + (openMenu === name ? " open" : "")}>
@@ -204,7 +205,7 @@ export default function App() {
       {/* ── Status bar ──────────────────────────────────────────── */}
       <div className="statusbar">
         <span><span className={"dot" + (running ? " on" : "")} />{statusText}</span>
-        <span>{meta ? meta.long : ""}</span>
+        <span>{meta ? `${meta.app} ${meta.version}` : ""}</span>
         <div className="right">
           {meta?.manual_available && (
             <button className="linklike" onClick={() => openGuide()}>docs</button>

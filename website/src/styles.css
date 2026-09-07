@@ -328,6 +328,53 @@ td.mono { font-family: "JetBrains Mono", Consolas, monospace; }
 }
 .pill.pass { background: rgba(90,144,104,0.1); color: var(--green); border: 1px solid rgba(90,144,104,0.2); }
 .pill.fail { background: rgba(160,80,80,0.08); color: var(--red); border: 1px solid rgba(160,80,80,0.15); }
+.pill.pending { background: rgba(200,160,64,0.1); color: var(--amber); border: 1px solid rgba(200,160,64,0.2); }
+.pill.info { background: rgba(74,144,217,0.1); color: var(--accent); border: 1px solid rgba(74,144,217,0.2); }
+
+/* ═══════════════════════════ CONSOLE EVENT LOG ═══════════════════════════ */
+
+.c-log-bar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-bottom: 10px; font-size: 12px;
+}
+.c-log-bar .c-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 2px 9px; border-radius: 10px; font-size: 11px;
+  font-weight: 700; font-family: monospace;
+}
+.c-log-bar .c-pill.pass { background: rgba(90,144,104,0.12); color: var(--green); }
+.c-log-bar .c-pill.fail { background: rgba(160,80,80,0.1); color: var(--red); }
+.c-log-bar .c-pill.pending { background: rgba(200,160,64,0.1); color: var(--amber); }
+.c-log-bar .c-pill.info { background: rgba(74,144,217,0.1); color: var(--accent); }
+.c-clear {
+  appearance: none; border: 1px solid var(--border); background: none;
+  color: var(--soft); font-size: 11.5px; padding: 3px 12px;
+  border-radius: 4px; cursor: pointer; margin-left: auto;
+}
+.c-clear:hover { background: var(--panel-hover); color: var(--ink); }
+
+.c-log {
+  border: 1px solid var(--border); border-radius: 6px;
+  background: var(--panel); max-height: 340px; overflow-y: auto;
+  font-family: "JetBrains Mono", Consolas, monospace; font-size: 12.5px;
+}
+.c-log .c-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 5px 12px; border-bottom: 1px solid rgba(28,28,28,0.6);
+}
+.c-log .c-row:last-child { border-bottom: none; }
+.c-log .c-slot {
+  flex: 0 0 74px; color: var(--muted); font-size: 11px;
+}
+.c-log .c-pill {
+  flex: 0 0 auto; padding: 1px 8px; border-radius: 8px;
+  font-size: 9px; font-weight: 800; letter-spacing: 0.5px;
+}
+.c-log .c-pill.pass { background: rgba(90,144,104,0.12); color: var(--green); }
+.c-log .c-pill.fail { background: rgba(160,80,80,0.1); color: var(--red); }
+.c-log .c-pill.pending { background: rgba(200,160,64,0.1); color: var(--amber); }
+.c-log .c-pill.info { background: rgba(74,144,217,0.1); color: var(--accent); }
+.c-log .c-txt { color: var(--soft); flex: 1; word-break: break-word; }
 
 /* ═══════════════════════════ FIGURES ═══════════════════════════ */
 

@@ -5,22 +5,26 @@
    ═══════════════════════════════════════════════════════════════════════ */
 
 :root {
-  --bg:        #1e1e1e;
-  --surface:   #252526;
-  --surface2:  #2d2d30;
-  --surface3:  #333333;
-  --border:    #3c3c3c;
-  --border-lt: #333333;
-  --ink:       #cccccc;
-  --ink-hi:    #e0e0e0;
-  --muted:     #858585;
-  --accent:    #4a90d9;
-  --accent-hi: #5aa0e9;
-  --good:      #6a9955;
-  --bad:       #f14c4c;
-  --warn:      #dcdcaa;
-  --sans:      "Segoe UI", system-ui, -apple-system, sans-serif;
-  --mono:      "Cascadia Mono", Consolas, ui-monospace, monospace;
+  /* ASTRA v3 "Aurora Command" — deep-space navy, cyan accent, semantic glows */
+  --bg:        #0f141b;
+  --surface:   #151c26;
+  --surface2:  #1b2431;
+  --surface3:  #232f3f;
+  --border:    #2a3648;
+  --border-lt: #212b3a;
+  --ink:       #c8d2e0;
+  --ink-hi:    #eef3fa;
+  --muted:     #7d8ba1;
+  --accent:    #38bdf8;
+  --accent-hi: #7dd3fc;
+  --accent-dark:#0c4a6e;
+  --good:      #34d399;
+  --bad:       #f87171;
+  --warn:      #fbbf24;
+  --sans:      "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --mono:      "Cascadia Code", "Cascadia Mono", Consolas, ui-monospace, monospace;
+  --glow:      0 0 0 1px rgba(56,189,248,.25), 0 0 24px rgba(56,189,248,.08);
+  --card:      0 1px 2px rgba(0,0,0,.4), 0 4px 16px rgba(0,0,0,.25);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -660,3 +664,157 @@ code.inline {
 .doc-content tr:nth-child(even) td { background: #222; }
 .doc-content a { color: #5aa0e9; }
 .doc-content a:hover { color: #7dbaf0; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   ASTRA v3.0 — "Aurora Command" redesign layer
+   Everything below restyles the components above for the v3 look:
+   elevated cards, glowing KPI heroes, pill tabs, winner highlighting.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+body {
+  background:
+    radial-gradient(1200px 500px at 70% -10%, rgba(56,189,248,.06), transparent 60%),
+    radial-gradient(900px 420px at 0% 110%, rgba(52,211,153,.045), transparent 55%),
+    var(--bg);
+}
+
+* { scrollbar-width: thin; scrollbar-color: var(--surface3) transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 6px; border: 2px solid var(--bg); }
+*::-webkit-scrollbar-thumb:hover { background: #33425a; }
+
+/* ── Menu bar & brand ─────────────────────────────────────────────────── */
+.menubar { background: rgba(21,28,38,.9); backdrop-filter: blur(8px); }
+.menubar .brand { color: var(--accent-hi); letter-spacing: 2.5px; }
+.menubar .brand .ver {
+  font-size: 9px; color: var(--accent); background: rgba(56,189,248,.12);
+  border: 1px solid rgba(56,189,248,.35); border-radius: 8px; padding: 0 6px;
+  letter-spacing: .5px; font-weight: 600;
+}
+
+/* ── Tabs: segmented pill control ─────────────────────────────────────── */
+.control-strip { background: rgba(21,28,38,.92); border-bottom: 1px solid var(--border); }
+.control-strip .tabs { gap: 4px; padding: 3px 6px; }
+.control-strip .tabs button {
+  border-radius: 6px; border-bottom: none; padding: 5px 13px;
+  font-weight: 600; letter-spacing: .2px; transition: all .12s;
+}
+.control-strip .tabs button.active {
+  color: var(--accent-hi);
+  background: rgba(56,189,248,.12);
+  box-shadow: inset 0 0 0 1px rgba(56,189,248,.35);
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────────── */
+.tbtn { border-radius: 6px; padding: 5px 14px; transition: all .12s; }
+.tbtn:hover:not(:disabled) { background: var(--surface3); border-color: #3a4a63; }
+.tbtn.primary {
+  background: linear-gradient(180deg, #0ea5e9, #0284c7);
+  border-color: #0ea5e9; color: #fff; font-weight: 600;
+  box-shadow: 0 1px 8px rgba(14,165,233,.35);
+}
+.tbtn.primary:hover:not(:disabled) { background: linear-gradient(180deg, #38bdf8, #0ea5e9); }
+.tbtn.stop { border-color: rgba(248,113,113,.4); background: rgba(248,113,113,.06); }
+.tbtn.stop:hover:not(:disabled) { background: rgba(248,113,113,.14); }
+
+/* ── Panels & cards ───────────────────────────────────────────────────── */
+.workspace { padding: 20px 24px 32px; }
+h1.page-title { font-size: 19px; letter-spacing: .3px; }
+p.lede { font-size: 13.5px; max-width: 820px; }
+.panel {
+  border-radius: 10px; box-shadow: var(--card);
+  background: linear-gradient(180deg, var(--surface2), var(--surface));
+  overflow: hidden;
+}
+.panel > h3 {
+  padding: 9px 14px; font-size: 10.5px; color: var(--accent-hi);
+  background: rgba(56,189,248,.05); border-bottom: 1px solid var(--border-lt);
+}
+.rx-panel, .list-item { border-radius: 8px; }
+canvas { border-radius: 6px; }
+
+/* ── Hero KPI stat cards (metrics upgrade) ────────────────────────────── */
+.stats { gap: 12px; margin-bottom: 20px; }
+.stat {
+  position: relative; border-radius: 10px; padding: 14px 16px 12px;
+  background: linear-gradient(180deg, var(--surface2), var(--surface));
+  border: 1px solid var(--border); box-shadow: var(--card);
+  overflow: hidden; transition: transform .12s, border-color .12s;
+}
+.stat::before {
+  content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+  background: linear-gradient(180deg, var(--accent), transparent);
+}
+.stat:hover { transform: translateY(-2px); border-color: rgba(56,189,248,.45); }
+.stat .k { font-size: 9.5px; letter-spacing: 1.2px; color: var(--muted); }
+.stat .v {
+  font-size: 26px; font-weight: 700; margin-top: 2px;
+  color: var(--ink-hi); text-shadow: 0 0 18px rgba(56,189,248,.25);
+}
+.stat .v.good { color: var(--good); text-shadow: 0 0 18px rgba(52,211,153,.3); }
+.stat .s { margin-top: 5px; font-size: 10.5px; }
+.stat .meter { margin-top: 8px; height: 5px; border-radius: 3px; background: rgba(125,139,161,.18); }
+.stat .meter i { height: 5px; border-radius: 3px;
+  background: linear-gradient(90deg, #0ea5e9, #7dd3fc); }
+
+/* ── Head-to-head comparison table ────────────────────────────────────── */
+.vs-table td.num { font-size: 12px; }
+.vs-table .win { color: var(--good); font-weight: 700; }
+.vs-table .lose { color: var(--muted); }
+.vs-table td.delta { font-family: var(--mono); font-size: 10.5px; color: var(--good); }
+.vs-table tr.hl td { background: rgba(56,189,248,.10); }
+.caveat {
+  border-left: 3px solid var(--warn); background: rgba(251,191,36,.07);
+  padding: 6px 10px; font-size: 11px; color: var(--warn);
+  border-radius: 0 6px 6px 0; margin-top: 8px;
+}
+
+/* ── Tables ───────────────────────────────────────────────────────────── */
+table.data th { padding: 8px 10px; background: rgba(56,189,248,.04); }
+table.data td { padding: 6px 10px; }
+table.data tr:nth-child(even) td { background: rgba(27,36,49,.5); }
+table.data tbody tr { transition: background .1s; }
+table.data tbody tr:hover td { background: rgba(56,189,248,.06) !important; }
+table.data tr.hl td { background: rgba(56,189,248,.10); }
+table.data tr.hl td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+
+/* ── Badges & meters ──────────────────────────────────────────────────── */
+.badge { border-radius: 4px; padding: 2px 7px; }
+.badge.pass { background: rgba(52,211,153,.14); }
+.badge.fail { background: rgba(248,113,113,.12); }
+.meter { border-radius: 3px; background: rgba(125,139,161,.18); }
+.meter i { border-radius: 3px; background: linear-gradient(90deg, #0ea5e9, #7dd3fc); }
+.meter i.good { background: linear-gradient(90deg, #059669, #34d399); }
+.meter i.disqualified { background: #4b5563; }
+
+/* ── Live advantage ribbon (Operations) ───────────────────────────────── */
+.adv-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.adv-cell {
+  border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px;
+  background: var(--surface2);
+}
+.adv-cell .t { font-size: 9.5px; letter-spacing: .8px; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.adv-cell .nums { display: flex; justify-content: space-between; align-items: baseline;
+  font-family: var(--mono); font-size: 13px; margin-top: 4px; }
+.adv-cell .leader { color: var(--good); font-weight: 700; }
+.adv-cell .lag { color: var(--muted); }
+.adv-cell .bar { display: flex; height: 5px; border-radius: 3px; overflow: hidden; margin-top: 7px; background: rgba(125,139,161,.15); }
+.adv-cell .bar i { display: block; height: 5px; }
+.adv-cell .bar i.a { background: linear-gradient(90deg, #0ea5e9, #7dd3fc); }
+.adv-cell .bar i.b { background: #4b5563; margin-left: auto; }
+.adv-cell .tag { font-size: 8.5px; font-weight: 700; letter-spacing: .6px; padding: 1px 5px; border-radius: 3px; }
+.adv-cell .tag.ahead { color: #052e1c; background: var(--good); }
+.adv-cell .tag.behind { color: var(--muted); background: var(--surface3); }
+.rx-panel.leader-panel { border-color: rgba(52,211,153,.45); box-shadow: 0 0 0 1px rgba(52,211,153,.2), var(--card); }
+.rx-panel.leader-panel h3 { color: var(--good); }
+
+/* ── Status bar & modals ──────────────────────────────────────────────── */
+.statusbar { background: linear-gradient(90deg, #0c4a6e, #0e7490); }
+.modal { border-radius: 12px; box-shadow: 0 24px 80px rgba(0,0,0,.6); }
+.result-note {
+  border-radius: 0 8px 8px 0; border-left: 3px solid var(--good);
+  background: rgba(52,211,153,.08); color: var(--good);
+}
+.diag-row .mark.ok { color: var(--good); }
+
+

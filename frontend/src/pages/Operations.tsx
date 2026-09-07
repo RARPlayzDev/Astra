@@ -133,6 +133,27 @@ export default function Operations({ resetKey, running, onStartMission }: Props)
   };
 
   const names = Object.keys(kpis);
+  const [n1, n2] = names;
+  const a = names.length === 2 ? kpis[n1] : undefined;
+  const b = names.length === 2 ? kpis[n2] : undefined;
+
+  // Live head-to-head: per-metric leader with direction awareness.
+  const ADV: { key: keyof LiveKpis; label: string; lower?: boolean; fmt?: (v: number) => string }[] = [
+    { key: "threat_coverage", label: "Threat coverage", fmt: (v) => `${(v * 100).toFixed(0)}%` },
+    { key: "avg_reward", label: "Reward / dwell", fmt: (v) => v.toFixed(3) },
+    { key: "intercept_ratio", label: "Intercept ratio", fmt: (v) => `${(v * 100).toFixed(0)}%` },
+    { key: "hit_rate", label: "Hit rate", fmt: (v) => `${(v * 100).toFixed(0)}%` },
+    { key: "false_alarms", label: "False alarms", lower: true },
+    { key: "locks", label: "Periodic locks" },
+  ];
+  const advRows = (a && b)
+    ? ADV.map((r) => {
+        const va = Number(a[r.key] ?? 0), vb = Number(b[r.key] ?? 0);
+        const aWins = r.lower ? va < vb : va > vb;
+        const tot = va + vb;
+        return { ...r, va, vb, aWins, pct: tot > 0 ? va / tot : 0.5 };
+      })
+    : [];
   const verdict = useMemo(() => {
     if (!finals || names.length < 2) return null;
     const [n1, n2] = names;
@@ -218,6 +239,37 @@ export default function Operations({ resetKey, running, onStartMission }: Props)
         </div>
       </div>
 
+      {advRows.length > 0 && a && b && (
+        <div className="panel" style={{ marginBottom: 14 }}>
+          <h3>Live advantage &mdash; {policyTitle(n1)} vs {policyTitle(n2)}</h3>
+          <div className="body">
+            <div className="adv-grid">
+              {advRows.map((r) => (
+                <div className="adv-cell" key={r.key as string}>
+                  <div className="t">{r.label}</div>
+                  <div className="nums">
+                    <span className={r.aWins ? "leader" : "lag"}>{r.fmt ? r.fmt(r.va) : r.va}</span>
+                    <span className={!r.aWins ? "leader" : "lag"}>{r.fmt ? r.fmt(r.vb) : r.vb}</span>
+                  </div>
+                  <div className="bar">
+                    <i className="a" style={{ width: `${r.pct * 100}%` }} />
+                    <i className="b" style={{ width: `${(1 - r.pct) * 100}%` }} />
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 5 }}>
+                    <span className={"tag " + (r.aWins ? "ahead" : "behind")}>
+                      {r.aWins ? "A LEADS" : "B LEADS"}
+                    </span>
+                    <span className={"tag " + (!r.aWins ? "ahead" : "behind")}>
+                      {!r.aWins ? "B LEADS" : "A LEADS"}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {verdict && <div className="result-note"><b>Result.</b> {verdict}</div>}
 
       <div className="receivers">
@@ -228,7 +280,9 @@ export default function Operations({ resetKey, running, onStartMission }: Props)
           </p>
         )}
         {names.map((name) => (
-          <div className="rx-panel" key={name}>
+          <div className={"rx-panel" + (finals && kpis[name] && Object.keys(kpis).length === 2 &&
+            Number(kpis[name].avg_reward) >= Number(kpis[names[0] === name ? names[1] : names[0]]?.avg_reward ?? 0)
+            ? " leader-panel" : "")} key={name}>
             <h3>{policyTitle(name)}</h3>
             <p className="role">
               {name === "smart-scan"

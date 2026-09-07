@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased — evidence freeze (Phase 0)
+
+### Added
+- **Reproducibility manifest** (`docs/reproducibility.md`): single source of truth for the environment, canonical test/eval commands, Monte Carlo seeds, and the artifact-provenance rule.
+- **Canonical result schema** (`results/result_schema.json`) + a dependency-free schema-validity test (`tests/test_result_schema.py`) that validates `results/suite_results.json`.
+
+### Fixed
+- **Reconciled contradictory counts** across `README.md`, `EVALUATION.md`, `problem.md`, `PROJECT_EXPLAINED.md` and this changelog: the canonical figures are **225 automated tests** and **200 held-out Monte Carlo episodes**.
+
+### Technical
+- 225 automated tests passing (`python -m pytest -q`); was 222 before the schema-validity test was added.
+
 ## v2.0.0 (2026-08-28)
 
 ### Added

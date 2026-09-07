@@ -15,8 +15,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from .environment import RFEnvironment
-from .metrics import compute_metrics, mission_scores, gated_mes_episodes
-from .runner import run_episode, REWARD_CFG, train
+from .metrics import (compute_metrics, mission_scores, gated_mes_episodes,
+                      aggregate_metrics_ci, attribution_conservation)
+from .runner import (run_episode, REWARD_CFG, train, make_schedulers,
+                     detected_eids)
 from .schedulers import (LinearQLearning, DQNScheduler, SmartScanScheduler,
                          SequentialSweep, UCBScheduler)
 from .multireceiver import CooperativeTeam, run_episode_multi
@@ -451,6 +453,8 @@ def ablation_experiment(n_bands=20, T=1500, episodes=3) -> dict:
         "no-phase-lock": {"lock_hits": 10 ** 9},
         "no-burst": {"burst_horizon": 0},
         "no-exploit-ramp": {"exploit_ramp": 0.0},
+        "no-learned-value": {"value_mode": "heuristic"},
+        "no-learning": {"value_mode": "flat"},
         "recon-only": {"lock_hits": 10 ** 9, "burst_horizon": 0,
                        "exploit_ramp": 0.0, "explore_eps": 0.0},
     }
@@ -491,6 +495,68 @@ def multireceiver_experiment(team_sizes=(1, 2, 3), n_bands=20, T=1500,
             out[key] = {"total_reward": float(np.mean(rs)),
                         "intercept_ratio": float(np.mean(covs))}
     return out
+
+def benchmark_report(json_path: str = "results/benchmark.json",
+                     md_path: str | None = "results/benchmark.md",
+                     n_bands: int = 16, T: int = 800, episodes: int = 6,
+                     base_seed: int = 7000) -> dict:
+    """Canonical single-protocol benchmark for every scheduler.
+
+    One command, one scenario family, identical seeds across schedulers.
+    Produces the machine-readable JSON artifact and, optionally, the exact
+    Markdown table generated from it - no hand-entered headline numbers.
+    """
+    from pathlib import Path
+    from .metrics import METRIC_LABELS, SCHEDULER_LABELS
+    probe = RFEnvironment(n_bands=n_bands, T=T, seed=base_seed)
+    threats = sorted({e.home_band for e in probe.emitters
+                      if e.threat and e.kind == "stationary"}) or [0]
+    scheds = make_schedulers(n_bands, threats, seed=base_seed)
+    per_ep: dict[str, list] = {}
+    conservation = {}
+    for ep in range(episodes):
+        env = RFEnvironment(n_bands=n_bands, T=T, seed=base_seed + ep)
+        for s in scheds:
+            tr = run_episode(env, s, seed=base_seed + ep)
+            per_ep.setdefault(s.name, []).append(compute_metrics(env, tr))
+            if isinstance(s, SmartScanScheduler) or s.name == "smart-scan":
+                conservation[f"ep{ep}"] = attribution_conservation(env, tr)
+    ci = {name: aggregate_metrics_ci(eps) for name, eps in per_ep.items()}
+    artifact = {
+        "protocol": {"n_bands": n_bands, "T": T, "episodes": episodes,
+                     "base_seed": base_seed},
+        "metrics_ci": ci,
+        "attribution_conservation": conservation,
+        "ranking": mission_scores(
+            {n: {k: v["mean"] for k, v in m.items()} for n, m in ci.items()}
+        )["ranking"],
+    }
+    out = Path(json_path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    with open(out, "w") as f:
+        json.dump(artifact, f, indent=2, allow_nan=False)
+    if md_path:
+        keys = ("avg_reward", "threat_intercept_ratio", "intercept_rate",
+                "false_alarm_rate", "mean_time_to_first_intercept",
+                "pct_correct_predictions", "ambiguous_hit_rate")
+        lines = ["# Canonical Scheduler Benchmark",
+                 "",
+                 f"Protocol: n_bands={n_bands}, T={T}, episodes={episodes}, "
+                 f"base_seed={base_seed}. Mean (95% CI).",
+                 "",
+                 "| Scheduler | " + " | ".join(
+                     METRIC_LABELS.get(k, k) for k in keys) + " |",
+                 "|---" * (len(keys) + 1) + "|"]
+        for name in sorted(ci):
+            row = [SCHEDULER_LABELS.get(name, name)]
+            for k in keys:
+                v = ci[name][k]
+                row.append(f"{v['mean']:.3f} ± {v['ci95']:.3f}")
+            lines.append("| " + " | ".join(row) + " |")
+        Path(md_path).parent.mkdir(parents=True, exist_ok=True)
+        Path(md_path).write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return artifact
+
 
 def run_suite(outdir: str = "results", figdir: str = "figures",
               suite: str = "quick") -> dict:

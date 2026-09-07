@@ -425,6 +425,56 @@ class DQNScheduler(BaseScheduler):
         self.agent.set_weights(w)
 
 
+class _BandLogit:
+    """Online logistic regression over per-band dwell features (SGD).
+
+    A second learned model inside SmartScan: while phase locks capture
+    periodic rhythm, this calibrates a per-band occupancy probability from
+    the receiver's own observation history (hit-rate EMA, dwell interval,
+    time since last detection).  It powers occupancy predictions for bands
+    without a validated lock and adds a learned bonus to the exploit score.
+    """
+
+    _NFEAT = 5
+
+    def __init__(self, lr: float = 0.08):
+        self.w = np.zeros(self._NFEAT)
+        self.lr = lr
+        self.n = 0
+        self.ema_hit = 0.1
+        self.ema_dt = 20.0
+        self.last_hit_t = -100.0
+        self.last_visit_t = 0.0
+
+    def features(self, t: int) -> np.ndarray:
+        dt = max(1.0, float(t - self.last_visit_t))
+        return np.array([1.0, self.ema_hit,
+                         min(2.0, dt / max(self.ema_dt, 1.0)),
+                         min(2.0, (t - self.last_hit_t) / 120.0),
+                         min(1.0, self.n / 40.0)])
+
+    def observe(self, t: int, hit: bool) -> float:
+        """Update on one dwell; returns the probability predicted *before* it."""
+        x = self.features(t)
+        p = float(1.0 / (1.0 + np.exp(-float(x @ self.w))))
+        y = 1.0 if hit else 0.0
+        self.w += self.lr * (y - p) * x
+        self.n += 1
+        self.ema_hit = 0.85 * self.ema_hit + 0.15 * (y if hit else 0.0)
+        if self.n > 1:
+            self.ema_dt = 0.8 * self.ema_dt + 0.2 * (t - self.last_visit_t)
+        if hit:
+            self.last_hit_t = t
+        self.last_visit_t = t
+        return p
+
+    def prob(self, t: int) -> float:
+        if self.n < 8:
+            return 0.0
+        x = self.features(t)
+        return float(1.0 / (1.0 + np.exp(-float(x @ self.w))))
+
+
 class SmartScanScheduler(BaseScheduler):
     """The proposed hybrid adaptive scan strategy.
 
@@ -449,9 +499,15 @@ class SmartScanScheduler(BaseScheduler):
     learnable = True
 
     def __init__(self, n_bands: int, seed: int = 0, explore_eps: float = 0.08,
-                 lock_hits: int = 5, recon_factor: int = 26,
-                 burst_horizon: int = 480, exploit_ramp: float = 0.60):
+                 lock_hits: int = 5, recon_factor: int = 12,
+                 burst_horizon: int = 480, exploit_ramp: float = 0.60,
+                 value_mode: str = "learned"):
         super().__init__(n_bands, seed)
+        if value_mode not in ("learned", "heuristic", "flat"):
+            raise ValueError(
+                f"value_mode must be 'learned', 'heuristic' or 'flat', "
+                f"got {value_mode!r}")
+        self.value_mode = value_mode
         self.explore_eps = explore_eps * 0.6  # slightly less random waste
         self.lock_hits = lock_hits
         self.recon_steps = recon_factor * n_bands
@@ -483,6 +539,8 @@ class SmartScanScheduler(BaseScheduler):
         # --- knowledge-state predictor (hard-confirmation policy) ---
         self.visit_hits: list[deque] = [
             deque(maxlen=10) for _ in range(self.n_bands)]
+        # --- online logistic occupancy model (second learned component) ---
+        self.logit = [_BandLogit() for _ in range(self.n_bands)]
 
     def end_episode(self) -> None:
         pass
@@ -639,10 +697,22 @@ class SmartScanScheduler(BaseScheduler):
                        max(1.0, 0.5 * (self.horizon - self.recon_steps)))
         return self.exploit_ramp * progress
 
+    def _value_estimates(self) -> np.ndarray:
+        """Learned per-band value estimates, ablated by ``value_mode``.
+
+        * ``learned``  - full hybrid: reward means learned from hits/misses;
+        * ``heuristic``- value estimates zeroed (pure UCB + recency ranking);
+        * ``flat``     - no learned signal at all (uniform rotation exploit).
+        """
+        if self.value_mode == "learned":
+            return self.mu
+        return np.zeros(self.n_bands)
+
     def select(self, t: int) -> int:
         self._check_t(t)
         if t < self.recon_steps:
             return int(t % self.n_bands)
+        mu_eff = self._value_estimates()
         for b, dl in list(self.burst.items()):
             if t >= dl or b in self.est:
                 self.burst.pop(b, None)
@@ -651,7 +721,7 @@ class SmartScanScheduler(BaseScheduler):
         credible = [(b, e) for b, e in self.est.items()
                     if periodic.predict_on(e, t, guard_frac=0.25)
                     and self._credible(b)]
-        credible.sort(key=lambda be: -self.mu[be[0]])
+        credible.sort(key=lambda be: -mu_eff[be[0]])
         suppressed: list[tuple[float, int]] = []
         for b, e in credible:
             aoa = e.get("aoa")
@@ -681,12 +751,22 @@ class SmartScanScheduler(BaseScheduler):
                 return b
         if self.rng.random() < self.explore_eps:
             return int(self.rng.integers(self.n_bands))
+        # Reconnaissance floor: bound the maximum revisit latency of any band
+        # so emerging emitters cannot hide behind exploitation of known ones.
+        stale = int(np.argmax(t - self.last_visit))
+        if t - self.last_visit[stale] > 6 * self.n_bands:
+            return stale
         if self.rng.random() < self._exploit_prob(t):
-            return int(np.argmax(self.mu))
+            if self.value_mode == "flat":
+                return int(self.rng.integers(self.n_bands))
+            return int(np.argmax(mu_eff))
         recency = np.sqrt(np.maximum(0.0, t - self.last_visit))
         unseen = (self.n <= 1).astype(float)
-        score = self.mu + 0.55 * np.sqrt(np.log(t + 2) / self.n) \
-            + (0.16 + 0.14 * unseen) * recency
+        lprob = (np.array([lg.prob(t) for lg in self.logit])
+                 if self.value_mode == "learned"
+                 else np.zeros(self.n_bands))
+        score = mu_eff + 0.55 * np.sqrt(np.log(t + 2) / self.n) \
+            + (0.16 + 0.14 * unseen) * recency + 0.35 * lprob
         return int(np.argmax(score))
 
     def _persistent_confirmed(self, band: int) -> bool:
@@ -720,12 +800,16 @@ class SmartScanScheduler(BaseScheduler):
         # 2. Confirmed persistent carrier
         if self._persistent_confirmed(band):
             return True
-        return False
+        # 3. Online logistic model (learned occupancy probability)
+        if self.value_mode != "learned":
+            return False
+        return self.logit[band].prob(t) >= 0.65
 
     def update(self, t: int, band: int, res, r: float = 0.0) -> None:
         self._check_band(band)
         r = self._check_reward(r)
         hit, _ = self._check_res(res)
+        self.logit[band].observe(t, hit)
         self.visit_times[band].append(t)
         self.last_visit[band] = t
         # knowledge-state bookkeeping (hard confirmation / demotion)
