@@ -82,7 +82,7 @@ may expect some attempt at pattern detection even on agile emitters.**
 
 | Requirement (PS) | Status | What Exists | What's Missing / Weak |
 |---|---|---|---|
-| Development of a robust scheduler using ML | ✅ | SmartScan in `schedulers.py` — confidence-multiplexed hybrid with 5 behaviours. UCB-based rotation uses Q-style value estimates. | SmartScan is partly ML (learned confidence, value estimates) and partly rule-based (phase-lock, burst logic). It is not a pure end-to-end learned policy. The PS says "ML-based"; SmartScan qualifies but is not a monolithic neural-net scheduler. |
+| Development of a robust scheduler using ML | ✅ | SmartScan in `schedulers.py` — confidence-multiplexed hybrid with 6 behaviours (including causal agile-hop anticipation). UCB-based rotation uses Q-style value estimates. | SmartScan is partly ML (learned confidence, value estimates) and partly rule-based (phase-lock, burst logic). It is not a pure end-to-end learned policy. The PS says "ML-based"; SmartScan qualifies but is not a monolithic neural-net scheduler. |
 | Minimise intercept time | ✅ | KPP-gated MES includes "mean time to first intercept" as a normalised component. SmartScan's cued pursuit directly minimises TTFF for periodic emitters. | — |
 | Ensure high interception rate | ✅ | `threat_intercept_ratio ≥ 0.95` with KPP gate at 0.90 | — |
 | Train based on hits and misses | ✅ | `runner.py::train()` runs cross-episode training for learnable schedulers (Linear Q, DQN, SmartScan). SmartScan updates its internal statistics (`mu`, `n`, `band_hits`, `est`) from every hit/miss. | SmartScan "trains" incrementally within an episode (no gradient update, but statistical learning). DQN and Linear Q do gradient/tabular RL training across episodes. The PS "train based on hits and misses" is satisfied. |
@@ -131,7 +131,7 @@ requires. The main gap is the depth of each individual algorithm (see Section 3)
    concern.
 
 4. **Reproducibility.** Seed-defined scenarios, strict JSON outputs,
-   pickle-free artifacts, 225 tests, Docker image. Everything can be
+   pickle-free artifacts, 250 tests, Docker image. Everything can be
    independently verified.
 
 5. **The end-to-end chain.** Environment → Receiver → Scheduler → Metrics →
@@ -200,7 +200,7 @@ by public-domain NATO reporting names (e.g., "SNOW DRIFT", "FLAT FACE").
 These are **not operational ELINT data**. They are class-level descriptions
 with coarse frequency/pulse-width/scan-period ranges.
 
-**Impact:** 100% identification accuracy on the reference episode is
+**Impact:** 86% identification accuracy (14/19 streams) on the synthetic reference episode is
 meaningless if the library doesn't represent real threats. The architecture
 supports plugging in a real library; the content is placeholder.
 
@@ -255,9 +255,9 @@ expecting a formal cost-benefit framework will not find one.
 | **ML depth** | 5/10 | SmartScan is the star but is hand-designed. DQN declines. Linear Q improves but underperforms. No PPO, no transformer, no advanced RL. |
 | **Identification** | 6/10 | Architecture is solid. Library is placeholder. Accuracy claim is misleading without real data. |
 | **Geolocation** | 7/10 | AOA triangulation works. 2D only. CEP improves with receivers. |
-| **Multi-receiver** | 7/10 | Cooperative de-confliction. Scaling demonstrated (601→1101→1898). No real multi-platform test. |
+| **Multi-receiver** | 7/10 | Cooperative de-confliction. Scaling demonstrated (663→1192→1808). No real multi-platform test. |
 | **Live integration** | 5/10 | UDP bridge designed. No real hardware evidence. Simulated PDWs only. |
-| **Software quality** | 8/10 | 225 tests, Docker, strict JSON, pickle-free. Strong for a hackathon project. |
+| **Software quality** | 8/10 | 250 tests, Docker, strict JSON, pickle-free. Strong for a hackathon project. |
 | **Presentation / UX** | 8/10 | React command centre, desktop app, website. Professional-looking. |
 | **Documentation** | 8/10 | PROJECT_EXPLAINED.md, EVALUATION.md, VitePress docs site, README. Thorough. |
 
@@ -275,7 +275,7 @@ validation, and operational realism.**
    but don't dominate. The DQN (the actual ML policy) performs worse.
 
 2. **"Your identification accuracy is meaningless."**
-   100% on a 10-entry illustrative library with synthetic scenarios is
+   86% (14/19) on an illustrative library with synthetic scenarios is
    not a meaningful benchmark.
 
 3. **"No real hardware validation."**

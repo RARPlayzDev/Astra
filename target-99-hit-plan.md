@@ -1,17 +1,18 @@
 # Target 99 Hit Plan
 
-**Current assessed alignment:** 74/100  
+**Current assessed alignment:** 83/100 (rev. 2, 2026-09-08 — see `docs/smart-scan-alignment-report.md`)  
 **Target:** 99/100 alignment with the Smart Scan Strategy problem statement  
 **Purpose:** execution plan for the developer and other AI agents
 
 ## Execution status addendum (updated by agent run)
 
-The four P0 code gaps are now closed with regression tests (`tests/test_target99_gaps.py`, suite: 239 passed):
+The four P0 code gaps are now closed with regression tests (`tests/test_target99_gaps.py`, suite: 250 passed), and the alignment-gaps remediation (rev. 2) landed on top:
 
 - **Phase 1 (attribution)** — `DwellResult.detected_eids`; reward/first-intercept credit only detected emitters (`runner.detected_eids`, `runner.step_reward`); ambiguous co-channel dwells tracked in `Trace.ambiguous` and reported as `ambiguous_hit_rate`; `metrics.attribution_conservation` verifies credits ≤ supported detections. Co-channel regression tests added.
-- **Phase 2 (agile prediction)** — new `ewsmart/prediction.py` (causal transition-count, persistence, uniform predictors + oracle) with top-1/top-k and missed-opportunity metrics; `ScenarioConfig.agile_mode` adds structured Markov hopping. Leakage test proves future truth cannot change predictions; random hopping is scored at chance (0.199 vs 0.372 on Markov; `results/hop_prediction.json`).
+- **Phase 2 (agile prediction)** — `ewsmart/prediction.py` (causal transition-count, persistence, uniform predictors + oracle) with top-1/top-k and missed-opportunity metrics; `ScenarioConfig.agile_mode` adds structured Markov hopping. Leakage test proves future truth cannot change predictions; random hopping is scored at chance. **Rev. 2:** the same causal transition model is now integrated into `SmartScanScheduler.select()` (urgency-gated `hop_weight` bonus, ablatable), and policy-level hop-follow rates are reported for every scheduler in `results/benchmark.json` (the standalone `results/hop_prediction.json` is superseded by the `hop_prediction` section of `benchmark.json`).
 - **Phase 3 (learned control)** — `SmartScanScheduler(value_mode=...)` with `learned` / `heuristic` / `flat` ablations wired through `select()`; ablation experiment extended; test proves removing the learned value changes decisions materially.
-- **Phase 4 (canonical benchmark)** — `experiments.benchmark_report()` generates `results/benchmark.json` + `results/benchmark.md` from one seeded protocol for all 7 schedulers with 95% CIs and attribution-conservation checks; no hand-entered numbers. README test counts reconciled (239).
+- **Phase 4 (canonical benchmark)** — `experiments.benchmark_report()` generates `results/benchmark.json` + `results/benchmark.md` from the locked protocol (`CANONICAL_PROTOCOL`: 24 bands × 3000 slots × 50 episodes, base_seed 9000) for all 7 schedulers with 95% CIs, attribution-conservation checks, full FoM table, agile-hop follow rates, next-hop prediction benchmark, and a provenance stamp; no hand-entered numbers. Test counts reconciled to **250** everywhere.
+- **Rev. 2 additions** — `results/performance.json` (p50/p95/p99/max latency + platform), `results/dataset_benchmark.json` (Turing-schema replay with provenance), `tools/export_site_data.py` (single command bakes artifacts into the website), multi-receiver `coverage_integrity` deconfliction evidence, and the re-scored alignment report (83/100).
 
 
 ## Important meaning of 99/100

@@ -380,6 +380,19 @@ def test_agile_hop_follow_metrics_handbuilt():
     assert m1["agile_hop_follow_latency"] == pytest.approx(0.0)
 
 
+def test_dataset_replay_benchmark_artifact(tmp_path):
+    """Dataset-calibrated replay benchmark produces a provenance-stamped artifact."""
+    from ewsmart.dataset import dataset_replay_benchmark
+    jp = tmp_path / "dataset_benchmark.json"
+    art = dataset_replay_benchmark(str(jp), n_bands=6, T=300, episodes=1,
+                                   seed=99)
+    data = json.loads(jp.read_text())
+    assert set(data["metrics_ci"]) >= {"smart-scan", "openloop-sequential"}
+    assert data["provenance"]["python"]
+    assert data["protocol"]["seed"] == 99
+    assert data["dataset_summary"]["n_freq_clusters"] >= 1
+
+
 def test_benchmark_report_includes_hop_and_provenance(tmp_path):
     jp = tmp_path / "benchmark.json"
     mp = tmp_path / "benchmark.md"
@@ -390,8 +403,9 @@ def test_benchmark_report_includes_hop_and_provenance(tmp_path):
     assert "hop_prediction" in data
     assert "smart_scan_agile_hop" in data
     assert data["smart_scan_agile_hop"]["window_slots"] > 0
+    assert "smart-scan" in data["smart_scan_agile_hop"]["follow_rate_mean"]
     text = mp.read_text()
-    assert "agile-hop integration" in text
+    assert "Agile-hop follow rate by scheduler" in text
     assert "next-hop prediction" in text
 
 

@@ -561,7 +561,7 @@ def benchmark_report(json_path: str = "results/benchmark.json",
     scheds = make_schedulers(n_bands, threats, seed=base_seed)
     per_ep: dict[str, list] = {}
     conservation = {}
-    hop_follow: list[float] = []
+    hop_follow: dict[str, list[float]] = {}
     hop_latency: list[float] = []
     hop_window = 8
     for ep in range(episodes):
@@ -569,10 +569,13 @@ def benchmark_report(json_path: str = "results/benchmark.json",
         for s in scheds:
             tr = run_episode(env, s, seed=base_seed + ep)
             per_ep.setdefault(s.name, []).append(compute_metrics(env, tr))
+            # Policy-level agile-hop coverage, computed post hoc from the
+            # trace (no leakage: nothing is fed back into any scheduler).
+            hf = agile_hop_follow_metrics(env, tr)
+            hop_follow.setdefault(s.name, []).append(
+                hf["agile_hop_follow_rate"])
             if s.name == "smart-scan":
                 conservation[f"ep{ep}"] = attribution_conservation(env, tr)
-                hf = agile_hop_follow_metrics(env, tr)
-                hop_follow.append(hf["agile_hop_follow_rate"])
                 if np.isfinite(hf["agile_hop_follow_latency"]):
                     hop_latency.append(hf["agile_hop_follow_latency"])
                 hop_window = hf["window"]
@@ -583,12 +586,10 @@ def benchmark_report(json_path: str = "results/benchmark.json",
         "provenance": provenance(),
         "metrics_ci": ci,
         "smart_scan_agile_hop": {
-            "follow_rate_mean": (float(np.mean(hop_follow))
-                                 if hop_follow else None),
-            "follow_rate_min": (float(np.min(hop_follow))
-                                if hop_follow else None),
-            "follow_rate_max": (float(np.max(hop_follow))
-                                if hop_follow else None),
+            "follow_rate_mean": {
+                n: float(np.mean(v)) for n, v in hop_follow.items()},
+            "follow_rate_per_episode": {
+                n: [float(x) for x in v] for n, v in hop_follow.items()},
             "follow_latency_mean": (float(np.mean(hop_latency))
                                     if hop_latency else None),
             "window_slots": int(hop_window)},
@@ -622,16 +623,23 @@ def benchmark_report(json_path: str = "results/benchmark.json",
                 row.append(f"{v['mean']:.3f} ± {v['ci95']:.3f}")
             lines.append("| " + " | ".join(row) + " |")
         ss = artifact["smart_scan_agile_hop"]
+        fr = ss["follow_rate_mean"]
         lines += ["",
-                  "## SmartScan agile-hop integration (same episodes)",
+                  "## Agile-hop follow rate by scheduler (same episodes)",
                   "",
-                  f"- Agile-hop follow rate within {ss['window_slots']} slots "
-                  f"of each observed hop: **{ss['follow_rate_mean']:.3f}** "
-                  f"(min {ss['follow_rate_min']:.3f}, "
-                  f"max {ss['follow_rate_max']:.3f} across episodes)"]
+                  f"Fraction of agile-emitter hops whose destination band was "
+                  f"dwelt within {ss['window_slots']} slots of the hop "
+                  "(post-hoc trace measurement, leakage-free).",
+                  "",
+                  "| Scheduler | Follow rate |",
+                  "|---|---|"]
+        for name in sorted(fr, key=lambda n: -fr[n]):
+            label = SCHEDULER_LABELS.get(name, name)
+            lines.append(f"| {label} | {fr[name]:.3f} |")
         if ss["follow_latency_mean"] is not None:
-            lines.append(f"- Mean follow latency: "
-                         f"{ss['follow_latency_mean']:.1f} slots")
+            lines += ["",
+                      f"SmartScan mean follow latency: "
+                      f"{ss['follow_latency_mean']:.1f} slots after the hop."]
         lines += ["",
                   "## Observation-only next-hop prediction (separate protocol)",
                   "",

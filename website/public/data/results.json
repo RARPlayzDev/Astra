@@ -1,486 +1,1274 @@
 {
- "monte_carlo_means": {
-  "openloop-sequential": {
-   "avg_reward": 0.19593650000000004,
-   "total_reward": 587.8095,
-   "intercept_ratio": 0.8938000000000001,
-   "threat_intercept_ratio": 0.77875,
-   "intercept_rate": 0.44813166666666665,
-   "false_alarm_rate": 0.000125,
-   "mean_time_to_first_intercept": 96.46949378411442,
-   "threat_mean_ttff": 205.40523124098124,
-   "pct_correct_predictions": 0.457985,
-   "avg_intercept_time_error": 50.43583372835373,
-   "n_periodic_locked": 3.735
-  },
-  "openloop-random": {
-   "avg_reward": 0.19689295,
-   "total_reward": 590.67885,
-   "intercept_ratio": 0.9890000000000001,
-   "threat_intercept_ratio": 0.9770833333333333,
-   "intercept_rate": 0.4484916666666667,
-   "false_alarm_rate": 0.00010999999999999999,
-   "mean_time_to_first_intercept": 180.28873260869565,
-   "threat_mean_ttff": 347.7828257575758,
-   "pct_correct_predictions": 0.45775333333333335,
-   "avg_intercept_time_error": 34.03513928121363,
-   "n_periodic_locked": 5.645
-  },
-  "openloop-priority": {
-   "avg_reward": 0.19644183333333337,
-   "total_reward": 589.3255,
-   "intercept_ratio": 0.897,
-   "threat_intercept_ratio": 0.7854166666666665,
-   "intercept_rate": 0.4479316666666666,
-   "false_alarm_rate": 9.166666666666667e-05,
-   "mean_time_to_first_intercept": 93.5796808723885,
-   "threat_mean_ttff": 197.88477417027417,
-   "pct_correct_predictions": 0.45837000000000006,
-   "avg_intercept_time_error": 45.67871035506297,
-   "n_periodic_locked": 3.81
-  },
-  "bandit-ucb": {
-   "avg_reward": 0.9419854000000001,
-   "total_reward": 2825.9562,
-   "intercept_ratio": 0.7575999999999999,
-   "threat_intercept_ratio": 0.5404166666666668,
-   "intercept_rate": 0.9493666666666667,
-   "false_alarm_rate": 3.3333333333333333e-06,
-   "mean_time_to_first_intercept": 140.05428537444033,
-   "threat_mean_ttff": 172.94936111111113,
-   "pct_correct_predictions": 0.9876833333333334,
-   "avg_intercept_time_error": 57.712387944600174,
-   "n_periodic_locked": 1.085
-  },
-  "rl-linear-q": {
-   "avg_reward": 0.47381458333333343,
-   "total_reward": 1421.44375,
-   "intercept_ratio": 0.9501999999999999,
-   "threat_intercept_ratio": 0.89625,
-   "intercept_rate": 0.7269116666666667,
-   "false_alarm_rate": 5.8333333333333326e-05,
-   "mean_time_to_first_intercept": 272.59851953227934,
-   "threat_mean_ttff": 495.6778385642135,
-   "pct_correct_predictions": 0.19014666666666663,
-   "avg_intercept_time_error": 36.66235014165347,
-   "n_periodic_locked": 3.285
-  },
-  "rl-dqn": {
-   "avg_reward": 0.2694345166666667,
-   "total_reward": 808.30355,
-   "intercept_ratio": 0.9498000000000001,
-   "threat_intercept_ratio": 0.8954166666666665,
-   "intercept_rate": 0.5188816666666667,
-   "false_alarm_rate": 9.666666666666667e-05,
-   "mean_time_to_first_intercept": 292.0874602955016,
-   "threat_mean_ttff": 545.8421675685427,
-   "pct_correct_predictions": 0.3870283333333333,
-   "avg_intercept_time_error": 43.741279595860206,
-   "n_periodic_locked": 2.845
-  },
-  "smart-scan": {
-   "avg_reward": 0.4168796,
-   "total_reward": 1250.6388,
-   "intercept_ratio": 0.9758000000000001,
-   "threat_intercept_ratio": 0.9495833333333331,
-   "intercept_rate": 0.629275,
-   "false_alarm_rate": 7.166666666666667e-05,
-   "mean_time_to_first_intercept": 201.170134057971,
-   "threat_mean_ttff": 410.0740176767677,
-   "pct_correct_predictions": 0.58128,
-   "avg_intercept_time_error": 39.43246170419975,
-   "n_periodic_locked": 4.35
-  }
- },
- "monte_carlo_ci": {
-  "openloop-sequential": {
-   "avg_reward": 0.0025116932268532386,
-   "total_reward": 7.5350796805597176,
-   "intercept_ratio": 0.006026824833014411,
-   "threat_intercept_ratio": 0.012555885068780026,
-   "intercept_rate": 0.0051037785403923105,
-   "false_alarm_rate": 2.945102588603341e-05,
-   "mean_time_to_first_intercept": 5.758199970229658,
-   "threat_mean_ttff": 13.481250716270473,
-   "pct_correct_predictions": 0.006271680742066482,
-   "avg_intercept_time_error": 5.222324131437392,
-   "n_periodic_locked": 0.1646769891447158
-  },
-  "openloop-random": {
-   "avg_reward": 0.0026518332931873122,
-   "total_reward": 7.955499879561935,
-   "intercept_ratio": 0.0027753386320615134,
-   "threat_intercept_ratio": 0.005781955483461484,
-   "intercept_rate": 0.00508616217166892,
-   "false_alarm_rate": 2.744250128186657e-05,
-   "mean_time_to_first_intercept": 8.448965488099528,
-   "threat_mean_ttff": 17.62204201232298,
-   "pct_correct_predictions": 0.006350590969824696,
-   "avg_intercept_time_error": 2.5912725546536435,
-   "n_periodic_locked": 0.134634557675966
-  },
-  "openloop-priority": {
-   "avg_reward": 0.0025623816568578687,
-   "total_reward": 7.687144970573606,
-   "intercept_ratio": 0.006073791461152403,
-   "threat_intercept_ratio": 0.01265373221073417,
-   "intercept_rate": 0.0050417514795396785,
-   "false_alarm_rate": 2.6173315311480757e-05,
-   "mean_time_to_first_intercept": 5.811471797750947,
-   "threat_mean_ttff": 13.754735643523802,
-   "pct_correct_predictions": 0.0063161182035899,
-   "avg_intercept_time_error": 4.168620599054024,
-   "n_periodic_locked": 0.17430831345837614
-  },
-  "bandit-ucb": {
-   "avg_reward": 0.0049666023265896135,
-   "total_reward": 14.899806979768845,
-   "intercept_ratio": 0.008868554460060291,
-   "threat_intercept_ratio": 0.014961573290301044,
-   "intercept_rate": 0.004443236341444111,
-   "false_alarm_rate": 4.608142236777405e-06,
-   "mean_time_to_first_intercept": 9.376230111398014,
-   "threat_mean_ttff": 19.61819236214834,
-   "pct_correct_predictions": 0.00036704053727379106,
-   "avg_intercept_time_error": 12.030712286008585,
-   "n_periodic_locked": 0.14289801050761755
-  },
-  "rl-linear-q": {
-   "avg_reward": 0.025216315370017662,
-   "total_reward": 75.64894611005298,
-   "intercept_ratio": 0.005842056470027908,
-   "threat_intercept_ratio": 0.01217095097922481,
-   "intercept_rate": 0.010285340853637805,
-   "false_alarm_rate": 1.8776998057678656e-05,
-   "mean_time_to_first_intercept": 12.699534194176534,
-   "threat_mean_ttff": 26.631057251140252,
-   "pct_correct_predictions": 0.008061613450900288,
-   "avg_intercept_time_error": 3.777073124859341,
-   "n_periodic_locked": 0.23056520066739036
-  },
-  "rl-dqn": {
-   "avg_reward": 0.021429083733307566,
-   "total_reward": 64.28725119992268,
-   "intercept_ratio": 0.005694806915870388,
-   "threat_intercept_ratio": 0.011864181074729979,
-   "intercept_rate": 0.021696772091605337,
-   "false_alarm_rate": 2.388182145206328e-05,
-   "mean_time_to_first_intercept": 13.449745440492467,
-   "threat_mean_ttff": 27.256205128291313,
-   "pct_correct_predictions": 0.02277524649497787,
-   "avg_intercept_time_error": 5.301986029502083,
-   "n_periodic_locked": 0.20234725065897538
-  },
-  "smart-scan": {
-   "avg_reward": 0.004720971596668887,
-   "total_reward": 14.162914790006662,
-   "intercept_ratio": 0.004080128444130529,
-   "threat_intercept_ratio": 0.008500267591938605,
-   "intercept_rate": 0.004228168987733704,
-   "false_alarm_rate": 2.1161552422948327e-05,
-   "mean_time_to_first_intercept": 9.671676836644503,
-   "threat_mean_ttff": 20.359222035737332,
-   "pct_correct_predictions": 0.010859595908398849,
-   "avg_intercept_time_error": 3.5604659155574088,
-   "n_periodic_locked": 0.1923965231249067
-  }
- },
- "mission_effectiveness": {
-  "scores": {
-   "openloop-sequential": {
-    "mes": 0.33649224614312484,
-    "components": {
-     "Pd (threat coverage)": 0.77875,
-     "1 - Pfa (rel.)": 0.0,
-     "Avg intercept rate": 0.44813166666666665,
-     "Reward (rel.)": 0.20800375462294854,
-     "Prediction accuracy": 0.457985,
-     "Intercept-time error (rel.)": 0.12608305556913402
+  "monte_carlo_means": {
+    "openloop-sequential": {
+      "avg_reward": 0.1863657333333333,
+      "total_reward": 559.0971999999999,
+      "intercept_ratio": 0.8896000000000001,
+      "threat_intercept_ratio": 0.77,
+      "intercept_rate": 0.44958666666666663,
+      "false_alarm_rate": 8.666666666666667e-05,
+      "mean_time_to_first_intercept": 106.89170331262942,
+      "threat_mean_ttff": 224.05701803751808,
+      "threat_ttff_censored": 862.615,
+      "pct_correct_predictions": 0.4611083333333334,
+      "avg_intercept_time_error": 56.28313848095733,
+      "n_periodic_locked": 3.64,
+      "ambiguous_hit_rate": 0.11823333333333333
     },
+    "openloop-random": {
+      "avg_reward": 0.1864242,
+      "total_reward": 559.2726,
+      "intercept_ratio": 0.9832,
+      "threat_intercept_ratio": 0.965,
+      "intercept_rate": 0.44964,
+      "false_alarm_rate": 9.333333333333334e-05,
+      "mean_time_to_first_intercept": 187.260768115942,
+      "threat_mean_ttff": 358.2257575757576,
+      "threat_ttff_censored": 451.525,
+      "pct_correct_predictions": 0.4610916666666667,
+      "avg_intercept_time_error": 35.216854506079734,
+      "n_periodic_locked": 5.64,
+      "ambiguous_hit_rate": 0.11723333333333333
+    },
+    "openloop-priority": {
+      "avg_reward": 0.18581780000000003,
+      "total_reward": 557.4534,
+      "intercept_ratio": 0.8864,
+      "threat_intercept_ratio": 0.7633333333333333,
+      "intercept_rate": 0.44945333333333337,
+      "false_alarm_rate": 7.333333333333334e-05,
+      "mean_time_to_first_intercept": 109.8572377752682,
+      "threat_mean_ttff": 233.07477994227997,
+      "threat_ttff_censored": 889.7333333333335,
+      "pct_correct_predictions": 0.4612,
+      "avg_intercept_time_error": 62.60245831166463,
+      "n_periodic_locked": 3.7,
+      "ambiguous_hit_rate": 0.11750666666666666
+    },
+    "bandit-ucb": {
+      "avg_reward": 0.8995043333333334,
+      "total_reward": 2698.513,
+      "intercept_ratio": 0.7487999999999999,
+      "threat_intercept_ratio": 0.5233333333333333,
+      "intercept_rate": 0.9345600000000001,
+      "false_alarm_rate": 0.0,
+      "mean_time_to_first_intercept": 145.91329120595606,
+      "threat_mean_ttff": 161.87104761904763,
+      "threat_ttff_censored": 1519.4983333333332,
+      "pct_correct_predictions": 0.994775,
+      "avg_intercept_time_error": 58.389241693007065,
+      "n_periodic_locked": 0.98,
+      "ambiguous_hit_rate": 0.3902999999999999
+    },
+    "rl-linear-q": {
+      "avg_reward": 0.47571213333333334,
+      "total_reward": 1427.1364,
+      "intercept_ratio": 0.94,
+      "threat_intercept_ratio": 0.8749999999999999,
+      "intercept_rate": 0.7329399999999999,
+      "false_alarm_rate": 4e-05,
+      "mean_time_to_first_intercept": 269.6145647844909,
+      "threat_mean_ttff": 470.8123282828282,
+      "threat_ttff_censored": 783.1916666666667,
+      "pct_correct_predictions": 0.18464166666666665,
+      "avg_intercept_time_error": 36.8055260121734,
+      "n_periodic_locked": 3.6,
+      "ambiguous_hit_rate": 0.30615333333333333
+    },
+    "rl-dqn": {
+      "avg_reward": 0.23458206666666664,
+      "total_reward": 703.7461999999998,
+      "intercept_ratio": 0.9248000000000001,
+      "threat_intercept_ratio": 0.8433333333333334,
+      "intercept_rate": 0.49668000000000007,
+      "false_alarm_rate": 8.666666666666667e-05,
+      "mean_time_to_first_intercept": 275.6295228119706,
+      "threat_mean_ttff": 494.3124718614718,
+      "threat_ttff_censored": 894.4683333333335,
+      "pct_correct_predictions": 0.41295833333333326,
+      "avg_intercept_time_error": 46.88458745250342,
+      "n_periodic_locked": 2.74,
+      "ambiguous_hit_rate": 0.14531333333333335
+    },
+    "smart-scan": {
+      "avg_reward": 0.4746716666666667,
+      "total_reward": 1424.015,
+      "intercept_ratio": 0.9536,
+      "threat_intercept_ratio": 0.9033333333333333,
+      "intercept_rate": 0.7062599999999999,
+      "false_alarm_rate": 3.333333333333333e-05,
+      "mean_time_to_first_intercept": 179.50510553359683,
+      "threat_mean_ttff": 364.44531313131307,
+      "threat_ttff_censored": 621.8683333333333,
+      "pct_correct_predictions": 0.5479833333333333,
+      "avg_intercept_time_error": 38.33946328216832,
+      "n_periodic_locked": 3.96,
+      "ambiguous_hit_rate": 0.2585533333333333
+    }
+  },
+  "monte_carlo_ci": {
+    "openloop-sequential": {
+      "avg_reward": {
+        "mean": 0.1863657333333333,
+        "ci95": 0.004073982872987291
+      },
+      "total_reward": {
+        "mean": 559.0971999999999,
+        "ci95": 12.221948618961873
+      },
+      "intercept_ratio": {
+        "mean": 0.8896000000000001,
+        "ci95": 0.011544152459145715
+      },
+      "threat_intercept_ratio": {
+        "mean": 0.77,
+        "ci95": 0.024050317623220234
+      },
+      "intercept_rate": {
+        "mean": 0.44958666666666663,
+        "ci95": 0.009754464164109116
+      },
+      "false_alarm_rate": {
+        "mean": 8.666666666666667e-05,
+        "ci95": 5.540573576404843e-05
+      },
+      "mean_time_to_first_intercept": {
+        "mean": 106.89170331262942,
+        "ci95": 12.001077291083453
+      },
+      "threat_mean_ttff": {
+        "mean": 224.05701803751808,
+        "ci95": 28.3301063440312
+      },
+      "threat_ttff_censored": {
+        "mean": 862.615,
+        "ci95": 70.3296663202347
+      },
+      "pct_correct_predictions": {
+        "mean": 0.4611083333333334,
+        "ci95": 0.010518872927584336
+      },
+      "avg_intercept_time_error": {
+        "mean": 56.28313848095733,
+        "ci95": 11.61419646814164
+      },
+      "n_periodic_locked": {
+        "mean": 3.64,
+        "ci95": 0.3618830750394386
+      },
+      "ambiguous_hit_rate": {
+        "mean": 0.11823333333333333,
+        "ci95": 0.006058368683986732
+      }
+    },
+    "openloop-random": {
+      "avg_reward": {
+        "mean": 0.1864242,
+        "ci95": 0.00522815340791263
+      },
+      "total_reward": {
+        "mean": 559.2726,
+        "ci95": 15.684460223737892
+      },
+      "intercept_ratio": {
+        "mean": 0.9832,
+        "ci95": 0.006371215268690896
+      },
+      "threat_intercept_ratio": {
+        "mean": 0.965,
+        "ci95": 0.013273365143106033
+      },
+      "intercept_rate": {
+        "mean": 0.44964,
+        "ci95": 0.010367931810475352
+      },
+      "false_alarm_rate": {
+        "mean": 9.333333333333334e-05,
+        "ci95": 4.9528263535973965e-05
+      },
+      "mean_time_to_first_intercept": {
+        "mean": 187.260768115942,
+        "ci95": 17.09244635621438
+      },
+      "threat_mean_ttff": {
+        "mean": 358.2257575757576,
+        "ci95": 35.978961988321196
+      },
+      "threat_ttff_censored": {
+        "mean": 451.525,
+        "ci95": 46.13722114277991
+      },
+      "pct_correct_predictions": {
+        "mean": 0.4610916666666667,
+        "ci95": 0.010767489963362452
+      },
+      "avg_intercept_time_error": {
+        "mean": 35.216854506079734,
+        "ci95": 3.75761487916505
+      },
+      "n_periodic_locked": {
+        "mean": 5.64,
+        "ci95": 0.2950514531399566
+      },
+      "ambiguous_hit_rate": {
+        "mean": 0.11723333333333333,
+        "ci95": 0.006476828990932042
+      }
+    },
+    "openloop-priority": {
+      "avg_reward": {
+        "mean": 0.18581780000000003,
+        "ci95": 0.004640353806272583
+      },
+      "total_reward": {
+        "mean": 557.4534,
+        "ci95": 13.921061418817745
+      },
+      "intercept_ratio": {
+        "mean": 0.8864,
+        "ci95": 0.01293781805406151
+      },
+      "threat_intercept_ratio": {
+        "mean": 0.7633333333333333,
+        "ci95": 0.026953787612628146
+      },
+      "intercept_rate": {
+        "mean": 0.44945333333333337,
+        "ci95": 0.009798360040560075
+      },
+      "false_alarm_rate": {
+        "mean": 7.333333333333334e-05,
+        "ci95": 5.374573884918175e-05
+      },
+      "mean_time_to_first_intercept": {
+        "mean": 109.8572377752682,
+        "ci95": 14.248480070748311
+      },
+      "threat_mean_ttff": {
+        "mean": 233.07477994227997,
+        "ci95": 34.043682178975054
+      },
+      "threat_ttff_censored": {
+        "mean": 889.7333333333335,
+        "ci95": 75.3418802791648
+      },
+      "pct_correct_predictions": {
+        "mean": 0.4612,
+        "ci95": 0.010637124903949476
+      },
+      "avg_intercept_time_error": {
+        "mean": 62.60245831166463,
+        "ci95": 12.372385822202855
+      },
+      "n_periodic_locked": {
+        "mean": 3.7,
+        "ci95": 0.34634087255188345
+      },
+      "ambiguous_hit_rate": {
+        "mean": 0.11750666666666666,
+        "ci95": 0.006209949728191579
+      }
+    },
+    "bandit-ucb": {
+      "avg_reward": {
+        "mean": 0.8995043333333334,
+        "ci95": 0.013248595583559456
+      },
+      "total_reward": {
+        "mean": 2698.513,
+        "ci95": 39.74578675067836
+      },
+      "intercept_ratio": {
+        "mean": 0.7487999999999999,
+        "ci95": 0.015525640212242453
+      },
+      "threat_intercept_ratio": {
+        "mean": 0.5233333333333333,
+        "ci95": 0.030969232043002504
+      },
+      "intercept_rate": {
+        "mean": 0.9345600000000001,
+        "ci95": 0.010390820413764794
+      },
+      "false_alarm_rate": {
+        "mean": 0.0,
+        "ci95": 0.0
+      },
+      "mean_time_to_first_intercept": {
+        "mean": 145.91329120595606,
+        "ci95": 21.643061408765682
+      },
+      "threat_mean_ttff": {
+        "mean": 161.87104761904763,
+        "ci95": 33.60895543268971
+      },
+      "threat_ttff_censored": {
+        "mean": 1519.4983333333332,
+        "ci95": 83.81544077584326
+      },
+      "pct_correct_predictions": {
+        "mean": 0.994775,
+        "ci95": 0.0004828421642271483
+      },
+      "avg_intercept_time_error": {
+        "mean": 58.389241693007065,
+        "ci95": 17.6164779555877
+      },
+      "n_periodic_locked": {
+        "mean": 0.98,
+        "ci95": 0.2596009244975834
+      },
+      "ambiguous_hit_rate": {
+        "mean": 0.3902999999999999,
+        "ci95": 0.07093989399484607
+      }
+    },
+    "rl-linear-q": {
+      "avg_reward": {
+        "mean": 0.47571213333333334,
+        "ci95": 0.04694015557527399
+      },
+      "total_reward": {
+        "mean": 1427.1364,
+        "ci95": 140.82046672582197
+      },
+      "intercept_ratio": {
+        "mean": 0.94,
+        "ci95": 0.01252198067399882
+      },
+      "threat_intercept_ratio": {
+        "mean": 0.8749999999999999,
+        "ci95": 0.026087459737497543
+      },
+      "intercept_rate": {
+        "mean": 0.7329399999999999,
+        "ci95": 0.017757982630167576
+      },
+      "false_alarm_rate": {
+        "mean": 4e-05,
+        "ci95": 3.032974337730758e-05
+      },
+      "mean_time_to_first_intercept": {
+        "mean": 269.6145647844909,
+        "ci95": 23.402091909691592
+      },
+      "threat_mean_ttff": {
+        "mean": 470.8123282828282,
+        "ci95": 49.80643229053572
+      },
+      "threat_ttff_censored": {
+        "mean": 783.1916666666667,
+        "ci95": 86.01491538939304
+      },
+      "pct_correct_predictions": {
+        "mean": 0.18464166666666665,
+        "ci95": 0.016198543998355734
+      },
+      "avg_intercept_time_error": {
+        "mean": 36.8055260121734,
+        "ci95": 8.430790741446808
+      },
+      "n_periodic_locked": {
+        "mean": 3.6,
+        "ci95": 0.5312626469082877
+      },
+      "ambiguous_hit_rate": {
+        "mean": 0.30615333333333333,
+        "ci95": 0.044176709422449695
+      }
+    },
+    "rl-dqn": {
+      "avg_reward": {
+        "mean": 0.23458206666666664,
+        "ci95": 0.039848369522082504
+      },
+      "total_reward": {
+        "mean": 703.7461999999998,
+        "ci95": 119.54510856624752
+      },
+      "intercept_ratio": {
+        "mean": 0.9248000000000001,
+        "ci95": 0.014797569530162712
+      },
+      "threat_intercept_ratio": {
+        "mean": 0.8433333333333334,
+        "ci95": 0.03082826985450566
+      },
+      "intercept_rate": {
+        "mean": 0.49668000000000007,
+        "ci95": 0.04367141951050162
+      },
+      "false_alarm_rate": {
+        "mean": 8.666666666666667e-05,
+        "ci95": 4.499402429459074e-05
+      },
+      "mean_time_to_first_intercept": {
+        "mean": 275.6295228119706,
+        "ci95": 25.748155833354986
+      },
+      "threat_mean_ttff": {
+        "mean": 494.3124718614718,
+        "ci95": 51.609283308800485
+      },
+      "threat_ttff_censored": {
+        "mean": 894.4683333333335,
+        "ci95": 73.33731772391037
+      },
+      "pct_correct_predictions": {
+        "mean": 0.41295833333333326,
+        "ci95": 0.049042355305275544
+      },
+      "avg_intercept_time_error": {
+        "mean": 46.88458745250342,
+        "ci95": 12.970592235618957
+      },
+      "n_periodic_locked": {
+        "mean": 2.74,
+        "ci95": 0.33975897339143224
+      },
+      "ambiguous_hit_rate": {
+        "mean": 0.14531333333333335,
+        "ci95": 0.03280967847341526
+      }
+    },
+    "smart-scan": {
+      "avg_reward": {
+        "mean": 0.4746716666666667,
+        "ci95": 0.01384454500599183
+      },
+      "total_reward": {
+        "mean": 1424.015,
+        "ci95": 41.53363501797549
+      },
+      "intercept_ratio": {
+        "mean": 0.9536,
+        "ci95": 0.008778971238134906
+      },
+      "threat_intercept_ratio": {
+        "mean": 0.9033333333333333,
+        "ci95": 0.018289523412781058
+      },
+      "intercept_rate": {
+        "mean": 0.7062599999999999,
+        "ci95": 0.009214232164549696
+      },
+      "false_alarm_rate": {
+        "mean": 3.333333333333333e-05,
+        "ci95": 3.3651811904330564e-05
+      },
+      "mean_time_to_first_intercept": {
+        "mean": 179.50510553359683,
+        "ci95": 19.273134199623115
+      },
+      "threat_mean_ttff": {
+        "mean": 364.44531313131307,
+        "ci95": 41.252270784720146
+      },
+      "threat_ttff_censored": {
+        "mean": 621.8683333333333,
+        "ci95": 52.89932334543084
+      },
+      "pct_correct_predictions": {
+        "mean": 0.5479833333333333,
+        "ci95": 0.022383494821954068
+      },
+      "avg_intercept_time_error": {
+        "mean": 38.33946328216832,
+        "ci95": 7.902333420155964
+      },
+      "n_periodic_locked": {
+        "mean": 3.96,
+        "ci95": 0.3958213738544193
+      },
+      "ambiguous_hit_rate": {
+        "mean": 0.2585533333333333,
+        "ci95": 0.03238814388177665
+      }
+    }
+  },
+  "mission_effectiveness": {
+    "scores": {
+      "openloop-sequential": {
+        "mes": 0.34337572532062594,
+        "components": {
+          "Pd (threat coverage)": 0.77,
+          "1 - Pfa (rel.)": 0.07142857142857151,
+          "Avg intercept rate": 0.44958666666666663,
+          "Reward (rel.)": 0.20718714343788594,
+          "Prediction accuracy": 0.4611083333333334,
+          "Intercept-time error (rel.)": 0.10094363705729792
+        },
+        "kpps": {
+          "threat_intercept_ratio": {
+            "pass": false,
+            "value": 0.77
+          },
+          "pct_correct_predictions": {
+            "pass": false,
+            "value": 0.4611083333333334
+          },
+          "false_alarm_rate": {
+            "pass": true,
+            "value": 8.666666666666667e-05
+          }
+        },
+        "mission_capable": false
+      },
+      "openloop-random": {
+        "mes": 0.42007272323182687,
+        "components": {
+          "Pd (threat coverage)": 0.965,
+          "1 - Pfa (rel.)": 0.0,
+          "Avg intercept rate": 0.44964,
+          "Reward (rel.)": 0.20725214219831442,
+          "Prediction accuracy": 0.4610916666666667,
+          "Intercept-time error (rel.)": 0.43745253052598054
+        },
+        "kpps": {
+          "threat_intercept_ratio": {
+            "pass": true,
+            "value": 0.965
+          },
+          "pct_correct_predictions": {
+            "pass": false,
+            "value": 0.4610916666666667
+          },
+          "false_alarm_rate": {
+            "pass": true,
+            "value": 9.333333333333334e-05
+          }
+        },
+        "mission_capable": false
+      },
+      "openloop-priority": {
+        "mes": 0.3491417290152609,
+        "components": {
+          "Pd (threat coverage)": 0.7633333333333333,
+          "1 - Pfa (rel.)": 0.2142857142857142,
+          "Avg intercept rate": 0.44945333333333337,
+          "Reward (rel.)": 0.20657799313918446,
+          "Prediction accuracy": 0.4612,
+          "Intercept-time error (rel.)": 0.0
+        },
+        "kpps": {
+          "threat_intercept_ratio": {
+            "pass": false,
+            "value": 0.7633333333333333
+          },
+          "pct_correct_predictions": {
+            "pass": false,
+            "value": 0.4612
+          },
+          "false_alarm_rate": {
+            "pass": true,
+            "value": 7.333333333333334e-05
+          }
+        },
+        "mission_capable": false
+      },
+      "bandit-ucb": {
+        "mes": 0.7533282450430093,
+        "components": {
+          "Pd (threat coverage)": 0.5233333333333333,
+          "1 - Pfa (rel.)": 1.0,
+          "Avg intercept rate": 0.9345600000000001,
+          "Reward (rel.)": 1.0,
+          "Prediction accuracy": 0.994775,
+          "Intercept-time error (rel.)": 0.06730113692472228
+        },
+        "kpps": {
+          "threat_intercept_ratio": {
+            "pass": false,
+            "value": 0.5233333333333333
+          },
+          "pct_correct_predictions": {
+            "pass": true,
+            "value": 0.994775
+          },
+          "false_alarm_rate": {
+            "pass": true,
+            "value": 0.0
+          }
+        },
+        "mission_capable": false
+      },
+      "rl-linear-q": {
+        "mes": 0.5508243213436711,
+        "components": {
+          "Pd (threat coverage)": 0.8749999999999999,
+          "1 - Pfa (rel.)": 0.5714285714285714,
+          "Avg intercept rate": 0.7329399999999999,
+          "Reward (rel.)": 0.5288603019514821,
+          "Prediction accuracy": 0.18464166666666665,
+          "Intercept-time error (rel.)": 0.4120753880153061
+        },
+        "kpps": {
+          "threat_intercept_ratio": {
+            "pass": false,
+            "value": 0.8749999999999999
+          },
+          "pct_correct_predictions": {
+            "pass": false,
+            "value": 0.18464166666666665
+          },
+          "false_alarm_rate": {
+            "pass": true,
+            "value": 4e-05
+          }
+        },
+        "mission_capable": false
+      },
+      "rl-dqn": {
+        "mes": 0.3893774910028065,
+        "components": {
+          "Pd (threat coverage)": 0.8433333333333334,
+          "1 - Pfa (rel.)": 0.07142857142857151,
+          "Avg intercept rate": 0.49668000000000007,
+          "Reward (rel.)": 0.2607903686215334,
+          "Prediction accuracy": 0.41295833333333326,
+          "Intercept-time error (rel.)": 0.2510743393000674
+        },
+        "kpps": {
+          "threat_intercept_ratio": {
+            "pass": false,
+            "value": 0.8433333333333334
+          },
+          "pct_correct_predictions": {
+            "pass": false,
+            "value": 0.41295833333333326
+          },
+          "false_alarm_rate": {
+            "pass": true,
+            "value": 8.666666666666667e-05
+          }
+        },
+        "mission_capable": false
+      },
+      "smart-scan": {
+        "mes": 0.6192849933904855,
+        "components": {
+          "Pd (threat coverage)": 0.9033333333333333,
+          "1 - Pfa (rel.)": 0.642857142857143,
+          "Avg intercept rate": 0.7062599999999999,
+          "Reward (rel.)": 0.5277035908294679,
+          "Prediction accuracy": 0.5479833333333333,
+          "Intercept-time error (rel.)": 0.3875725599896357
+        },
+        "kpps": {
+          "threat_intercept_ratio": {
+            "pass": true,
+            "value": 0.9033333333333333
+          },
+          "pct_correct_predictions": {
+            "pass": true,
+            "value": 0.5479833333333333
+          },
+          "false_alarm_rate": {
+            "pass": true,
+            "value": 3.333333333333333e-05
+          }
+        },
+        "mission_capable": true
+      }
+    },
+    "ranking": [
+      "smart-scan",
+      "bandit-ucb",
+      "rl-linear-q",
+      "openloop-random",
+      "rl-dqn",
+      "openloop-priority",
+      "openloop-sequential"
+    ],
     "kpps": {
-     "threat_intercept_ratio": {
-      "pass": false,
-      "value": 0.77875
-     },
-     "pct_correct_predictions": {
-      "pass": false,
-      "value": 0.457985
-     },
-     "false_alarm_rate": {
-      "pass": true,
-      "value": 0.000125
-     }
-    },
-    "mission_capable": false
-   },
-   "openloop-random": {
-    "mes": 0.43710171529144226,
-    "components": {
-     "Pd (threat coverage)": 0.9770833333333333,
-     "1 - Pfa (rel.)": 0.1200000000000001,
-     "Avg intercept rate": 0.4484916666666667,
-     "Reward (rel.)": 0.20901911006264004,
-     "Prediction accuracy": 0.45775333333333335,
-     "Intercept-time error (rel.)": 0.4102628483526801
-    },
-    "kpps": {
-     "threat_intercept_ratio": {
-      "pass": true,
-      "value": 0.9770833333333333
-     },
-     "pct_correct_predictions": {
-      "pass": false,
-      "value": 0.45775333333333335
-     },
-     "false_alarm_rate": {
-      "pass": true,
-      "value": 0.00010999999999999999
-     }
-    },
-    "mission_capable": false
-   },
-   "openloop-priority": {
-    "mes": 0.3959060635296879,
-    "components": {
-     "Pd (threat coverage)": 0.7854166666666665,
-     "1 - Pfa (rel.)": 0.2666666666666667,
-     "Avg intercept rate": 0.4479316666666666,
-     "Reward (rel.)": 0.20854021021274147,
-     "Prediction accuracy": 0.45837000000000006,
-     "Intercept-time error (rel.)": 0.20851117096538596
-    },
-    "kpps": {
-     "threat_intercept_ratio": {
-      "pass": false,
-      "value": 0.7854166666666665
-     },
-     "pct_correct_predictions": {
-      "pass": false,
-      "value": 0.45837000000000006
-     },
-     "false_alarm_rate": {
-      "pass": true,
-      "value": 9.166666666666667e-05
-     }
-    },
-    "mission_capable": false
-   },
-   "bandit-ucb": {
-    "mes": 0.7418,
-    "components": {
-     "Pd (threat coverage)": 0.5404166666666668,
-     "1 - Pfa (rel.)": 0.9733333333333334,
-     "Avg intercept rate": 0.9493666666666667,
-     "Reward (rel.)": 1.0,
-     "Prediction accuracy": 0.9876833333333334,
-     "Intercept-time error (rel.)": 0.0
-    },
-    "kpps": {
-     "threat_intercept_ratio": {
-      "pass": false,
-      "value": 0.5404166666666668
-     },
-     "pct_correct_predictions": {
-      "pass": true,
-      "value": 0.9876833333333334
-     },
-     "false_alarm_rate": {
-      "pass": true,
-      "value": 3.3333333333333333e-06
-     }
-    },
-    "mission_capable": false
-   },
-   "rl-linear-q": {
-    "mes": 0.5357296190304511,
-    "components": {
-     "Pd (threat coverage)": 0.89625,
-     "1 - Pfa (rel.)": 0.5333333333333334,
-     "Avg intercept rate": 0.7269116666666667,
-     "Reward (rel.)": 0.5029956762953368,
-     "Prediction accuracy": 0.19014666666666663,
-     "Intercept-time error (rel.)": 0.36474037122070324
-    },
-    "kpps": {
-     "threat_intercept_ratio": {
-      "pass": false,
-      "value": 0.89625
-     },
-     "pct_correct_predictions": {
-      "pass": false,
-      "value": 0.19014666666666663
-     },
-     "false_alarm_rate": {
-      "pass": true,
-      "value": 5.8333333333333326e-05
-     }
-    },
-    "mission_capable": false
-   },
-   "rl-dqn": {
-    "mes": 0.42601721486393274,
-    "components": {
-     "Pd (threat coverage)": 0.8954166666666665,
-     "1 - Pfa (rel.)": 0.22666666666666668,
-     "Avg intercept rate": 0.5188816666666667,
-     "Reward (rel.)": 0.2860283361787419,
-     "Prediction accuracy": 0.3870283333333333,
-     "Intercept-time error (rel.)": 0.24208161967152086
-    },
-    "kpps": {
-     "threat_intercept_ratio": {
-      "pass": false,
-      "value": 0.8954166666666665
-     },
-     "pct_correct_predictions": {
-      "pass": false,
-      "value": 0.3870283333333333
-     },
-     "false_alarm_rate": {
-      "pass": true,
-      "value": 9.666666666666667e-05
-     }
-    },
-    "mission_capable": false
-   },
-   "smart-scan": {
-    "mes": 0.5576835025996866,
-    "components": {
-     "Pd (threat coverage)": 0.9495833333333331,
-     "1 - Pfa (rel.)": 0.42666666666666664,
-     "Avg intercept rate": 0.629275,
-     "Reward (rel.)": 0.44255420519256455,
-     "Prediction accuracy": 0.58128,
-     "Intercept-time error (rel.)": 0.3167418104055556
-    },
-    "kpps": {
-     "threat_intercept_ratio": {
-      "pass": true,
-      "value": 0.9495833333333331
-     },
-     "pct_correct_predictions": {
-      "pass": true,
-      "value": 0.58128
-     },
-     "false_alarm_rate": {
-      "pass": true,
-      "value": 7.166666666666667e-05
-     }
-    },
-    "mission_capable": true
-   }
+      "threat_intercept_ratio": {
+        "min": 0.9,
+        "why": "PS primary objective: high interception rate"
+      },
+      "pct_correct_predictions": {
+        "min": 0.5,
+        "why": "PS FoM: predictions better than chance"
+      },
+      "false_alarm_rate": {
+        "max": 0.0005,
+        "why": "operator loading limit"
+      }
+    }
   },
-  "ranking": [
-   "smart-scan",
-   "bandit-ucb",
-   "rl-linear-q",
-   "openloop-random",
-   "rl-dqn",
-   "openloop-priority",
-   "openloop-sequential"
+  "significance_gated_mes": [
+    {
+      "comparator": "openloop-sequential",
+      "mean_diff": 0.31595202652826937,
+      "ci95_low": 0.21798954362456152,
+      "ci95_high": 0.4173975873001104,
+      "p_value": 0.0,
+      "n": 50,
+      "metric": "gated_mes",
+      "significant": true
+    },
+    {
+      "comparator": "openloop-random",
+      "mean_diff": 0.23624211861065222,
+      "ci95_low": 0.13331823339974244,
+      "ci95_high": 0.3434963467069982,
+      "p_value": 0.0,
+      "n": 50,
+      "metric": "gated_mes",
+      "significant": true
+    },
+    {
+      "comparator": "openloop-priority",
+      "mean_diff": 0.3033945060252947,
+      "ci95_low": 0.20692816041276735,
+      "ci95_high": 0.40459813815455586,
+      "p_value": 0.0,
+      "n": 50,
+      "metric": "gated_mes",
+      "significant": true
+    },
+    {
+      "comparator": "bandit-ucb",
+      "mean_diff": 0.31595202652826937,
+      "ci95_low": 0.21798954362456152,
+      "ci95_high": 0.4173975873001104,
+      "p_value": 0.0,
+      "n": 50,
+      "metric": "gated_mes",
+      "significant": true
+    },
+    {
+      "comparator": "rl-linear-q",
+      "mean_diff": 0.31595202652826937,
+      "ci95_low": 0.21798954362456152,
+      "ci95_high": 0.4173975873001104,
+      "p_value": 0.0,
+      "n": 50,
+      "metric": "gated_mes",
+      "significant": true
+    },
+    {
+      "comparator": "rl-dqn",
+      "mean_diff": 0.23196401568144268,
+      "ci95_low": 0.12093833327631714,
+      "ci95_high": 0.3435374678878234,
+      "p_value": 0.0001,
+      "n": 50,
+      "metric": "gated_mes",
+      "significant": true
+    }
   ],
-  "kpps": {
-   "threat_intercept_ratio": {
-    "min": 0.9,
-    "why": "PS primary objective: high interception rate"
-   },
-   "pct_correct_predictions": {
-    "min": 0.5,
-    "why": "PS FoM: predictions better than chance"
-   },
-   "false_alarm_rate": {
-    "max": 0.0005,
-    "why": "operator loading limit"
-   }
-  }
- },
- "significance_gated_mes": [
-  {
-   "comparator": "openloop-sequential",
-   "mean_diff": 0.49616960349967615,
-   "p_value": 0.0,
-   "significant": true
+  "identification": {
+    "accuracy": 0.8571428571428571,
+    "n_identified": 14,
+    "n_streams": 19
   },
-  {
-   "comparator": "openloop-random",
-   "mean_diff": 0.4191371784507166,
-   "p_value": 0.0,
-   "significant": true
+  "geolocation": {
+    "2": {
+      "n": 60,
+      "mean": 14.725501364485513,
+      "cep50": 3.200840280539285,
+      "cep90": 11.17391369360094
+    },
+    "3": {
+      "n": 60,
+      "mean": 2.492519507176217,
+      "cep50": 2.432889774519965,
+      "cep90": 4.216995691976086
+    },
+    "4": {
+      "n": 60,
+      "mean": 1.7777354246017352,
+      "cep50": 1.6914023512706946,
+      "cep90": 2.984798744695238
+    }
   },
-  {
-   "comparator": "openloop-priority",
-   "mean_diff": 0.48974474486486647,
-   "p_value": 0.0,
-   "significant": true
+  "multireceiver": {
+    "smart-scan-x1": {
+      "total_reward": 663.4,
+      "intercept_ratio": 0.8533333333333334,
+      "coverage_integrity": 1.0
+    },
+    "openloop-sequential-x1": {
+      "total_reward": 365.32333333333327,
+      "intercept_ratio": 0.8533333333333334,
+      "coverage_integrity": 1.0
+    },
+    "smart-scan-x2": {
+      "total_reward": 1191.5166666666667,
+      "intercept_ratio": 0.9466666666666667,
+      "coverage_integrity": 1.0
+    },
+    "openloop-sequential-x2": {
+      "total_reward": 719.9733333333334,
+      "intercept_ratio": 0.9866666666666667,
+      "coverage_integrity": 1.0
+    },
+    "smart-scan-x3": {
+      "total_reward": 1807.9399999999998,
+      "intercept_ratio": 1.0,
+      "coverage_integrity": 1.0
+    },
+    "openloop-sequential-x3": {
+      "total_reward": 1067.3633333333332,
+      "intercept_ratio": 0.9866666666666667,
+      "coverage_integrity": 1.0
+    }
   },
-  {
-   "comparator": "bandit-ucb",
-   "mean_diff": 0.5040792094522157,
-   "p_value": 0.0,
-   "significant": true
+  "hop_prediction": {
+    "random": {
+      "transition": {
+        "top1_accuracy": 0.22556390977443608,
+        "topk_accuracy": 0.5883458646616542,
+        "missed_opportunity_rate": 0.41165413533834583
+      },
+      "persistence": {
+        "top1_accuracy": 0.0,
+        "topk_accuracy": 0.0,
+        "missed_opportunity_rate": 1.0
+      },
+      "uniform": {
+        "top1_accuracy": 0.046992481203007516,
+        "topk_accuracy": 0.046992481203007516,
+        "missed_opportunity_rate": 0.9530075187969925
+      },
+      "oracle": {
+        "predictor": "oracle",
+        "n_hops": 1064,
+        "top1_accuracy": 0.31954887218045114,
+        "topk_accuracy": 0.6973684210526315,
+        "missed_opportunity_rate": 0.3026315789473685
+      }
+    },
+    "markov": {
+      "transition": {
+        "top1_accuracy": 0.4186046511627907,
+        "topk_accuracy": 0.6875,
+        "missed_opportunity_rate": 0.3125
+      },
+      "persistence": {
+        "top1_accuracy": 0.0,
+        "topk_accuracy": 0.0,
+        "missed_opportunity_rate": 1.0
+      },
+      "uniform": {
+        "top1_accuracy": 0.03488372093023256,
+        "topk_accuracy": 0.03488372093023256,
+        "missed_opportunity_rate": 0.9651162790697675
+      },
+      "oracle": {
+        "predictor": "oracle",
+        "n_hops": 688,
+        "top1_accuracy": 0.49273255813953487,
+        "topk_accuracy": 0.8008720930232558,
+        "missed_opportunity_rate": 0.1991279069767442
+      }
+    }
   },
-  {
-   "comparator": "rl-linear-q",
-   "mean_diff": 0.5040792094522157,
-   "p_value": 0.0,
-   "significant": true
+  "provenance": {
+    "source": "results/suite_results.json + results/benchmark.json",
+    "suite_protocol": {
+      "note": "see benchmark_protocol"
+    }
   },
-  {
-   "comparator": "rl-dqn",
-   "mean_diff": 0.41147526747842506,
-   "p_value": 0.0,
-   "significant": true
-  }
- ],
- "identification": {
-  "accuracy": 1.0,
-  "n_identified": 14,
-  "n_streams": 19
- },
- "geolocation": {
-  "2": {
-   "n": 60,
-   "mean": 14.725501364485513,
-   "cep50": 3.200840280539285,
-   "cep90": 11.173913693600941
+  "benchmark_protocol": {
+    "n_bands": 24,
+    "T": 3000,
+    "episodes": 50,
+    "base_seed": 9000
   },
-  "3": {
-   "n": 60,
-   "mean": 2.492519507176217,
-   "cep50": 2.432889774519965,
-   "cep90": 4.216995691976086
+  "benchmark_provenance": {
+    "generated_utc": "2026-09-08T16:50:34Z",
+    "git_commit": "b86e8061fbf7abb5b962e544e7c29e9537a24bf6",
+    "git_dirty": true,
+    "python": "3.14.2",
+    "platform": "Windows-11-10.0.26200-SP0"
   },
-  "4": {
-   "n": 60,
-   "mean": 1.7777354246017352,
-   "cep50": 1.6914023512706946,
-   "cep90": 2.984798744695238
-  }
- },
- "multireceiver": {
-  "smart-scan-x1": {
-   "total_reward": 600.6566666666666,
-   "intercept_ratio": 0.9333333333333332
+  "smart_scan_agile_hop": {
+    "follow_rate_mean": {
+      "openloop-sequential": 0.3343802266216613,
+      "openloop-random": 0.28616816011512114,
+      "openloop-priority": 0.33340712655243543,
+      "bandit-ucb": 0.06522241041112528,
+      "rl-linear-q": 0.23169454048320112,
+      "rl-dqn": 0.15937304638036656,
+      "smart-scan": 0.22746291502489277
+    },
+    "follow_rate_per_episode": {
+      "openloop-sequential": [
+        0.35128205128205126,
+        0.3471133285816108,
+        0.34375,
+        0.3240223463687151,
+        0.3295238095238095,
+        0.3456072351421189,
+        0.3193069306930693,
+        0.3300124533001245,
+        0.35583333333333333,
+        0.32526115859449195,
+        0.343481138318994,
+        0.3504616619831393,
+        0.3300871348026653,
+        0.32597105864432596,
+        0.3314993122420908,
+        0.3261138613861386,
+        0.3367399080224834,
+        0.32967032967032966,
+        0.39202026599113365,
+        0.3273073263558516,
+        0.32666666666666666,
+        0.3303194695599759,
+        0.3404255319148936,
+        0.3388739946380697,
+        0.32136653155761435,
+        0.3247910863509749,
+        0.3488681757656458,
+        0.3076388888888889,
+        0.33508887425938116,
+        0.3098676293622142,
+        0.3649893692416726,
+        0.33927056827820185,
+        0.28955049620548745,
+        0.34776119402985073,
+        0.30054151624548736,
+        0.3107007061379685,
+        0.3455182774161242,
+        0.3075245365321701,
+        0.336150234741784,
+        0.34660421545667447,
+        0.3548864758144126,
+        0.3137673425827108,
+        0.35768556399766216,
+        0.3409350057012543,
+        0.3341049382716049,
+        0.33164983164983164,
+        0.3396048918156162,
+        0.3141321044546851,
+        0.357556270096463,
+        0.33710629921259844
+      ],
+      "openloop-random": [
+        0.27692307692307694,
+        0.28937990021382753,
+        0.2965801886792453,
+        0.26629422718808193,
+        0.2826666666666667,
+        0.29069767441860467,
+        0.2856435643564356,
+        0.2783312577833126,
+        0.29083333333333333,
+        0.2981956315289649,
+        0.2786234281932495,
+        0.2946607788036933,
+        0.27370579190158895,
+        0.27113480578827115,
+        0.2716643741403026,
+        0.2753712871287129,
+        0.28819621870209505,
+        0.2802197802197802,
+        0.2786573780873971,
+        0.2697431018078021,
+        0.2926666666666667,
+        0.2820976491862568,
+        0.3060556464811784,
+        0.28847184986595176,
+        0.26288361320208453,
+        0.27910863509749306,
+        0.29494007989347537,
+        0.29930555555555555,
+        0.3120473996050033,
+        0.30866425992779783,
+        0.2827781715095677,
+        0.2858354537743851,
+        0.29071803852889666,
+        0.29253731343283584,
+        0.2842960288808664,
+        0.2922324823465508,
+        0.2784176264396595,
+        0.29280261723009815,
+        0.3136150234741784,
+        0.275175644028103,
+        0.27393879565646595,
+        0.2849519743863394,
+        0.277030976037405,
+        0.282212086659065,
+        0.2908950617283951,
+        0.2884399551066218,
+        0.3015051740357479,
+        0.28648233486943164,
+        0.2784565916398714,
+        0.29232283464566927
+      ],
+      "openloop-priority": [
+        0.3605128205128205,
+        0.3300071275837491,
+        0.3408018867924528,
+        0.3249534450651769,
+        0.3401904761904762,
+        0.3339793281653747,
+        0.3430693069306931,
+        0.3412204234122042,
+        0.3416666666666667,
+        0.33618233618233617,
+        0.33951025810721375,
+        0.3384183059012445,
+        0.34392619169656585,
+        0.32216298552932215,
+        0.32599724896836313,
+        0.31435643564356436,
+        0.3311190597853858,
+        0.31373626373626373,
+        0.36732108929702345,
+        0.3258801141769743,
+        0.33,
+        0.3622664255575648,
+        0.33878887070376434,
+        0.3640750670241287,
+        0.32194557035321364,
+        0.313091922005571,
+        0.3415446071904128,
+        0.32083333333333336,
+        0.3304805793285056,
+        0.3020457280385078,
+        0.332388377037562,
+        0.3324851569126378,
+        0.30122591943957966,
+        0.3365671641791045,
+        0.31633574007220217,
+        0.31124388919065726,
+        0.32248372558838256,
+        0.3227917121046892,
+        0.3352112676056338,
+        0.3114754098360656,
+        0.35784797630799603,
+        0.33938100320170755,
+        0.3419053185271771,
+        0.3392246294184721,
+        0.31790123456790126,
+        0.34231200897867564,
+        0.32502351834430854,
+        0.3686635944700461,
+        0.3652733118971061,
+        0.31053149606299213
+      ],
+      "bandit-ucb": [
+        0.043076923076923075,
+        0.05987170349251604,
+        0.020047169811320754,
+        0.007914338919925512,
+        0.12038095238095238,
+        0.008397932816537468,
+        0.04702970297029703,
+        0.13947696139476962,
+        0.051666666666666666,
+        0.008547008547008548,
+        0.05029781601588352,
+        0.0425531914893617,
+        0.24551512045105076,
+        0.1507996953541508,
+        0.12929848693259974,
+        0.013613861386138614,
+        0.12110373019928462,
+        0.11703296703296703,
+        0.07726409119696011,
+        0.01665080875356803,
+        0.126,
+        0.07233273056057866,
+        0.007364975450081833,
+        0.035924932975871314,
+        0.039953676896352056,
+        0.09805013927576602,
+        0.11318242343541944,
+        0.1597222222222222,
+        0.05595786701777485,
+        0.0631768953068592,
+        0.1105598866052445,
+        0.039016115351993216,
+        0.07413893753648569,
+        0.08283582089552238,
+        0.01444043321299639,
+        0.027159152634437807,
+        0.1342013019529294,
+        0.06543075245365322,
+        0.008450704225352112,
+        0.08138173302107728,
+        0.032082922013820334,
+        0.013340448239060833,
+        0.05026300409117475,
+        0.055872291904218926,
+        0.05246913580246913,
+        0.014590347923681257,
+        0.07243650047036689,
+        0.021505376344086023,
+        0.0077170418006430866,
+        0.0610236220472441
+      ],
+      "rl-linear-q": [
+        0.2230769230769231,
+        0.14041339985744833,
+        0.21285377358490565,
+        0.22346368715083798,
+        0.1420952380952381,
+        0.1834625322997416,
+        0.2995049504950495,
+        0.3929016189290162,
+        0.2525,
+        0.10588793922127256,
+        0.14162806088682992,
+        0.13568847852268165,
+        0.18452075858534084,
+        0.22772277227722773,
+        0.2125171939477304,
+        0.09653465346534654,
+        0.21512519161982627,
+        0.25824175824175827,
+        0.09436352121595946,
+        0.09419600380589914,
+        0.374,
+        0.3453887884267631,
+        0.15875613747954173,
+        0.27506702412868633,
+        0.3665315576143602,
+        0.381058495821727,
+        0.38348868175765644,
+        0.08263888888888889,
+        0.22514812376563528,
+        0.3243080625752106,
+        0.16229624379872432,
+        0.16115351993214588,
+        0.3333333333333333,
+        0.3656716417910448,
+        0.13763537906137185,
+        0.3747963063552417,
+        0.21682523785678517,
+        0.11886586695747,
+        0.09765258215962441,
+        0.17096018735362997,
+        0.29318854886475815,
+        0.34845250800426897,
+        0.3495032144944477,
+        0.30045610034207526,
+        0.32330246913580246,
+        0.25308641975308643,
+        0.15004703668861713,
+        0.13210445468509985,
+        0.3311897106109325,
+        0.2111220472440945
+      ],
+      "rl-dqn": [
+        0.12410256410256411,
+        0.18602993585174626,
+        0.19044811320754718,
+        0.1378026070763501,
+        0.14933333333333335,
+        0.15633074935400518,
+        0.2099009900990099,
+        0.19676214196762143,
+        0.13,
+        0.12773029439696107,
+        0.26671078755790867,
+        0.15014050582095545,
+        0.12403895438236802,
+        0.115003808073115,
+        0.1856946354883081,
+        0.17264851485148514,
+        0.19826264690853346,
+        0.18021978021978022,
+        0.16782773907536416,
+        0.11037107516650808,
+        0.16466666666666666,
+        0.17600964436407474,
+        0.1407528641571195,
+        0.1260053619302949,
+        0.16386797915460335,
+        0.16434540389972144,
+        0.17177097203728361,
+        0.14097222222222222,
+        0.17445687952600394,
+        0.24187725631768953,
+        0.13961729270021261,
+        0.17133163698049195,
+        0.12492702860478692,
+        0.13134328358208955,
+        0.14846570397111913,
+        0.10320478001086367,
+        0.11817726589884828,
+        0.09869138495092694,
+        0.18403755868544602,
+        0.17740046838407494,
+        0.12290227048371175,
+        0.1542155816435432,
+        0.16656925774400935,
+        0.1864310148232611,
+        0.26003086419753085,
+        0.16947250280583614,
+        0.13922859830667922,
+        0.17127496159754224,
+        0.13569131832797426,
+        0.12155511811023623
+      ],
+      "smart-scan": [
+        0.18974358974358974,
+        0.19885958660014255,
+        0.17688679245283018,
+        0.21042830540037244,
+        0.2502857142857143,
+        0.19444444444444445,
+        0.25693069306930694,
+        0.29514321295143214,
+        0.2425,
+        0.18803418803418803,
+        0.2183984116479153,
+        0.22199919710959454,
+        0.3813429010763711,
+        0.2901751713632902,
+        0.2799174690508941,
+        0.18626237623762376,
+        0.27593254982115484,
+        0.27692307692307694,
+        0.24445851804939836,
+        0.17554709800190296,
+        0.246,
+        0.2423146473779385,
+        0.18985270049099837,
+        0.2520107238605898,
+        0.21829762594093804,
+        0.23565459610027856,
+        0.20772303595206393,
+        0.1951388888888889,
+        0.20078999341672152,
+        0.22202166064981949,
+        0.22678951098511693,
+        0.24851569126378287,
+        0.30414477524810274,
+        0.22835820895522388,
+        0.15974729241877256,
+        0.27159152634437805,
+        0.28492739108662996,
+        0.24591057797164667,
+        0.14272300469483568,
+        0.25234192037470726,
+        0.20138203356367226,
+        0.1616862326574173,
+        0.24313267095265925,
+        0.2354618015963512,
+        0.18981481481481483,
+        0.15432098765432098,
+        0.18532455315145813,
+        0.23118279569892472,
+        0.21736334405144694,
+        0.22440944881889763
+      ]
+    },
+    "follow_latency_mean": 2.9089367128588206,
+    "window_slots": 8
   },
-  "openloop-sequential-x1": {
-   "total_reward": 391.95666666666665,
-   "intercept_ratio": 0.8533333333333334
-  },
-  "smart-scan-x2": {
-   "total_reward": 1100.6299999999999,
-   "intercept_ratio": 0.9333333333333332
-  },
-  "openloop-sequential-x2": {
-   "total_reward": 773.5233333333334,
-   "intercept_ratio": 0.9866666666666667
-  },
-  "smart-scan-x3": {
-   "total_reward": 1898.1566666666665,
-   "intercept_ratio": 0.9866666666666667
-  },
-  "openloop-sequential-x3": {
-   "total_reward": 1146.98,
-   "intercept_ratio": 0.9866666666666667
-  }
- }
+  "benchmark_ranking": [
+    "smart-scan",
+    "bandit-ucb",
+    "rl-linear-q",
+    "openloop-random",
+    "rl-dqn",
+    "openloop-priority",
+    "openloop-sequential"
+  ]
 }

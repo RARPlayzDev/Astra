@@ -12,7 +12,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/python-≥3.10-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python" />
   <img src="https://img.shields.io/badge/license-MIT-22c55e?style=for-the-badge" alt="License" />
-  <img src="https://img.shields.io/badge/tests-239_passing-10b981?style=for-the-badge&label=tests" alt="Tests" />
+  <img src="https://img.shields.io/badge/tests-250_passing-10b981?style=for-the-badge&label=tests" alt="Tests" />
   <img src="https://img.shields.io/badge/docker-ready-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" />
   <img src="https://img.shields.io/badge/installer-131_MB-8b5cf6?style=for-the-badge" alt="Installer" />
   <img src="https://img.shields.io/badge/SIH_2026-submission-f59e0b?style=for-the-badge" alt="SIH 2026" />
@@ -113,7 +113,7 @@ ASTRA's **SmartScan** scheduler solves all three — it is the **only mission-ca
 
 ## 🧠 How SmartScan Works
 
-SmartScan is not a single algorithm — it is a **confidence-multiplexed control system** that activates five behaviours based on learned evidence:
+SmartScan is not a single algorithm — it is a **confidence-multiplexed control system** that activates six behaviours based on learned evidence:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -139,52 +139,76 @@ SmartScan is not a single algorithm — it is a **confidence-multiplexed control
 | 2 | **Cued Pursuit** | Validated phase locks exist | Missing predictable targets |
 | 3 | **Predict & Probe** | Unproven candidate rhythm | Never testing hypotheses |
 | 4 | **Burst Characterisation** | Isolated hit on quiet fingerprint | Under-sampling rare emitters |
-| 5 | **Value-Weighted Rotation** | Always (fallback) | Band starvation; over-commitment |
+| 5 | **Agile-Hop Anticipation** | Frequent hops on a tracked stream | Losing agile emitters between hops |
+| 6 | **Value-Weighted Rotation** | Always (fallback) | Band starvation; over-commitment |
 
 **Key innovations:**
 - **Online lock validation** — predictions must keep coming true; stale locks self-destruct
 - **SNR+AOA fingerprinting** — co-channel emitters stay separated; same-source locks merge
+- **Causal agile-hop prediction** — a per-stream transition model learned only from observed detections biases the rotation toward each agile emitter's likely next band; prediction accuracy is reported separately from hop coverage
 - **Cheap falsification** — wrong hypotheses die fast and cost only one slot
 
 ---
 
 ## 📊 Results
 
-### Monte Carlo Evaluation
+> Every number below is quoted from a generated artifact — nothing hand-entered.
+> Canonical protocol (locked in `ewsmart.experiments.CANONICAL_PROTOCOL`):
+> **24 bands × 3000 slots × 50 episodes, `base_seed=9000`**, identical for all schedulers.
 
-200 held-out episodes · 24 bands × 3000 slots · mean ± 95% CI:
+### Monte Carlo Evaluation — `results/benchmark.json`
+
+Mean ± 95% CI across 50 episodes (`python -c "from ewsmart.experiments import benchmark_report; benchmark_report()"`):
 
 | Scheduler | Avg Reward | Threat Coverage | Pred Accuracy | Mission Capable? |
 |---|---|---|---|---|
-| Sequential Sweep | 0.196 ± 0.003 | 0.779 ± 0.013 | 0.458 | ❌ |
-| Random Scan | 0.197 ± 0.003 | 0.977 ± 0.006 | 0.458 | ❌ |
-| Priority Sweep | 0.196 ± 0.003 | 0.785 ± 0.013 | 0.458 | ❌ |
-| UCB Bandit | 0.942 ± 0.005 | 0.540 ± 0.015 | 0.988 | ❌ (coverage fail) |
-| Linear Q-Learning | 0.474 ± 0.025 | 0.896 ± 0.012 | 0.190 | ❌ |
-| Deep Q-Network | 0.269 ± 0.021 | 0.895 ± 0.012 | 0.387 | ❌ |
-| **SmartScan** | **0.417 ± 0.005** | **0.950 ± 0.009** | **0.581** | **✅ YES** |
+| Sequential Sweep | 0.186 ± 0.004 | 0.775 ± 0.024 | 0.461 | ❌ |
+| Random Scan | 0.188 ± 0.005 | 0.975 ± 0.012 | 0.460 | ❌ |
+| Priority Sweep | 0.186 ± 0.004 | 0.765 ± 0.027 | 0.461 | ❌ |
+| UCB Bandit | 0.900 ± 0.013 | 0.527 ± 0.026 | 0.995 | ❌ (coverage fail) |
+| Linear Q-Learning | 0.449 ± 0.048 | 0.880 ± 0.029 | 0.184 | ❌ |
+| Deep Q-Network | 0.200 ± 0.031 | 0.887 ± 0.024 | 0.426 | ❌ |
+| **SmartScan** | **0.471 ± 0.014** | **0.920 ± 0.016** | **0.545** | **✅ YES** |
 
-### Mission Effectiveness (KPP-Gated)
+The same artifact reports the full FoM set (intercept rate, false-alarm rate,
+time-to-first-intercept, intercept-time prediction error, ambiguous co-channel
+hit rate), per-scheduler **agile-hop follow rates**, the observation-only
+next-hop prediction benchmark, and attribution-conservation checks.
 
-Following defence T&E practice — hard Key Performance Parameters gate first, then composite ranking:
+### Agile-Hop Prediction vs Coverage (reported separately)
+
+- **Observation-only next-hop prediction** (Markov/structured agility):
+  transition model **top-1 0.394 / top-3 0.740** (missed-opportunity 0.260) vs
+  0.063 top-1 for a uniform guesser; random-mode agility numbers are in the
+  artifact for comparison.
+- **Policy-level hop coverage** is measured post hoc for *every* scheduler
+  (fraction of agile hops whose destination band was dwelt within 8 slots) —
+  see the "Agile-hop follow rate by scheduler" table in `results/benchmark.md`.
+
+### Mission Effectiveness (KPP-Gated) — `results/suite_results.json`
+
+Hard Key Performance Parameters gate first, then composite ranking (defence T&E practice):
 
 | KPP Gate | Threshold | SmartScan |
 |---|---|---|
-| Threat Coverage | ≥ 0.90 | ✅ **0.950** |
-| Prediction Accuracy | ≥ 0.50 | ✅ **0.581** |
-| False Alarm Rate | ≤ 5×10⁻⁴/slot | ✅ **PASS** |
-| **Mission Status** | | **✅ CAPABLE — #1 RANKED** |
+| Threat Coverage | ≥ 0.90 | ✅ **0.903** |
+| Prediction Accuracy | ≥ 0.50 | ✅ **0.548** |
+| False Alarm Rate | ≤ 5×10⁻⁴/slot | ✅ **3.3×10⁻⁵** |
+| **Mission Status** | | **✅ CAPABLE — #1 RANKED (MES 0.619)** |
 
 > **SmartScan is the only mission-capable scheduler in the field.**
-> UCB posts the top raw reward but misses 46% of threats — disqualified by coverage KPP.
-> Statistical significance: SmartScan > every comparator at **p < 1e-4** (Holm-corrected).
+> UCB posts the top raw reward but misses 47% of threats — disqualified by the
+> coverage KPP. On raw reward SmartScan does **not** beat the exploit-only UCB
+> bandit (by design); on the gated Mission Effectiveness Score it beats every
+> comparator at **p ≤ 1e-4** (paired permutation, Holm-corrected).
 
 ### Supporting Evidence
 
-- **2.1× sequential scan's reward** with **+17 points of threat coverage**
-- **Multi-receiver scaling:** 601 → 1101 → 1898 total reward for 1 → 2 → 3 receivers
-- **Geolocation:** CEP improves 3.2 km → 1.7 km with 2 → 4 receivers
-- **Identification:** 100% accuracy on reference episode vs JC Wise-style library
+- **2.5× sequential scan's reward** (0.471 vs 0.186) with **+14 points of threat coverage**
+- **Multi-receiver scaling** (`suite_results.json`): total reward 663 → 1192 → 1808 for 1 → 2 → 3 SmartScan receivers (sequential: 365 → 720 → 1067), with **coverage integrity 1.0** — zero duplicate dwells in every episode (de-confliction working)
+- **Geolocation:** CEP50 improves 3.2 km → 1.69 km with 2 → 4 receivers
+- **Identification:** 86% (14/19 streams) on the synthetic reference episode's built-in JC Wise-style library — simulation-only evidence, not recorded-RF identification
+- **Decision latency** (`results/performance.json`, Windows 11 / AMD Ryzen): SmartScan mean **0.35 ms**, DQN **0.47 ms** per decision (limit 1 ms); p95 ≈ 1.2 ms for both — tail spikes exist and are recorded rather than hidden
 
 ---
 
@@ -248,13 +272,14 @@ astra/
 ├── models/                   # Trained scheduler weights (.npz)
 ├── results/                  # Generated evaluation data
 ├── figures/                  # Publication-quality charts
-├── tests/                    # 239 automated tests
+├── tests/                    # 250 automated tests
 ├── tools/                    # Utilities
 │   ├── sdr_bridge.py         # UDP/CSV bridge for real SDR hardware
-│   ├── pdw_generator.py      # Synthetic PDW stream generator
-│   ├── export_site_data.py   # Bake results into website
+│   ├── export_site_data.py   # Bake results/figures/manual into website
+│   ├── cleanup_dist.py       # Prune the PyInstaller build tree
+│   ├── create_ppt.py         # Generate the pitch deck
 │   ├── build_exe.ps1         # PyInstaller build script
-│   └── make_brand_assets.py  # Logo/icon generator
+│   └── sign_all.ps1          # Installer signing helpers
 │
 ├── docs/                     # VitePress documentation site
 ├── assets/                   # Brand assets (logo, icons)
@@ -298,7 +323,7 @@ Then select **UDP bridge (real hardware)** on the Live Radar page.
 
 ## 🧪 Testing
 
-239 automated tests covering all layers of the system:
+250 automated tests covering all layers of the system:
 
 ```powershell
 # Run all tests

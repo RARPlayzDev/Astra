@@ -65,7 +65,7 @@ features:
     <b>Smart India Hackathon 2026</b> · Defence & Space · Problem ID: SMART SCAN EW
   </p>
   <p style="font-size: 0.9rem; color: var(--vp-c-text-3);">
-    7 scheduling policies benchmarked · 200 held-out episodes · 95% confidence intervals
+    7 scheduling policies benchmarked · 50 held-out episodes (canonical protocol) · 95% confidence intervals
     · p &lt; 1e-4 statistical significance · 225 automated tests
   </p>
 </div>

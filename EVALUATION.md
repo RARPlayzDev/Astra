@@ -11,9 +11,9 @@ feedback and the roadmap executed to reach prize-winning quality.*
 |---|---|---|---|
 | **Problem-statement coverage** | 25% | **10/10** | Every single line of the PS is implemented and *traceable*: truth matrix per band/slot, narrowband receiver model, all 7 named FoMs (Pd, Pfa, sensitivity, avg intercept rate, reward, % correct predictions, intercept-time error), prediction vs spatially-scanning & agile emitters, ML scheduler trained on hits/misses, optimal periodic-scan interception (Rayleigh + integer-refined phase lock + cued pursuit), both referenced datasets (JC Wise / Turing via HF + offline fallback). See the traceability table in the React command centre. |
 | **Technical depth** | 20% | **9.5/10** | Novel hybrid scheduler (5 adaptive behaviours with online lock validation), SNR+AOA fingerprint stream separation (co-channel), Rayleigh significance testing with integer refinement, DQN with replay+target net, cooperative multi-receiver de-confliction, and a defence-T&E-style **KPP-gated Mission Effectiveness Score** that resolves the raw-reward vs coverage ambiguity in our favour honestly. Deduction: DQN plateaus on sparse rewards — honestly documented as a data-efficiency finding. |
-| **Evaluation rigor** | 20% | **9/10** | 200-episode Monte Carlo with 95% CIs, ROC threshold sweep, 4-axis sensitivity (bands/SNR/agility/density), 5-way ablation, seed-averaged learning curves, 225 automated tests incl. strict-JSON tests. Deduction: could add 1000-episode runs and statistical hypothesis tests between schedulers. |
+| **Evaluation rigor** | 20% | **9/10** | 50-episode canonical Monte Carlo (24 bands × 3000 slots, base_seed 9000) with 95% CIs, provenance-stamped artifacts, ROC threshold sweep, 4-axis sensitivity (bands/SNR/agility/density), 5-way ablation, seed-averaged learning curves, 250 automated tests incl. strict-JSON tests. Deduction: could add longer runs; paired permutation + Holm-corrected significance tests are already in place. |
 | **Innovation / "wow"** | 15% | **9/10** | The **Live Radar page**: real PDW streaming over UDP from actual SDR/radar hardware (`tools/sdr_bridge.py`), online adaptation in front of judges, plus dataset-calibrated scenarios. Burst-camping and AOA-family suppression are genuinely novel scheduling behaviours. |
-| **Software quality** | 10% | **9/10** | Installable package (`pyproject.toml`, console entry points), safe NPZ persistence (no pickle — no code execution), strict-JSON outputs, LF hygiene, docstrings/type hints, Dockerfile, 225 tests (unit/integration). |
+| **Software quality** | 10% | **9/10** | Installable package (`pyproject.toml`, console entry points), safe NPZ persistence (no pickle — no code execution), strict-JSON outputs, LF hygiene, docstrings/type hints, Dockerfile, 250 tests (unit/integration). |
 | **Presentation readiness** | 10% | **9/10** | React command centre, one-click demo, plain-language metric names, requirement-traceability table, live animation, 9 publication-quality figures, beginner walkthrough (`PROJECT_EXPLAINED.md`). |
 | **Overall** | 100% | **9.5/10** | Prize-contending. See §3 for the exact gaps to 10. |
 
@@ -34,9 +34,9 @@ feedback and the roadmap executed to reach prize-winning quality.*
 | Likely judge question | Our answer |
 |---|---|
 | "Show me it works on the referenced datasets." | Dataset Studio → one click imports PDWs (Turing schema via HuggingFace when online; identical offline fallback), shows the PDW waterfall, calibrates a battlefield from frequency clusters, runs SmartScan on it. |
-| "Prove SmartScan beats open loop." | Benchmarks tab: 200-episode Monte Carlo, mean ± 95% CI — reward 0.417 vs 0.196 (2.1×), threat coverage 0.950 vs 0.779; **paired permutation tests p < 0.00001 vs all three open-loop baselines (Holm-corrected)**. Ablation chart attributes the gain to each behaviour. |
-| "What about the exploit trap the PS warns about?" | The UCB bandit row demonstrates it exactly: top reward (0.943), worst coverage (0.540) — SmartScan resolves the trade-off instead of trading. |
-| "Does it use the emitter database?" | Yes — the full EW chain: intercepted streams are fingerprinted (frequency, pulse width, scan rhythm) and matched against a JC Wise-style library; **100% identification accuracy** on the reference episode, with a live Threat Board on the radar page. |
+| "Prove SmartScan beats open loop." | Benchmarks tab: 50-episode canonical Monte Carlo (24 bands × 3000 slots, base_seed 9000), mean ± 95% CI — reward 0.471 vs 0.186 (2.5×), threat coverage 0.920 vs 0.775; **paired permutation tests p < 0.00001 vs all three open-loop baselines (Holm-corrected)**. Ablation chart attributes the gain to each behaviour. |
+| "What about the exploit trap the PS warns about?" | The UCB bandit row demonstrates it exactly: top reward (0.900), worst coverage (0.527) — SmartScan resolves the trade-off instead of trading. |
+| "Does it use the emitter database?" | Yes — the full EW chain: intercepted streams are fingerprinted (frequency, pulse width, scan rhythm) and matched against a JC Wise-style library; **86% identification accuracy (14/19 streams) on the synthetic reference episode** (built-in library, simulation-only), with a live Threat Board on the radar page. |
 | "Can it locate emitters?" | Multi-receiver AOA triangulation (least-squares, noise-robust): CEP50 improves 3.2 km → 2.4 km → 1.7 km as receivers go 2 → 3 → 4; tactical map on the Simulation Lab page. |
 | "Does it work in real time on real sensors?" | Live Radar page + `tools/sdr_bridge.py`: UDP or CSV-tail ingestion of standard PDWs (`toa_us, freq_mhz, pw_us, pa_db, aoa_deg`), online adaptation visible live. |
 | "Is the ML actually trained?" | Seed-averaged training curves **plus held-out greedy evaluation curves** (exploration off, weights snapshotted): Q-learning reaches 716–841 greedy reward; the DQN's decline is measured and disclosed honestly. |
@@ -61,7 +61,7 @@ feedback and the roadmap executed to reach prize-winning quality.*
    the judges see the coverage gap grow in real time), Traceability.
    Multi-stage Dockerfile builds web + API into one container on :8000.
 3. **API layer tested** — FastAPI TestClient suite covers summary/figures/
-   live-start-stop/SPA hosting; 225 automated tests total, all green.
+   live-start-stop/SPA hosting; 250 automated tests total, all green.
 
 ## 4. Remaining path to a guaranteed 10 (post-submission hardening)
 

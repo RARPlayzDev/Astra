@@ -18,6 +18,64 @@ from . import periodic
 HF_DATASET = "alan-turing-institute/turing-synthetic-radar-dataset"
 
 
+def dataset_replay_benchmark(json_path: str = "results/dataset_benchmark.json",
+                             n_bands: int = 24, T: int = 1500,
+                             episodes: int = 3, seed: int = 2026) -> dict:
+    """Replay scheduler benchmark on a dataset-calibrated environment.
+
+    Calibrates an :class:`RFEnvironment` from the Turing-schema PDW dataset
+    (deterministic offline fallback by default, so the benchmark is
+    reproducible and air-gapped), then replays SmartScan and open-loop
+    reference schedulers over identical episode seeds.  Writes a JSON
+    artifact with full provenance.  This is *dataset-replay* evidence, not
+    hardware-in-the-loop validation: the environment is simulated, only its
+    calibration statistics come from the dataset.
+    """
+    import json as _json
+    from pathlib import Path
+    from .runner import run_episode
+    from .metrics import aggregate_metrics_ci, compute_metrics
+    from .schedulers import SequentialSweep, UCBScheduler, SmartScanScheduler
+    from .experiments import provenance
+
+    def _pdws(s: int) -> list[dict]:
+        # Deterministic offline fallback: same PDW schema as the Turing
+        # dataset, no network access, byte-reproducible for a given seed.
+        return synthetic_pdws(20000, seed=s)
+
+    def _env(s: int) -> RFEnvironment:
+        return environment_from_dataset(None, n_bands=n_bands, T=T, seed=s,
+                                        pdws=_pdws(s))[0]
+
+    env0, summary = environment_from_dataset(
+        None, n_bands=n_bands, T=T, seed=seed, pdws=_pdws(seed))
+    scheds = [SequentialSweep(n_bands, seed),
+              UCBScheduler(n_bands, seed),
+              SmartScanScheduler(n_bands, seed)]
+    per_ep: dict[str, list] = {s.name: [] for s in scheds}
+    for ep in range(episodes):
+        env = env0 if ep == 0 else _env(seed + ep)
+        for s in scheds:
+            tr = run_episode(env, s, seed=seed + 31 * ep)
+            per_ep[s.name].append(compute_metrics(env, tr))
+    ci = {name: aggregate_metrics_ci(eps) for name, eps in per_ep.items()}
+    artifact = {
+        "protocol": {"source": summary.get("source",
+                                           "offline synthetic fallback"),
+                     "n_bands": n_bands, "T": T, "episodes": episodes,
+                     "seed": seed},
+        "provenance": provenance(),
+        "dataset_summary": summary,
+        "metrics_ci": ci,
+    }
+    out = Path(json_path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    from .metrics import json_safe
+    with open(out, "w") as f:
+        _json.dump(json_safe(artifact), f, indent=2, allow_nan=False)
+    return artifact
+
+
 def load_pdws(source: str | None = None, max_rows: int = 20000,
               seed: int = 0) -> list[dict]:
     """Return PDW records (dicts with toa_us, freq_mhz, pw_us, pa_db, aoa_deg).
@@ -131,15 +189,19 @@ def summarize_pdws(pdws: list[dict], n_bands: int = 24,
 
 def environment_from_dataset(source: str | None = None, n_bands: int = 24,
                              T: int = 3000, seed: int = 0,
-                             max_rows: int = 20000) -> tuple[RFEnvironment, dict]:
+                             max_rows: int = 20000,
+                             pdws: list[dict] | None = None) -> tuple[RFEnvironment, dict]:
     """Build an :class:`RFEnvironment` calibrated from a PDW dataset.
 
     Frequency clusters become emitters; clusters whose TOA series exhibits
     significant periodicity are mapped to periodic/spatial kinds, sparse
     multi-frequency families to agile, and dense continuous ones to stationary.
     Returns the environment plus the dataset summary for traceability.
+    Pre-resolved ``pdws`` may be injected to skip dataset loading (used by
+    the deterministic offline replay benchmark).
     """
-    pdws = load_pdws(source, max_rows=max_rows, seed=seed)
+    pdws = load_pdws(source, max_rows=max_rows, seed=seed) if pdws is None \
+        else pdws
     summary = summarize_pdws(pdws, n_bands)
     freq = np.array([p["freq_mhz"] for p in pdws])
     order = np.argsort(freq)

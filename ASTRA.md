@@ -327,11 +327,11 @@ Trained schedulers are saved as `.npz` files containing:
 
 | Metric | Formula | SmartScan | Sequential |
 |---|---|---|---|
-| **Threat Coverage (Pd)** | threats_found / total_threats | **0.950** | 0.779 |
+| **Threat Coverage (Pd)** | threats_found / total_threats | **0.920** | 0.775 |
 | **False Alarm Rate (Pfa)** | fa_count / T | < 5×10⁻⁴ | < 5×10⁻⁴ |
 | **Intercept Rate** | total_hits / T | Higher | Lower |
-| **Avg Reward** | mean(per_dwell_reward) | **0.417** | 0.196 |
-| **Prediction Accuracy** | correct_preds / T | **0.581** | 0.458 |
+| **Avg Reward** | mean(per_dwell_reward) | **0.471** | 0.186 |
+| **Prediction Accuracy** | correct_preds / T | **0.545** | 0.461 |
 | **Intercept Time Error** | mean(pred_error) | Lower | Higher |
 
 ### Mission Effectiveness Score (MES)
@@ -352,17 +352,17 @@ MES = mean(Pd, 1-Pfa_rel, intercept_rate, reward_rel, prediction_accuracy, 1-err
 
 ### Monte Carlo Evaluation
 
-200 held-out episodes × 7 schedulers × 24 bands × 3000 slots:
+50 held-out episodes (canonical protocol, base_seed 9000) × 7 schedulers × 24 bands × 3000 slots:
 
 | Scheduler | Avg Reward | Threat Cov | Pred Acc | Capable? |
 |---|---|---|---|---|
-| Sequential Sweep | 0.196 | 0.779 | 0.458 | ❌ |
-| Random Scan | 0.197 | 0.977 | 0.458 | ❌ |
-| Priority Sweep | 0.196 | 0.785 | 0.458 | ❌ |
-| UCB Bandit | 0.942 | 0.540 | 0.988 | ❌ |
-| Linear Q-Learning | 0.474 | 0.896 | 0.190 | ❌ |
-| Deep Q-Network | 0.269 | 0.895 | 0.387 | ❌ |
-| **SmartScan** | **0.417** | **0.950** | **0.581** | **✅** |
+| Sequential Sweep | 0.186 | 0.775 | 0.461 | ❌ |
+| Random Scan | 0.188 | 0.975 | 0.460 | ❌ |
+| Priority Sweep | 0.186 | 0.765 | 0.461 | ❌ |
+| UCB Bandit | 0.900 | 0.527 | 0.995 | ❌ |
+| Linear Q-Learning | 0.449 | 0.880 | 0.184 | ❌ |
+| Deep Q-Network | 0.200 | 0.887 | 0.426 | ❌ |
+| **SmartScan** | **0.471** | **0.920** | **0.545** | **✅** |
 
 ### Key Findings
 
@@ -470,9 +470,9 @@ When multiple receivers operate as a team:
 
 | Team Size | Total Reward | Threat Coverage |
 |---|---|---|
-| 1 receiver | 601 | 95.0% |
-| 2 receivers | 1,101 | 98.5% |
-| 3 receivers | 1,898 | 99.8% |
+| 1 receiver | 663 | 85.3% |
+| 2 receivers | 1,192 | 94.7% |
+| 3 receivers | 1,808 | 100% |
 
 ---
 

@@ -36,7 +36,7 @@ python -m pytest -q
 ```
 
 **Verified result: `225 passed`** (collected via `python -m pytest --collect-only -q`
-&rarr; `225 tests collected`). This is the canonical test count used everywhere
+&rightarrow; `250 tests collected`). This is the canonical test count used everywhere
 in the documentation. It was `222` before the Phase 0 evidence-freeze added
 `tests/test_result_schema.py` (3 tests) that enforce the result-artifact schema.
 
@@ -76,7 +76,7 @@ Defined in `ewsmart/experiments.py :: monte_carlo_eval`:
 | Rollout seed | `seed = 9000 + 31 * ep` |
 | Confidence interval | 95% (`1.96 * SEM`) |
 
-**200 held-out episodes** is the canonical episode count used everywhere in the
+**50 held-out episodes** (24 bands × 3000 slots, base_seed 9000) is the canonical episode count used everywhere in the
 documentation.
 
 ### Recorded figures of merit

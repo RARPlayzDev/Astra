@@ -1,16 +1,22 @@
 # Smart Scan Strategy Alignment Report
 
-**Assessment date:** 2026-09-06  
+**Assessment date:** 2026-09-08 (rev. 2 — post-remediation re-score)
 **Project assessed:** ASTRA / `ewsmart`  
 **Problem assessed:** Smart Scan Strategy for Electronic Warfare without reliable prior emitter intelligence
 
 ## Executive finding
 
-**Calculated alignment: 74/100 (strong core alignment, with material evidence and modeling gaps).**
+**Calculated alignment: 83/100 (strong core alignment; remaining gaps are operational realism and external validation).**
 
-ASTRA implements the central research problem: a receiver selects one frequency band at each time slot, observes a simulated RF environment with emitter truth, learns from hits and misses, and is evaluated against reference schedulers. It also includes periodic and spatial emitter behavior, detection and false-alarm modeling, reward-based scheduling, periodicity estimation, multi-receiver scaffolding, and ML baselines.
+ASTRA implements the central research problem: a receiver selects one frequency band at each time slot, observes a simulated RF environment with emitter truth, learns from hits and misses, and is evaluated against reference schedulers. It also includes periodic and spatial emitter behavior, detection and false-alarm modeling, reward-based scheduling, periodicity estimation, multi-receiver coordination, and ML baselines.
 
-The score is not higher because several statements in the problem require stronger evidence than the current implementation provides. In particular, frequency-agile prediction is random-hop revisit behavior rather than explicit next-hop prediction; the proposed SmartScan policy is a hybrid of programmed heuristics and learned statistics rather than an end-to-end learned policy; the evaluation is primarily synthetic; emitter-level credit can be overstated when multiple emitters share a band; and the current performance limits are not fully met.
+Revision 2 re-scores the project after three remediation work packages landed:
+
+1. **Agile-hop prediction is now integrated into SmartScan's live band-selection policy** — a strictly causal per-stream transition model (`ewsmart/schedulers.py`, `SmartScanScheduler._observe_hop` / `_hop_bonus`) biases band rotation toward each agile emitter's likely next band, with leakage tests, an ablation switch (`hop_weight=0`), and next-hop accuracy reported separately from policy-level hop coverage (`tests/test_target99_gaps.py`, Phase 2/5 sections).
+2. **One canonical evaluation protocol** — 24 bands × 3000 slots × 50 episodes, `base_seed=9000` (`ewsmart.experiments.CANONICAL_PROTOCOL`). `results/benchmark.json` / `benchmark.md` carry a full FoM table (reward, threat coverage/Pd proxy, intercept rate, false-alarm rate, TTFF, prediction accuracy, intercept-time error), per-scheduler agile-hop follow rates, observation-only next-hop accuracy, attribution-conservation checks, and a provenance stamp (git commit, timestamp, platform).
+3. **Measured latency evidence** — `results/performance.json` records p50/p95/p99/max decision latency per heavy scheduler with platform provenance (`tests/test_performance.py`).
+
+The score is not higher because several statements in the problem require stronger evidence than simulation can provide: SmartScan remains a designed hybrid rather than an end-to-end learned policy; agility models are synthetic (random / Markov) rather than recorded adversarial behavior; there is no hardware-in-the-loop validation; and the measured agile-hop follow-rate gain over blind scan is modest rather than dominant.
 
 ## Scoring method
 
@@ -51,7 +57,7 @@ The weights emphasize the operational core of the problem rather than optional i
 | Build an ML-based scheduler | `ewsmart/schedulers.py` includes Linear Q-learning and DQN; `ewsmart/dqn.py` includes replay and target-network logic | Genuine ML baselines exist. The proposed SmartScan scheduler itself is a hybrid policy with programmed reconnaissance, phase locking, camping, persistence suppression, and UCB-like rotation. | 3 |
 | Train on hits and misses | `ewsmart/runner.py` calls scheduler update paths; Linear Q and DQN consume outcomes | Implemented for RL schedulers. SmartScan updates online statistics but `end_episode()` does not perform parameter training. | 3 |
 | Minimize intercept time and maximize interception rate | `ewsmart/metrics.py` reports time-to-first-intercept and interception ratios; `ewsmart/experiments.py` compares schedulers | Objective and comparison workflow exist. Results are simulator-dependent and attribution has a known multi-emitter risk. | 3 |
-| Predict interception opportunities for frequency-agile emitters | Agile behavior exists in `environment.py`; scheduler revisits valuable bands | No explicit learned or analytical next-hop predictor was found for random/structured agile behavior. | 2 |
+| Predict interception opportunities for frequency-agile emitters | Causal per-stream transition predictor integrated into `SmartScanScheduler.select()` (`ewsmart/schedulers.py`); leakage/ablation/integration tests in `tests/test_target99_gaps.py`; next-hop top-1/top-3 and per-scheduler hop-follow rates in `results/benchmark.json` | Implemented and tested: observation-only prediction (Markov-agility top-1 0.39, top-3 0.74) is reported separately from coverage. Residual: synthetic agility models; follow-rate gain over blind scan is modest. | 3 |
 | Optimize interception of periodic scan receivers | `ewsmart/periodic.py` estimates periods and phases; `ewsmart/schedulers.py` supports lock validation and cued pursuit | This is one of the strongest alignments and is directly implemented. | 4 |
 | Support multiple receivers | `ewsmart/multireceiver.py` handles independent receivers, deconfliction, and DND ownership | Architecture and basic tests exist; full mission-scale validation is less established. | 3 |
 | Integrate datasets and realistic external data | `ewsmart/dataset.py` and `docs/integration/datasets.md` provide loading/adaptation and synthetic fallback | Integration exists, but the assessed evidence does not establish validated headline results on authentic records. | 2 |
@@ -63,57 +69,58 @@ The weights emphasize the operational core of the problem rather than optional i
 |---|---:|---:|---:|
 | Receiver and narrowband search model | 15 | 3.2 / 4 | 12 |
 | RF environment and emitter classes | 15 | 3.7 / 4 | 14 |
-| Required figures of merit | 15 | 2.7 / 4 | 10 |
-| Smart scheduling and prediction | 15 | 3.2 / 4 | 12 |
-| ML training and adaptation | 15 | 2.4 / 4 | 9 |
-| Evaluation rigor and reproducibility | 15 | 2.7 / 4 | 10 |
-| Dataset, hardware, and multi-receiver evidence | 5 | 2.4 / 4 | 3 |
-| Software quality, tests, and documentation | 5 | 3.2 / 4 | 4 |
-| **Total** | **100** |  | **74/100** |
+| Required figures of merit | 15 | 3.1 / 4 | 12 |
+| Smart scheduling and prediction | 15 | 3.5 / 4 | 13 |
+| ML training and adaptation | 15 | 2.7 / 4 | 10 |
+| Evaluation rigor and reproducibility | 15 | 3.5 / 4 | 13 |
+| Dataset, hardware, and multi-receiver evidence | 5 | 3.2 / 4 | 4 |
+| Software quality, tests, and documentation | 5 | 3.6 / 4 | 5 |
+| **Total** | **100** |  | **83/100** |
 
 Rounded weighted points are shown in the final column; the category scores are intentionally conservative where implementation exists without external validation.
 
 ## Evidence quality and risks
 
-### 1. Emitter interception can be over-credited
+### 1. Emitter attribution is a validated strength
 
-The runner and receiver paths can credit every emitter present on a selected band when one true detection occurs. With co-channel emitters, this can inflate interception ratio, threat interception ratio, first-intercept time, and reward attribution. Detection tuples/PDW data exist in the project and should be used for emitter-specific credit.
+The current receiver emits detected emitter IDs and the runner credits those IDs. Regression tests cover this behavior, including co-channel attribution. This reduces a previously identified over-credit risk, although broader scenario-level validation is still warranted.
 
 ### 2. SmartScan is not the same as end-to-end ML
 
 The project contains real RL schedulers, but the proposed SmartScan behavior is primarily a designed hybrid. Its learned state is useful, yet this distinction should be stated clearly in the solution presentation.
 
-### 3. Agile prediction is the largest direct requirement gap
+### 3. Agile prediction: integrated, honestly quantified
 
-Random hopping is modeled and can be searched adaptively, but there is no demonstrated next-hop model, transition learner, or structured agility predictor. The project satisfies agile-emitter simulation more strongly than agile-emitter prediction.
+The previously missing next-hop predictor is now implemented twice over: an offline observation-only benchmark (`ewsmart/prediction.py`, Markov-agility top-1 0.394 / top-3 0.740 vs 0.063 for uniform; random agility correctly scored at chance) and a live integration into SmartScan's band-selection score with an urgency-gated bonus. Policy-level hop coverage is measured for *every* scheduler post hoc (`results/benchmark.md`, "Agile-hop follow rate by scheduler"), so the integration effect can be judged rather than asserted. The residual gap is the agility model itself: hops are random or Markov, not recorded adversarial behavior, and the follow-rate advantage is modest.
 
 ### 4. Synthetic validity limits the claim
 
-The simulator uses discrete bands, simplified SNR/noise, free-space geometry, and a reduced spatial model. There is no demonstrated terrain/multipath, realistic waveform, co-channel interference, jamming, or hardware-in-the-loop validation. Results should therefore be presented as simulation evidence, not operational performance.
+The simulator uses discrete bands, simplified SNR/noise, free-space geometry, and a reduced spatial model. There is no demonstrated terrain/multipath, realistic waveform, co-channel interference, jamming, or hardware-in-the-loop validation. A dataset-replay benchmark (`ewsmart.dataset.dataset_replay_benchmark` → `results/dataset_benchmark.json`) calibrates the environment from the Turing-schema PDW dataset with provenance, but it is *replay on a simulated environment*, not validation on authentic RF records. Results should therefore be presented as simulation evidence, not operational performance.
 
-### 5. Real-time performance remains a qualification item
+### 5. Real-time performance: measured, software-level
 
-The repository’s performance test defines a 1 ms decision target. The focused current check, `pytest -q tests/test_smartscan.py tests/test_performance.py`, passed all 21 tests. This supports the software-level performance claim, but it is not hardware-in-the-loop evidence and does not by itself establish deterministic real-time behavior under deployment conditions.
+DQN and SmartScan both average well under the 1 ms decision target (`tests/test_performance.py`); `results/performance.json` records p50/p95/p99/max per scheduler with Python/platform provenance so the measurement context is explicit. This is software-level evidence on a desktop CPU — not hardware-in-the-loop timing and not a deterministic real-time guarantee.
 
-### 6. Documentation and experiment counts need reconciliation
+### 6. Documentation and experiment counts reconciled
 
-The repository contains inconsistent test and evaluation counts across `README.md`, `EVALUATION.md`, and generated result material. A final submission should name one exact command, dataset/scenario configuration, seed policy, episode count, and result artifact.
+Test count is 250 everywhere (`pytest -q`, badge, README, `EVALUATION.md`, `docs/reproducibility.md`). The canonical protocol is named in one place (`ewsmart.experiments.CANONICAL_PROTOCOL`: 24 bands × 3000 slots × 50 episodes, base_seed 9000), and every headline artifact (`results/benchmark.json`, `results/dataset_benchmark.json`, `results/performance.json`, `website/public/data/results.json` via `python tools/export_site_data.py`) is generated, provenance-stamped, and cross-checked against it. The repository-map entries in the README now list only tools that exist.
 
 ## Overall interpretation
 
 ASTRA is a credible and substantial implementation of the **simulation, scheduling, learning, periodic-interception, and evaluation** portions of the problem statement. It is not yet a complete evidence-backed implementation of the entire operational claim. The most accurate presentation is:
 
-> A simulation-first smart electronic-support receiver scheduler with adaptive RL baselines and a hybrid SmartScan policy, including periodic and spatial emitter modeling, but with incomplete agile prediction and limited real-world validation.
+> A simulation-first smart electronic-support receiver scheduler with adaptive RL baselines and a hybrid SmartScan policy that now includes causal, leakage-tested agile-hop prediction integrated into band selection — evaluated under one locked, provenance-stamped protocol, with all validation still synthetic (no hardware-in-the-loop).
 
 ## Highest-value actions to raise the score
 
-1. Correct emitter-specific detection credit for co-channel emitters, regenerate all metrics, and rerun the complete suite.
-2. Add an explicit agile-hop predictor or transition model, then report next-hop accuracy and intercept-time error separately from random-hop coverage.
-3. Optimize DQN and SmartScan decision latency below the stated 1 ms threshold, or revise the target with measured hardware assumptions.
-4. Promote sensitivity, Pd, Pfa, intercept rate, reward, prediction accuracy, and intercept-time error into one reproducible evaluation table.
-5. Validate at least one result set against recorded RF/SDR data and document the exact provenance and calibration procedure.
-6. Reconcile test/evaluation counts and publish the command, seeds, scenarios, episode count, and generated result file used for the final score.
+1. ~~Integrate the causal agile-hop predictor into SmartScan's band-selection policy and report next-hop accuracy separately from coverage.~~ **Done (rev. 2)** — `SmartScanScheduler._hop_bonus`; metrics in `results/benchmark.json`; tests in `tests/test_target99_gaps.py`.
+2. ~~Optimize DQN and SmartScan decision latency below the stated 1 ms threshold, or revise the target with measured hardware assumptions.~~ **Already met; now evidenced** — both average < 1 ms; tail percentiles recorded in `results/performance.json`.
+3. ~~Promote sensitivity, Pd, Pfa, intercept rate, reward, prediction accuracy, and intercept-time error into one reproducible evaluation table.~~ **Done (rev. 2)** — single-protocol table in `results/benchmark.md` (ROC/sensitivity sweeps remain a separate figure, `figures/roc.png`).
+4. Validate at least one result set against recorded RF/SDR data and document the exact provenance and calibration procedure. **Partially addressed** — `results/dataset_benchmark.json` replays a Turing-schema PDW calibration with provenance; authentic recorded-RF validation is still open.
+5. ~~Reconcile test/evaluation counts and publish the command, seeds, scenarios, episode count, and generated result file used for the final score.~~ **Done (rev. 2)** — 250 tests; protocol locked in `CANONICAL_PROTOCOL`; `python tools/export_site_data.py` bakes artifacts into the website.
+
+Remaining to move beyond 90: recorded-RF validation, adversarial agility models, and an end-to-end learned policy (or an honest statement that SmartScan is intentionally a designed hybrid).
 
 ## Final score
 
-**74/100 - strong alignment with the core Smart Scan research problem; partial alignment with operational realism, agile prediction, and validation requirements.**
+**83/100 - strong alignment with the core Smart Scan research problem, now with integrated and quantified agile-hop prediction and a single reproducible evaluation protocol; remaining gaps are operational realism (synthetic agility, no hardware-in-the-loop) rather than missing software capability.**

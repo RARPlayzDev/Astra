@@ -26,13 +26,17 @@ Datagrams may carry **one JSON object or a JSON array** of objects.
 
 ## Integration paths
 
-### 1. Synthetic generator (no hardware)
+### 1. Built-in simulated feed (no hardware)
+
+The desktop app and command centre ship a built-in simulated PDW source
+(`ewsmart.live.SimulatedLiveSource`); select **Simulated feed** on the
+Live Radar page. For a file-based feed, write the deterministic synthetic
+PDW stream (Turing-dataset schema) to JSONL and point ASTRA's
+**Log tail** source (`ewsmart.live.FileTailSource`) at it:
 
 ```bash
-python tools/pdw_generator.py --port 5555 --rate 400
+python -c "import json; from ewsmart.dataset import synthetic_pdws; open('feed.jsonl','w').write(''.join(json.dumps(p)+'\n' for p in synthetic_pdws(5000, seed=0)))"
 ```
-
-Emits realistic multi-emitter traffic over UDP for integration testing.
 
 ### 2. Bridge an existing sweep log
 
@@ -66,3 +70,12 @@ can emit one PDW per detected peak per dwell.
 - Frequency-to-band mapping uses the scenario's `[fmin, fmax]`
 - All networking is local loopback by default
 - The demo pipeline assumes a single receiver location; AOA is carried end-to-end
+
+## Hardware status (honest scope)
+
+ASTRA's hardware paths are **transport-ready but not hardware-validated**: the
+UDP/CSV bridge, PDW schema, and live scheduling loop are implemented and
+covered by loopback tests, but no result in this repository was produced by
+physical radar or SDR hardware. All headline numbers come from the simulated
+environment (see `results/benchmark.json` and
+`results/dataset_benchmark.json` for their provenance).

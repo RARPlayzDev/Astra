@@ -190,7 +190,7 @@ Parameters (threat coverage â‰¥ 0.90, prediction accuracy â‰¥ 0.50, fals
 rate â‰¤ 5Ã—10â»â´ per slot). Only systems passing every KPP are considered
 mission-capable and ranked by the Mission Effectiveness Score (MES).
 
-**Monte Carlo table.** Mean Â± 95% confidence intervals across 200 held-out
+**Monte Carlo table.** Mean Â± 95% confidence intervals across 50 held-out (canonical protocol: 24 bands × 3000 slots, base_seed 9000)
 episodes for reward, threat coverage, prediction accuracy, intercept rate,
 false-alarm rate, time-to-first-intercept and intercept-time prediction error.
 Paired permutation tests on the gated score separate SmartScan from every
@@ -358,7 +358,7 @@ Following defence test & evaluation practice:
    problem-statement figures of merit (Pd, Pfa performance, intercept rate,
    reward, prediction accuracy, intercept-time error).
 3. **Statistics.** Paired per-episode permutation tests on the gated score with
-   Holm-Bonferroni correction; 200 held-out episodes; 95% confidence intervals.
+   Holm-Bonferroni correction; 50 held-out episodes; 95% confidence intervals.
 
 Headline outcome: **SmartScan is the only mission-capable scheduler in the
 field** and leads every comparator at p < 1e-4 on gated MES. Learning claims

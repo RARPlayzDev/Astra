@@ -1,5 +1,26 @@
 # Changelog
 
+## Unreleased — alignment remediation rev. 2 (2026-09-08)
+
+### Added
+- **Agile-hop prediction integrated into SmartScan**: strictly causal per-stream (SNR/AOA fingerprint) transition model with urgency-gated bonus in `select()`; `next_hop_topk()` accessor; ablatable via `hop_weight` / `hop_min_obs`. Leakage, ablation and integration regression tests added.
+- **Policy-level agile-hop follow-rate metric** (`metrics.agile_hop_follow_metrics`), reported for *every* scheduler in the canonical benchmark.
+- **Canonical protocol locked**: `experiments.CANONICAL_PROTOCOL` = 24 bands × 3000 slots × 50 episodes, `base_seed=9000`; `benchmark_report()` defaults to it and stamps provenance (git commit, timestamp, Python/platform) into every artifact; `run_suite(full)` uses it too.
+- **Latency evidence artifact**: `results/performance.json` with p50/p95/p99/max per heavy scheduler + platform provenance (`tests/test_performance.py`).
+- **Dataset replay benchmark**: `ewsmart.dataset.dataset_replay_benchmark()` → `results/dataset_benchmark.json` (deterministic offline Turing-schema PDW calibration + provenance).
+- **Site exporter**: `tools/export_site_data.py` bakes `results/` artifacts, figures and the manual into `website/public/` (now a real tool, previously a phantom README reference).
+- **Multi-receiver de-confliction evidence**: `coverage_integrity` (fraction of slots with all-distinct dwells) in `multireceiver_experiment`.
+
+### Changed
+- Canonical episode count is **50** (24 bands × 3000 slots, `base_seed=9000`); all docs reconciled.
+- Test count is **250** everywhere (badge, README, EVALUATION, problem.md, docs, reproducibility).
+- `docs/smart-scan-alignment-report.md` re-scored from implemented evidence: **83/100** (rev. 2), with links to tests and artifacts.
+
+### Fixed
+- `server/livesim.py` live-arena prediction accuracy now excludes the warm-up calibration transient and divides by scored slots (regression test added).
+- Removed scratch file `tests/_patch_livesim.py`; README repo map no longer lists phantom tools (`pdw_generator.py`, `make_brand_assets.py`).
+- Stale headline numbers in `README.md`, `EVALUATION.md`, `problem.md`, `ASTRA.md`, `PROJECT_EXPLAINED.md`, `docs/*` now match the regenerated canonical artifacts.
+
 ## Unreleased — evidence freeze (Phase 0)
 
 ### Added
