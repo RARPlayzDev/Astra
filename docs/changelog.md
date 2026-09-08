@@ -9,6 +9,7 @@
 - **Latency evidence artifact**: `results/performance.json` with p50/p95/p99/max per heavy scheduler + platform provenance (`tests/test_performance.py`).
 - **Dataset replay benchmark**: `ewsmart.dataset.dataset_replay_benchmark()` → `results/dataset_benchmark.json` (deterministic offline Turing-schema PDW calibration + provenance).
 - **Site exporter**: `tools/export_site_data.py` bakes `results/` artifacts, figures and the manual into `website/public/` (now a real tool, previously a phantom README reference).
+- **Sentence-by-sentence alignment ledger**: `docs/ps-alignment-sentence-report.md` scores all 25 PS clauses (95/100 coverage) and reconciles the 83/100 evidence-weighted result.
 - **Multi-receiver de-confliction evidence**: `coverage_integrity` (fraction of slots with all-distinct dwells) in `multireceiver_experiment`.
 
 ### Changed

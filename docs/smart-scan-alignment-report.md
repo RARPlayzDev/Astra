@@ -8,6 +8,10 @@
 
 **Calculated alignment: 83/100 (strong core alignment; remaining gaps are operational realism and external validation).**
 
+For the fully traceable, word-for-word / sentence-by-sentence breakdown and the
+coverage calculation (95/100) see
+[`docs/ps-alignment-sentence-report.md`](./ps-alignment-sentence-report.md).
+
 ASTRA implements the central research problem: a receiver selects one frequency band at each time slot, observes a simulated RF environment with emitter truth, learns from hits and misses, and is evaluated against reference schedulers. It also includes periodic and spatial emitter behavior, detection and false-alarm modeling, reward-based scheduling, periodicity estimation, multi-receiver coordination, and ML baselines.
 
 Revision 2 re-scores the project after three remediation work packages landed:
