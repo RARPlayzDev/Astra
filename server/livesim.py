@@ -105,6 +105,10 @@ class _Runner:
         self.pred_total = 0
         self.pred_true_pos = 0  # predicted True AND was True
         self.pred_true_total = 0  # predicted True (total)
+        # Steady-state prediction accuracy: the initial calibration transient
+        # (reconnaissance / first lock acquisition) is excluded for *every*
+        # scheduler identically - parity with ewsmart.metrics.compute_metrics.
+        self.warm = min(600, max(1, env.T // 5))
         self.streams: dict[int, list[dict]] = {}
         self.evasion_events: list[dict] = []
         self.dnd_bands: dict[int, int] = {}  # band -> receiver index that owns it
@@ -177,13 +181,14 @@ class _Runner:
                     self.threat_ttff.append(t)
 
         preds = [s.predict(t, b) for s, b in zip(self.scheds, bands)]
-        self.pred_correct += int(preds[0] == truth_present)
-        self.pred_total += 1
-        # Track active predictions (when scheduler actually predicts True)
-        if preds[0]:
-            self.pred_true_total += 1
-            if truth_present:
-                self.pred_true_pos += 1
+        if t >= self.warm:  # steady-state only: parity with compute_metrics
+            self.pred_correct += int(preds[0] == truth_present)
+            self.pred_total += 1
+            # Track active predictions (when scheduler actually predicts True)
+            if preds[0]:
+                self.pred_true_total += 1
+                if truth_present:
+                    self.pred_true_pos += 1
 
         self.scheds[0].update(t, bands[0], results[0], r_total / max(1, len(results)))
 
@@ -229,7 +234,10 @@ class _Runner:
                              if self.ttff_all else None,
                 "threat_mean_ttff": round(float(np.mean(self.threat_ttff)), 1)
                                     if self.threat_ttff else None,
-                "pred_accuracy": round(self.pred_correct / n, 4) if n else 0.0,
+                # Denominator is the number of *scored* (post-warm-up) slots,
+                # so the figure is a steady-state accuracy, not a slot ratio.
+                "pred_accuracy": round(
+                    self.pred_correct / max(1, self.pred_total), 4),
                 "pred_active_accuracy": round(
                     self.pred_true_pos / max(1, self.pred_true_total), 4),
                 "pred_active_count": self.pred_true_total,

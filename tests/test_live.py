@@ -111,6 +111,23 @@ def test_scanner_with_sequential_baseline():
     assert st["hit_rate"] > 0.3
 
 
+def test_livesim_prediction_bookkeeping_excludes_warmup():
+    """Regression: live-arena prediction accuracy must exclude the warm-up
+    calibration transient, exactly like ewsmart.metrics.compute_metrics."""
+    from server.livesim import _Runner
+    env = RFEnvironment(n_bands=8, T=600, seed=5)
+    r = _Runner("A", env, seed=1, policy="openloop-sequential", team=1)
+    assert r.warm == 120
+    for _ in range(300):
+        r.step()
+    assert r.pred_total == 300 - r.warm, (
+        "warm-up slots must not be scored into prediction accuracy")
+    assert 0 <= r.pred_correct <= r.pred_total
+    k = r.kpis()
+    assert 0.0 <= k["pred_accuracy"] <= 1.0
+    assert k["pred_active_count"] == r.pred_true_total
+
+
 if __name__ == "__main__":
     fns = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     for fn in fns:
