@@ -21,11 +21,46 @@ from .runner import (run_episode, REWARD_CFG, train, make_schedulers,
                      detected_eids)
 from .schedulers import (LinearQLearning, DQNScheduler, SmartScanScheduler,
                          SequentialSweep, UCBScheduler)
-from .multireceiver import CooperativeTeam, run_episode_multi
+from .multireceiver import CooperativeTeam, coverage_multiplier, run_episode_multi
 from .identification import (build_default_library, tag_environment,
                              identification_report, streams_from_env_detections)
 from .geo import geolocate_streams, cep_stats, simulate_bearings, triangulate
 from .sigtests import paired_permutation_test, paired_bootstrap_ci
+
+# Canonical benchmark protocol locked for every headline artifact:
+# 24 bands x 3000 slots x 50 episodes, base_seed 9000.  benchmark_report(),
+# the full experiment suite and the README table all use exactly this.
+CANONICAL_PROTOCOL = {"n_bands": 24, "T": 3000, "episodes": 50,
+                      "base_seed": 9000}
+
+
+def provenance() -> dict:
+    """Machine-readable provenance stamped into every generated artifact."""
+    import platform
+    import subprocess
+    import sys
+    import time
+
+    def _git(args: list[str]):
+        try:
+            return subprocess.check_output(["git"] + args, text=True,
+                                           stderr=subprocess.DEVNULL).strip()
+        except Exception:
+            return None
+
+    dirty = None
+    try:
+        dirty = bool(subprocess.check_output(
+            ["git", "status", "--porcelain"], text=True,
+            stderr=subprocess.DEVNULL).strip())
+    except Exception:
+        pass
+    return {"generated_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ",
+                                           time.gmtime()),
+            "git_commit": _git(["rev-parse", "HEAD"]),
+            "git_dirty": dirty,
+            "python": sys.version.split()[0],
+            "platform": platform.platform()}
 
 
 def _threat_bands(n_bands: int, T: int) -> list[int]:
@@ -484,7 +519,7 @@ def multireceiver_experiment(team_sizes=(1, 2, 3), n_bands=20, T=1500,
     for k in team_sizes:
         for kind in ("smart-scan", "openloop-sequential"):
             key = f"{kind}-x{k}"
-            rs, covs = [], []
+            rs, covs, integ = [], [], []
             for ep in range(episodes):
                 env = RFEnvironment(n_bands=n_bands, T=T, seed=850 + ep)
                 team = CooperativeTeam(team_factories(k, kind))
@@ -492,40 +527,73 @@ def multireceiver_experiment(team_sizes=(1, 2, 3), n_bands=20, T=1500,
                 tr = run_episode_multi(env, team, seed=ep)
                 rs.append(float(np.sum(tr.rewards)))
                 covs.append(len(tr.first_intercept) / max(1, len(env.emitters)))
+                integ.append(coverage_multiplier(tr, env))
             out[key] = {"total_reward": float(np.mean(rs)),
-                        "intercept_ratio": float(np.mean(covs))}
+                        "intercept_ratio": float(np.mean(covs)),
+                        "coverage_integrity": float(np.mean(integ))}
     return out
 
 def benchmark_report(json_path: str = "results/benchmark.json",
                      md_path: str | None = "results/benchmark.md",
-                     n_bands: int = 16, T: int = 800, episodes: int = 6,
-                     base_seed: int = 7000) -> dict:
+                     n_bands: int = CANONICAL_PROTOCOL["n_bands"],
+                     T: int = CANONICAL_PROTOCOL["T"],
+                     episodes: int = CANONICAL_PROTOCOL["episodes"],
+                     base_seed: int = CANONICAL_PROTOCOL["base_seed"]) -> dict:
     """Canonical single-protocol benchmark for every scheduler.
 
     One command, one scenario family, identical seeds across schedulers.
     Produces the machine-readable JSON artifact and, optionally, the exact
     Markdown table generated from it - no hand-entered headline numbers.
+
+    The artifact carries the locked protocol block, full provenance (git
+    commit, timestamp, Python/platform), per-metric mean +/- 95% CI for every
+    scheduler, SmartScan agile-hop *follow* coverage measured from its own
+    traces, the observation-only next-hop *prediction* benchmark, and
+    attribution-conservation checks.
     """
     from pathlib import Path
-    from .metrics import METRIC_LABELS, SCHEDULER_LABELS
+    from .metrics import (METRIC_LABELS, SCHEDULER_LABELS, json_safe,
+                          agile_hop_follow_metrics)
+    from .prediction import hop_prediction_experiment
     probe = RFEnvironment(n_bands=n_bands, T=T, seed=base_seed)
     threats = sorted({e.home_band for e in probe.emitters
                       if e.threat and e.kind == "stationary"}) or [0]
     scheds = make_schedulers(n_bands, threats, seed=base_seed)
     per_ep: dict[str, list] = {}
     conservation = {}
+    hop_follow: list[float] = []
+    hop_latency: list[float] = []
+    hop_window = 8
     for ep in range(episodes):
         env = RFEnvironment(n_bands=n_bands, T=T, seed=base_seed + ep)
         for s in scheds:
             tr = run_episode(env, s, seed=base_seed + ep)
             per_ep.setdefault(s.name, []).append(compute_metrics(env, tr))
-            if isinstance(s, SmartScanScheduler) or s.name == "smart-scan":
+            if s.name == "smart-scan":
                 conservation[f"ep{ep}"] = attribution_conservation(env, tr)
+                hf = agile_hop_follow_metrics(env, tr)
+                hop_follow.append(hf["agile_hop_follow_rate"])
+                if np.isfinite(hf["agile_hop_follow_latency"]):
+                    hop_latency.append(hf["agile_hop_follow_latency"])
+                hop_window = hf["window"]
     ci = {name: aggregate_metrics_ci(eps) for name, eps in per_ep.items()}
     artifact = {
         "protocol": {"n_bands": n_bands, "T": T, "episodes": episodes,
                      "base_seed": base_seed},
+        "provenance": provenance(),
         "metrics_ci": ci,
+        "smart_scan_agile_hop": {
+            "follow_rate_mean": (float(np.mean(hop_follow))
+                                 if hop_follow else None),
+            "follow_rate_min": (float(np.min(hop_follow))
+                                if hop_follow else None),
+            "follow_rate_max": (float(np.max(hop_follow))
+                                if hop_follow else None),
+            "follow_latency_mean": (float(np.mean(hop_latency))
+                                    if hop_latency else None),
+            "window_slots": int(hop_window)},
+        "hop_prediction": hop_prediction_experiment(
+            n_bands=min(n_bands, 16), T=1500, episodes=2, seed=base_seed),
         "attribution_conservation": conservation,
         "ranking": mission_scores(
             {n: {k: v["mean"] for k, v in m.items()} for n, m in ci.items()}
@@ -534,7 +602,7 @@ def benchmark_report(json_path: str = "results/benchmark.json",
     out = Path(json_path)
     out.parent.mkdir(parents=True, exist_ok=True)
     with open(out, "w") as f:
-        json.dump(artifact, f, indent=2, allow_nan=False)
+        json.dump(json_safe(artifact), f, indent=2, allow_nan=False)
     if md_path:
         keys = ("avg_reward", "threat_intercept_ratio", "intercept_rate",
                 "false_alarm_rate", "mean_time_to_first_intercept",
@@ -553,6 +621,33 @@ def benchmark_report(json_path: str = "results/benchmark.json",
                 v = ci[name][k]
                 row.append(f"{v['mean']:.3f} ± {v['ci95']:.3f}")
             lines.append("| " + " | ".join(row) + " |")
+        ss = artifact["smart_scan_agile_hop"]
+        lines += ["",
+                  "## SmartScan agile-hop integration (same episodes)",
+                  "",
+                  f"- Agile-hop follow rate within {ss['window_slots']} slots "
+                  f"of each observed hop: **{ss['follow_rate_mean']:.3f}** "
+                  f"(min {ss['follow_rate_min']:.3f}, "
+                  f"max {ss['follow_rate_max']:.3f} across episodes)"]
+        if ss["follow_latency_mean"] is not None:
+            lines.append(f"- Mean follow latency: "
+                         f"{ss['follow_latency_mean']:.1f} slots")
+        lines += ["",
+                  "## Observation-only next-hop prediction (separate protocol)",
+                  "",
+                  "| Agility | Predictor | Top-1 | Top-3 | Missed opportunity |",
+                  "|---|---|---|---|---|"]
+        for mode, per_pred in artifact["hop_prediction"].items():
+            for pred, d in per_pred.items():
+                lines.append(
+                    f"| {mode} | {pred} | {d['top1_accuracy']:.3f} | "
+                    f"{d['topk_accuracy']:.3f} | "
+                    f"{d['missed_opportunity_rate']:.3f} |")
+        prov = artifact["provenance"]
+        lines += ["",
+                  f"*Generated {prov['generated_utc']} from commit "
+                  f"`{prov['git_commit']}` (dirty={prov['git_dirty']}), "
+                  f"Python {prov['python']}, {prov['platform']}.*"]
         Path(md_path).parent.mkdir(parents=True, exist_ok=True)
         Path(md_path).write_text("\n".join(lines) + "\n", encoding="utf-8")
     return artifact
@@ -563,16 +658,18 @@ def run_suite(outdir: str = "results", figdir: str = "figures",
     """Run the full experiment programme and persist results + figures."""
     from pathlib import Path
     from . import viz
+    from .prediction import hop_prediction_experiment
     out, figs = Path(outdir), Path(figdir)
     out.mkdir(parents=True, exist_ok=True)
     figs.mkdir(parents=True, exist_ok=True)
     quick = suite == "quick"
     summary: dict = {}
 
-    print("[1/8] Monte Carlo evaluation...")
-    mc = monte_carlo_eval(n_bands=24 if not quick else 16,
-                          T=3000 if not quick else 800,
-                          episodes=200 if not quick else 6)
+    print("[1/8] Monte Carlo evaluation (canonical protocol when full)...")
+    if quick:
+        mc = monte_carlo_eval(n_bands=16, T=800, episodes=6)
+    else:
+        mc = monte_carlo_eval(**CANONICAL_PROTOCOL)
     summary["monte_carlo"] = mc
 
     print("[2/8] Significance tests (paired permutation, Holm-corrected)...")
@@ -699,6 +796,11 @@ def run_suite(outdir: str = "results", figdir: str = "figures",
                                   T=800 if quick else 1500,
                                   episodes=2 if quick else 3)
     summary["multireceiver"] = mr
+
+    print("[7.5/8] Observation-only agile-hop prediction...")
+    summary["hop_prediction"] = hop_prediction_experiment(
+        n_bands=16 if quick else 24, T=800 if quick else 1500,
+        episodes=1 if quick else 2, seed=4242)
 
     print("[8/8] Geolocation study...")
     geo = geolocation_experiment(trials=25 if quick else 60,

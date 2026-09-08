@@ -431,8 +431,12 @@ def test_runner_monte_carlo_streams_to_db():
             assert set(results[name]) == set(ci[name])
             for a in ci[name].values():
                 assert "ci_low" in a and "ci_high" in a
+                # n counts finite trial values; n == trials when every trial
+                # produced the metric.  avg_intercept_time_error is NaN in a
+                # trial whenever no periodic emitter was characterised within
+                # the short horizon, so n may legitimately be smaller.
                 if a["n"]:          # all-NaN metrics legitimately have n == 0
-                    assert a["n"] == 2
+                    assert 0 < a["n"] <= 2
         db = MetricsDB(p)
         try:
             n = db.conn.execute("SELECT COUNT(*) FROM trials").fetchone()[0]

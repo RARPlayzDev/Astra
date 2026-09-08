@@ -14,7 +14,8 @@ from ewsmart.config import ScenarioConfig
 from ewsmart.environment import RFEnvironment, ConfigurationError, EmitterSpec
 from ewsmart.receiver import ESReceiver, DwellResult
 from ewsmart.runner import run_episode, step_reward, detected_eids
-from ewsmart.metrics import Trace, compute_metrics, attribution_conservation
+from ewsmart.metrics import (Trace, compute_metrics, attribution_conservation,
+                             agile_hop_follow_metrics)
 from ewsmart.schedulers import SmartScanScheduler
 from ewsmart import prediction as pr
 from ewsmart.experiments import benchmark_report, ablation_experiment
@@ -279,6 +280,119 @@ def _superseded_gauss_newton_beats_linear_estimator():
 def _superseded_gauss_newton_beats_linear_estimator():
     """Superseded by the CEP-based comparison in tests/test_geo_ml.py."""
     assert True
+
+
+# ---------------------------------------------------------------------------
+# Phase 5: hop-predictor integration into SmartScan + policy-level metrics
+# ---------------------------------------------------------------------------
+
+def _feed_hop_stream(s: SmartScanScheduler, bands, t0: int = 0, dt: int = 4):
+    """Feed one persistent SNR/AOA stream hopping through ``bands``."""
+    for i, b in enumerate(bands):
+        res = DwellResult(band=b, t=t0 + i * dt, hit=True, false_alarm=False,
+                          snr_db=18.0, truth_present=True,
+                          detections=((18.0, 30.0),), detected_eids=(0,))
+        s.update(t0 + i * dt, b, res, 1.0)
+    return t0 + len(bands) * dt
+
+
+def test_smartscan_learns_causal_hop_transitions():
+    """The integrated per-stream model must rank the true successor first."""
+    s = SmartScanScheduler(6, seed=0)
+    end = _feed_hop_stream(s, [1, 2, 1, 2, 1, 2, 1])
+    assert s.next_hop_topk(1)[0] == 2
+    assert s.next_hop_topk(2)[0] == 1
+    # Urgency-weighted bonus peaks inside the learned hop window...
+    bonus = s._hop_bonus(end)  # one hop interval after the last detection
+    assert bonus[2] > 0.0, "predicted successor must receive hop bonus"
+    # ...and vanishes once the hop window has clearly passed.
+    assert s._hop_bonus(end + 10_000).sum() == 0.0
+
+
+def test_hop_bonus_ablates_and_gates_on_evidence():
+    """No bonus before enough transitions, none when the predictor is off."""
+    s = SmartScanScheduler(6, seed=0, hop_min_obs=10)
+    end = _feed_hop_stream(s, [1, 2, 1, 2])
+    assert s._hop_bonus(end + 4).sum() == 0.0, \
+        "immature transition statistics must not produce bonus"
+    off = SmartScanScheduler(6, seed=0, hop_weight=0.0)
+    _feed_hop_stream(off, [1, 2, 1, 2, 1, 2, 1])
+    assert off._hop_bonus(end + 4).sum() == 0.0, \
+        "hop_weight=0 must fully ablate the predictor"
+
+
+def test_smartscan_select_uses_hop_prediction():
+    """With all other scoring terms equalised, the hop bonus must decide."""
+    n = 6
+    s = SmartScanScheduler(n, seed=0, explore_eps=0.0, exploit_ramp=0.0,
+                           recon_factor=0, value_mode="flat")
+    for b in range(n):  # equal value/visit stats on every band
+        res = DwellResult(band=b, t=b, hit=True, false_alarm=False,
+                          snr_db=18.0, truth_present=True,
+                          detections=((18.0, 30.0),), detected_eids=(0,))
+        s.update(b, b, res, 0.5)
+    end = _feed_hop_stream(s, [3, 1, 3, 1, 3], t0=10)
+    s.n[:] = 5        # equal exploration bonuses
+    s.last_visit[:] = 0  # equal recency terms
+    # One learned hop interval after the last detection on band 3, the
+    # policy must pick the predicted successor (band 1).
+    assert s.select(end) == 1
+    # Ablated control under the identical state picks the term-tie first band.
+    s0 = SmartScanScheduler(n, seed=0, explore_eps=0.0, exploit_ramp=0.0,
+                            recon_factor=0, value_mode="flat", hop_weight=0.0)
+    for b in range(n):
+        res = DwellResult(band=b, t=b, hit=True, false_alarm=False,
+                          snr_db=18.0, truth_present=True,
+                          detections=((18.0, 30.0),), detected_eids=(0,))
+        s0.update(b, b, res, 0.5)
+    s0.n[:] = 5
+    s0.last_visit[:] = 0
+    assert s0.select(end) == 0
+
+
+def test_agile_hop_follow_metrics_handbuilt():
+    """Deterministic hand-built trace for the policy-level hop coverage."""
+
+    class _E:
+        def __init__(self, eid, kind):
+            self.eid, self.kind = eid, kind
+
+    class _Env:
+        T = 10
+        emitters = [_E(0, "agile"), _E(1, "agile")]
+        band_seq = np.array([[0] * 5 + [1] * 5,
+                             [2] * 5 + [3] * 5])
+
+    tr = Trace(actions=[0, 0, 2, 1, 0, 1, 3, 0, 0, 0],
+               hits=[False] * 10, false_alarms=[False] * 10,
+               rewards=[0.0] * 10, predictions=[False] * 10,
+               first_intercept={}, ambiguous=[False] * 10)
+    m = agile_hop_follow_metrics(_Env(), tr, window=2)
+    # Emitter 0 hops 0->1 at t=5; trace dwells band 1 at t=5 (latency 0).
+    # Emitter 1 hops 2->3 at t=5; window [5,7) = {1,3} -> band 3 at t=6,
+    # latency 1, followed.  Both hops covered.
+    assert m["n_hops"] == 2
+    assert m["agile_hop_follow_rate"] == pytest.approx(1.0)
+    assert m["agile_hop_follow_latency"] == pytest.approx(0.5)
+    # Shrinking the window to 1 slot must miss the second hop.
+    m1 = agile_hop_follow_metrics(_Env(), tr, window=1)
+    assert m1["agile_hop_follow_rate"] == pytest.approx(0.5)
+    assert m1["agile_hop_follow_latency"] == pytest.approx(0.0)
+
+
+def test_benchmark_report_includes_hop_and_provenance(tmp_path):
+    jp = tmp_path / "benchmark.json"
+    mp = tmp_path / "benchmark.md"
+    art = benchmark_report(str(jp), str(mp), n_bands=6, T=300, episodes=1,
+                           base_seed=99)
+    data = json.loads(jp.read_text())
+    assert "provenance" in data and data["provenance"]["python"]
+    assert "hop_prediction" in data
+    assert "smart_scan_agile_hop" in data
+    assert data["smart_scan_agile_hop"]["window_slots"] > 0
+    text = mp.read_text()
+    assert "agile-hop integration" in text
+    assert "next-hop prediction" in text
 
 
 

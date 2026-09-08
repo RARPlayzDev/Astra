@@ -489,7 +489,11 @@ class SmartScanScheduler(BaseScheduler):
        are separated by SNR fingerprints so co-channel emitters stay distinct,
        and proven-persistent streams are blacklisted;
     5. value-weighted rotation - discounted UCB + recency with an exploitation
-       ramp that progressively shifts effort toward the highest-value bands.
+       ramp that progressively shifts effort toward the highest-value bands;
+    6. agile-hop anticipation - a strictly causal, per-stream band-transition
+       model (learned only from detected SNR/AOA fingerprints) biases the
+       rotation toward the bands an agile emitter is most likely to hop to
+       next, with urgency decaying since the stream's last detection.
 
     Locks failing validation (repeated misses at predicted ON windows) are
     deleted automatically, keeping false locks cheap.
@@ -501,13 +505,16 @@ class SmartScanScheduler(BaseScheduler):
     def __init__(self, n_bands: int, seed: int = 0, explore_eps: float = 0.08,
                  lock_hits: int = 5, recon_factor: int = 12,
                  burst_horizon: int = 480, exploit_ramp: float = 0.60,
-                 value_mode: str = "learned"):
+                 value_mode: str = "learned", hop_weight: float = 0.45,
+                 hop_min_obs: int = 3):
         super().__init__(n_bands, seed)
         if value_mode not in ("learned", "heuristic", "flat"):
             raise ValueError(
                 f"value_mode must be 'learned', 'heuristic' or 'flat', "
                 f"got {value_mode!r}")
         self.value_mode = value_mode
+        self.hop_weight = float(hop_weight)
+        self.hop_min_obs = int(hop_min_obs)
         self.explore_eps = explore_eps * 0.6  # slightly less random waste
         self.lock_hits = lock_hits
         self.recon_steps = recon_factor * n_bands
@@ -541,6 +548,13 @@ class SmartScanScheduler(BaseScheduler):
             deque(maxlen=10) for _ in range(self.n_bands)]
         # --- online logistic occupancy model (second learned component) ---
         self.logit = [_BandLogit() for _ in range(self.n_bands)]
+        # --- causal agile-hop model (third learned component) ---
+        # Per-stream (SNR/AOA fingerprint) band-transition counts learned only
+        # from detections observed so far; never from hidden emitter state.
+        self.hop_last_band: dict[tuple, int] = {}
+        self.hop_last_t: dict[tuple, int] = {}
+        self.hop_dt: dict[tuple, float] = {}
+        self.hop_succ: dict[tuple, dict[int, dict[int, int]]] = {}
 
     def end_episode(self) -> None:
         pass
@@ -708,6 +722,85 @@ class SmartScanScheduler(BaseScheduler):
             return self.mu
         return np.zeros(self.n_bands)
 
+    # -------------------------------------------------- agile-hop prediction
+    def _observe_hop(self, t: int, band: int, snr: float, aoa: float) -> None:
+        """Feed one resolved detection into the causal per-stream hop model.
+
+        Streams are keyed by the same SNR/AOA fingerprint used for burst
+        characterisation, so a frequency-agile emitter keeps its identity as
+        it hops.  A transition is counted only when a detection lands on a
+        *different* band than the stream's previous detection, and the time
+        between detections is tracked as an exponential-moving average of the
+        hop interval (used as an urgency clock in :meth:`_hop_bonus`).
+        Strictly causal: only detections seen so far are ever used.
+        """
+        key = (round(snr * 2.0), int(aoa // 15.0))
+        prev = self.hop_last_band.get(key)
+        last_t = self.hop_last_t.get(key)
+        if prev is not None and last_t is not None and prev != band:
+            succ = self.hop_succ.setdefault(key, {}).setdefault(prev, {})
+            succ[band] = succ.get(band, 0) + 1
+            dt = t - last_t
+            if dt > 0:
+                m = self.hop_dt.get(key)
+                self.hop_dt[key] = float(dt) if m is None \
+                    else 0.8 * m + 0.2 * float(dt)
+        self.hop_last_band[key] = band
+        self.hop_last_t[key] = t
+        # Bound memory: keep only the most recently active streams.
+        if len(self.hop_last_band) > 48:
+            oldest = min(self.hop_last_band, key=self.hop_last_t.get)
+            for d in (self.hop_last_band, self.hop_last_t,
+                      self.hop_succ, self.hop_dt):
+                d.pop(oldest, None)
+
+    def _hop_bonus(self, t: int) -> np.ndarray:
+        """Urgency-weighted successor distribution for imminent agile hops.
+
+        For every recently-active stream with mature statistics (>=
+        ``hop_min_obs`` observed hops) whose last detection was within about
+        one learned hop interval, adds the model's successor probability mass
+        to the candidate bands.  Returns zeros when the predictor is ablated
+        (``hop_weight <= 0``) - used by the ablation study and tests.
+        """
+        bonus = np.zeros(self.n_bands)
+        if self.hop_weight <= 0 or not self.hop_last_band:
+            return bonus
+        for key, last_b in self.hop_last_band.items():
+            mean_dt = self.hop_dt.get(key)
+            if mean_dt is None:
+                continue
+            dt = t - self.hop_last_t[key]
+            if dt < 0 or dt > 2.0 * mean_dt:
+                continue  # hop window passed; nothing imminent
+            succ = self.hop_succ.get(key, {}).get(last_b)
+            if not succ:
+                continue
+            total = sum(succ.values())
+            if total < self.hop_min_obs:
+                continue  # not enough evidence yet
+            urg = max(0.0, 1.0 - dt / (2.0 * mean_dt))
+            mass = urg / total
+            for b, c in succ.items():
+                if 0 <= b < self.n_bands:
+                    bonus[b] += mass * c
+        return bonus
+
+    def next_hop_topk(self, band: int, k: int = 3) -> list[int]:
+        """Model's most likely successor bands of ``band`` across streams.
+
+        Aggregates the causal transition counts of every tracked stream and
+        returns the top-``k`` successor band indices (best first).  Empty
+        until at least one hop has been observed from ``band``.
+        """
+        counts: dict[int, int] = {}
+        for succ in self.hop_succ.values():
+            row = succ.get(band)
+            if row:
+                for b, c in row.items():
+                    counts[b] = counts.get(b, 0) + c
+        return sorted(counts, key=lambda b: -counts[b])[:max(1, k)]
+
     def select(self, t: int) -> int:
         self._check_t(t)
         if t < self.recon_steps:
@@ -766,7 +859,8 @@ class SmartScanScheduler(BaseScheduler):
                  if self.value_mode == "learned"
                  else np.zeros(self.n_bands))
         score = mu_eff + 0.55 * np.sqrt(np.log(t + 2) / self.n) \
-            + (0.16 + 0.14 * unseen) * recency + 0.35 * lprob
+            + (0.16 + 0.14 * unseen) * recency + 0.35 * lprob \
+            + self.hop_weight * self._hop_bonus(t)
         return int(np.argmax(score))
 
     def _persistent_confirmed(self, band: int) -> bool:
@@ -820,6 +914,7 @@ class SmartScanScheduler(BaseScheduler):
             if len(self.band_hits[band]) > 400:
                 del self.band_hits[band][:-200]
             self._update_burst(t, band, snr, aoa)
+            self._observe_hop(t, band, snr, aoa)
         if hit:
             self.hit_times[band].append(t)
             self.new_hits[band] += len(res.detections) or 1

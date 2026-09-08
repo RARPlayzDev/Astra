@@ -68,6 +68,79 @@ def test_full_episode_wall_clock_sane():
         assert ms * N_TICKS < N_TICKS * LIMIT_MS
 
 
+def _latencies(sched, seed: int = 3, n_ticks: int = N_TICKS,
+               warmup: int = WARMUP_TICKS) -> list:
+    """Per-decision scheduler cost in ms (select + predict + update)."""
+    env = RFEnvironment(n_bands=N_BANDS, T=n_ticks, seed=seed)
+    rx = ESReceiver(env, seed=seed + 1)
+    sched.reset(horizon=n_ticks)
+    for t in range(warmup):
+        b = sched.select(t)
+        res = rx.dwell(b, t)
+        sched.update(t, b, res, 0.2)
+    lats = []
+    pc = time.perf_counter
+    for t in range(warmup, n_ticks):
+        a = pc()
+        b = sched.select(t)
+        c = pc()
+        res = rx.dwell(b, t)
+        d = pc()
+        pred = sched.predict(t, b)
+        e = pc()
+        r = 0.3 if (res.hit and not res.false_alarm) else -0.05
+        sched.update(t, b, res, r)
+        f = pc()
+        lats.append(((c - a) + (e - d) + (f - e)) * 1000.0)
+        assert 0 <= b < N_BANDS and pred in (True, False)
+    return lats
+
+
+def test_latency_artifact_percentiles_and_platform(tmp_path=None):
+    """Latency evidence artifact: p50/p95/p99/max + platform provenance.
+
+    Writes ``results/performance.json`` so the README and evaluation docs can
+    cite measured tail latencies (not just means) with the exact platform
+    they were measured on.  The hard 1 ms gate stays on the mean, matching
+    ``test_scheduler_decision_under_1ms``; percentiles are recorded evidence.
+    """
+    import json as _json
+    import platform as _platform
+    foc = [s for s in make_schedulers(N_BANDS, (0, 1), seed=7)
+           if s.name in ("smart-scan", "rl-dqn")]
+    n_ticks = 4000
+    lat = {}
+    worst_mean = 0.0
+    for s in foc:
+        arr = np.asarray(_latencies(s, n_ticks=n_ticks), dtype=float)
+        row = {"mean_ms": float(arr.mean()),
+               "p50_ms": float(np.percentile(arr, 50)),
+               "p95_ms": float(np.percentile(arr, 95)),
+               "p99_ms": float(np.percentile(arr, 99)),
+               "max_ms": float(arr.max())}
+        lat[s.name] = row
+        worst_mean = max(worst_mean, row["mean_ms"])
+    artifact = {
+        "protocol": {"n_bands": N_BANDS, "n_ticks": n_ticks,
+                     "warmup_ticks": WARMUP_TICKS, "limit_ms": LIMIT_MS,
+                     "metric": "scheduler select+predict+update cost "
+                               "per decision (ms)"},
+        "provenance": {
+            "generated_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ",
+                                           time.gmtime()),
+            "python": _platform.python_version(),
+            "platform": _platform.platform(),
+            "processor": _platform.processor()},
+        "latency_ms": lat}
+    out = (_pathlib.Path(__file__).resolve().parent.parent / "results"
+           / "performance.json")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(_json.dumps(artifact, indent=2), encoding="utf-8")
+    assert worst_mean < LIMIT_MS, (
+        f"worst mean decision latency {worst_mean:.4f} ms exceeds "
+        f"{LIMIT_MS} ms hard limit")
+
+
 if __name__ == "__main__":
     scheds = make_schedulers(N_BANDS, (0, 1), seed=7)
     print(f"Average decision latency over {N_TICKS} ticks "

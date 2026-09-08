@@ -26,6 +26,8 @@ METRIC_LABELS = {
     "avg_intercept_time_error": "Intercept-Time Prediction Error (slots)",
     "n_periodic_locked": "Periodic Emitters Locked",
     "ambiguous_hit_rate": "Ambiguous Co-channel Hit Rate (/slot)",
+    "agile_hop_follow_rate": "Agile Hop Follow Rate (window)",
+    "agile_hop_follow_latency": "Mean Agile Hop Follow Latency (slots)",
 }
 
 SCHEDULER_LABELS = {
@@ -172,6 +174,47 @@ def attribution_conservation(env, trace: Trace) -> dict:
         if t >= len(trace.actions) or row[t] != trace.actions[t]:
             violations += 1
     return {"ok": violations == 0, "violations": violations}
+
+
+def agile_hop_follow_metrics(env, trace: Trace, window: int = 8) -> dict:
+    """Policy-level agile-hop coverage, measured post hoc from a full trace.
+
+    For every hop of every frequency-agile emitter (a band change in its
+    observable band sequence) this checks whether the scheduler dwelt on the
+    *destination* band within ``window`` slots after the hop.  It uses only
+    the trace the scheduler actually produced plus the environment's band
+    sequences, and nothing is fed back into the policy, so the measurement is
+    leakage-free when used as an offline evaluation.  This is the
+    policy-level companion to :mod:`ewsmart.prediction`: next-hop *prediction*
+    accuracy is reported separately from *coverage* of the hops.
+
+    Returns ``{"n_hops", "agile_hop_follow_rate", "agile_hop_follow_latency",
+    "window"}``.  Latency is the mean slot offset between the hop and the
+    first following dwell on the destination band (NaN when no hop followed).
+    """
+    actions = np.asarray(trace.actions)
+    T = min(int(env.T), len(actions))
+    hops = covered = 0
+    latencies: list[int] = []
+    for e in env.emitters:
+        if e.kind != "agile":
+            continue
+        seq = env.band_seq[e.eid]
+        for t in range(1, T):
+            b_prev, b_new = int(seq[t - 1]), int(seq[t])
+            if b_new < 0 or b_new == b_prev:
+                continue
+            hops += 1
+            hit_t = next((tt for tt in range(t, min(T, t + window))
+                          if int(actions[tt]) == b_new), None)
+            if hit_t is not None:
+                covered += 1
+                latencies.append(hit_t - t)
+    return {"n_hops": hops,
+            "agile_hop_follow_rate": covered / hops if hops else 0.0,
+            "agile_hop_follow_latency":
+                float(np.mean(latencies)) if latencies else float("nan"),
+            "window": int(window)}
 
 
 def periodic_best(hit_times):
