@@ -49,6 +49,9 @@ def build_site_data(suite: dict, bench: dict | None) -> dict:
         out["benchmark_provenance"] = bench.get("provenance")
         out["smart_scan_agile_hop"] = bench.get("smart_scan_agile_hop")
         out["benchmark_ranking"] = bench.get("ranking")
+        out["receiver_fom"] = bench.get("receiver_fom")
+        out["smart_scan_value_mode_ablation"] = bench.get(
+            "smart_scan_value_mode_ablation")
     return out
 
 

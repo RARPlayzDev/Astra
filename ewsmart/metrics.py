@@ -24,10 +24,22 @@ METRIC_LABELS = {
     "threat_ttff_censored": "Censored Threat Latency (slots)",
     "pct_correct_predictions": "Prediction Accuracy",
     "avg_intercept_time_error": "Intercept-Time Prediction Error (slots)",
+    "intercept_time_error_n": "Intercept-Time Error Samples",
+    "intercept_time_error_coverage": "Intercept-Time Error Coverage",
     "n_periodic_locked": "Periodic Emitters Locked",
     "ambiguous_hit_rate": "Ambiguous Co-channel Hit Rate (/slot)",
     "agile_hop_follow_rate": "Agile Hop Follow Rate (window)",
     "agile_hop_follow_latency": "Mean Agile Hop Follow Latency (slots)",
+    "ir_stationary": "Interception Ratio - Stationary",
+    "ir_agile": "Interception Ratio - Frequency Agile",
+    "ir_periodic": "Interception Ratio - Periodic",
+    "ir_spatial": "Interception Ratio - Spatial Scan",
+    "ir_evasive": "Interception Ratio - Evasive",
+    "ttff_stationary": "TTFF - Stationary (slots)",
+    "ttff_agile": "TTFF - Frequency Agile (slots)",
+    "ttff_periodic": "TTFF - Periodic (slots)",
+    "ttff_spatial": "TTFF - Spatial Scan (slots)",
+    "ttff_evasive": "TTFF - Evasive (slots)",
 }
 
 SCHEDULER_LABELS = {
@@ -139,6 +151,25 @@ def compute_metrics(env, trace: Trace) -> dict:
     else:
         pct_correct = float(np.mean(preds == truth_present)) if len(preds) else 0.0
 
+    # Per-emitter-class FoMs (PS: "prediction of intercept time and
+    # interception ratio ... against spatially scanning and frequency agile
+    # emitters").  Interception ratio and censored mean time-to-first-intercept
+    # are reported for every emitter class; classes absent from the scenario
+    # yield NaN so they are excluded from Monte Carlo aggregates rather than
+    # diluting the averages with phantom zeros.
+    class_out: dict[str, float] = {}
+    for kind in ("stationary", "agile", "periodic", "spatial", "evasive"):
+        ids = {e.eid for e in env.emitters if e.kind == kind}
+        if not ids:
+            class_out[f"ir_{kind}"] = float("nan")
+            class_out[f"ttff_{kind}"] = float("nan")
+            continue
+        got = [i for i in intercepted if i in ids]
+        class_out[f"ir_{kind}"] = len(got) / len(ids)
+        tt = [trace.first_intercept[i] for i in got]
+        n_miss = len(ids) - len(got)
+        class_out[f"ttff_{kind}"] = (sum(tt) + n_miss * T) / len(ids)
+
     return {
         "avg_reward": float(np.mean(trace.rewards)) if T else 0.0,
         "total_reward": float(np.sum(trace.rewards)),
@@ -151,10 +182,15 @@ def compute_metrics(env, trace: Trace) -> dict:
         "threat_ttff_censored": float(threat_ttff_censored),
         "pct_correct_predictions": pct_correct,
         "avg_intercept_time_error": float(np.mean(est_errs)) if est_errs else float("nan"),
+        "intercept_time_error_n": len(est_errs),
+        "intercept_time_error_coverage": (sum(1 for eid in periodic_ids
+                                              if len(hit_times[eid]) >= 3)
+                                          / max(1, len(periodic_ids))),
         "n_periodic_locked": sum(1 for eid in periodic_ids
                                  if len(hit_times[eid]) >= 3),
         "ambiguous_hit_rate": (float(np.mean(trace.ambiguous))
                                if len(trace.ambiguous) else 0.0),
+        **class_out,
     }
 
 

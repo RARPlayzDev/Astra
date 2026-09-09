@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass, asdict, field
 
 
@@ -33,6 +34,7 @@ class ScenarioConfig:
     hop_set_range: tuple = (3, 7)
     dwell_range: tuple = (3, 9)
     agile_mode: str = "random"  # "random" | "markov" (structured hopping)
+    noise_figure_db: float = 6.0  # receiver front-end noise figure
 
     @classmethod
     def from_json(cls, path: str) -> "ScenarioConfig":
@@ -55,3 +57,48 @@ class ScenarioConfig:
         d = asdict(self)
         d.update(overrides)
         return ScenarioConfig(**d)
+
+    # -- RF front-end bandwidth model --------------------------------------
+    # The PS requires a receiver whose *instantaneous* bandwidth is at least
+    # an order of magnitude below the surveilled spectrum.  The discretisation
+    # into n_bands is that model; these properties make the bandwidth
+    # semantics explicit and machine-checkable instead of merely implied.
+
+    @property
+    def total_bw_mhz(self) -> float:
+        """Total surveilled spectrum width in MHz."""
+        return float(self.freq_max_mhz - self.freq_min_mhz)
+
+    @property
+    def inst_bw_mhz(self) -> float:
+        """Instantaneous bandwidth of one receiver dwell (one band) in MHz."""
+        return self.total_bw_mhz / float(self.n_bands)
+
+    @property
+    def bandwidth_ratio(self) -> float:
+        """Spectrum-to-instantaneous bandwidth ratio (PS: should be >= 10)."""
+        return self.total_bw_mhz / self.inst_bw_mhz
+
+    def bandwidth_model(self) -> dict:
+        """Machine-readable RF front-end summary stamped into result artifacts.
+
+        ``thermal_noise_dbm`` is the kT+B floor over one band's instantaneous
+        bandwidth plus the receiver noise figure; ``sens_db`` is interpreted
+        relative to the *received* signal, so ``required_input_sens_dbm`` is
+        the input-referred floor a real front-end would need for 0 dB SNR.
+        """
+        inst_bw_hz = self.inst_bw_mhz * 1e6
+        thermal = -174.0 + 10.0 * math.log10(inst_bw_hz)
+        return {
+            "freq_min_mhz": float(self.freq_min_mhz),
+            "freq_max_mhz": float(self.freq_max_mhz),
+            "total_bw_mhz": self.total_bw_mhz,
+            "n_bands": int(self.n_bands),
+            "inst_bw_mhz": self.inst_bw_mhz,
+            "bandwidth_ratio": self.bandwidth_ratio,
+            "bandwidth_ratio_meets_ps_order": bool(self.bandwidth_ratio >= 10.0),
+            "noise_figure_db": float(self.noise_figure_db),
+            "thermal_noise_dbm": thermal + float(self.noise_figure_db),
+            "required_input_sens_dbm": thermal + float(self.noise_figure_db),
+            "sens_db": float(self.sens_db),
+        }

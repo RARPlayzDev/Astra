@@ -555,10 +555,15 @@ def benchmark_report(json_path: str = "results/benchmark.json",
     from .metrics import (METRIC_LABELS, SCHEDULER_LABELS, json_safe,
                           agile_hop_follow_metrics)
     from .prediction import hop_prediction_experiment
+    from .receiver import ESReceiver
+    from .schedulers import SmartScanScheduler
     probe = RFEnvironment(n_bands=n_bands, T=T, seed=base_seed)
     threats = sorted({e.home_band for e in probe.emitters
                       if e.threat and e.kind == "stationary"}) or [0]
     scheds = make_schedulers(n_bands, threats, seed=base_seed)
+    # Receiver sensitivity FoM (PS FoM: sensitivity) + explicit RF front-end
+    # bandwidth context (PS: instantaneous BW an order below the spectrum).
+    receiver_fom = ESReceiver(probe, seed=base_seed).sensitivity_fom()
     per_ep: dict[str, list] = {}
     conservation = {}
     hop_follow: dict[str, list[float]] = {}
@@ -580,11 +585,31 @@ def benchmark_report(json_path: str = "results/benchmark.json",
                     hop_latency.append(hf["agile_hop_follow_latency"])
                 hop_window = hf["window"]
     ci = {name: aggregate_metrics_ci(eps) for name, eps in per_ep.items()}
+    # Learned-value ablation (PS: "robust scheduler using machine learning").
+    # The SmartScan learned component is ablated on the same protocol at a
+    # reduced episode budget so the ML contribution is quantified, not asserted.
+    abl_episodes = min(episodes, 15)
+    ablation: dict[str, dict] = {}
+    for mode in ("learned", "heuristic", "flat"):
+        per: list[dict] = []
+        for ep in range(abl_episodes):
+            env = RFEnvironment(n_bands=n_bands, T=T, seed=base_seed + ep)
+            ss = SmartScanScheduler(n_bands, seed=base_seed + ep,
+                                    value_mode=mode)
+            tr = run_episode(env, ss, seed=base_seed + ep)
+            per.append(compute_metrics(env, tr))
+        mean = aggregate_metrics_ci(per)
+        ablation[mode] = {k: mean[k]["mean"] for k in
+                          ("avg_reward", "threat_intercept_ratio",
+                           "intercept_rate", "pct_correct_predictions")}
     artifact = {
         "protocol": {"n_bands": n_bands, "T": T, "episodes": episodes,
                      "base_seed": base_seed},
         "provenance": provenance(),
+        "receiver_fom": receiver_fom,
         "metrics_ci": ci,
+        "smart_scan_value_mode_ablation": {
+            "episodes": int(abl_episodes), **ablation},
         "smart_scan_agile_hop": {
             "follow_rate_mean": {
                 n: float(np.mean(v)) for n, v in hop_follow.items()},
@@ -652,6 +677,70 @@ def benchmark_report(json_path: str = "results/benchmark.json",
                     f"{d['topk_accuracy']:.3f} | "
                     f"{d['missed_opportunity_rate']:.3f} |")
         prov = artifact["provenance"]
+        # Per-emitter-class interception FoMs (PS: intercept ratio and time
+        # against spatially scanning and frequency-agile emitters).
+        class_kinds = ("stationary", "agile", "periodic", "spatial")
+        lines += ["",
+                  "## Interception FoMs by emitter class",
+                  "",
+                  "Interception ratio (IR) and censored mean time-to-first-intercept "
+                  "(TTFF, slots; missed emitters credited the full horizon). "
+                  "Classes absent from the scenario are omitted.",
+                  "",
+                  "| Scheduler | " + " | ".join(
+                      f"{k} IR / TTFF" for k in class_kinds
+                  ) + " |",
+                  "|---" * 5 + "|"]
+        for name in sorted(ci):
+            row = [SCHEDULER_LABELS.get(name, name)]
+            for k in class_kinds:
+                ir = ci[name].get(f"ir_{k}", {}).get("mean")
+                tt = ci[name].get(f"ttff_{k}", {}).get("mean")
+                if ir is None:
+                    row.append("—")
+                else:
+                    ttxt = f"{tt:.0f}" if (tt is not None) else "—"
+                    row.append(f"{ir:.3f} / {ttxt}")
+            lines.append("| " + " | ".join(row) + " |")
+        # Sensitivity / receiver FoM section (PS FoM: sensitivity).
+        rf = artifact["receiver_fom"]
+        fe = rf.get("frontend") or {}
+        lines += ["",
+                  "## Receiver sensitivity (PS FoM)",
+                  "",
+                  f"- Sensitivity threshold (Pd ≈ 0.5): **{rf['pd50_snr_db']:.1f} dB SNR** "
+                  f"(sens_db {rf['sens_db']:.1f} + offset {rf['pd_mid_offset_db']:.1f}, "
+                  f"logistic slope {rf['pd_k_db']:.1f} dB)",
+                  f"- Nominal false-alarm rate: {rf['base_false_alarm_rate']:.1e} /dwell",
+                  f"- Instantaneous bandwidth: {fe.get('inst_bw_mhz', float('nan')):.1f} MHz of a "
+                  f"{fe.get('total_bw_mhz', float('nan')):.0f} MHz spectrum "
+                  f"(ratio {fe.get('bandwidth_ratio', float('nan')):.0f}:1, "
+                  f"PS order-of-magnitude requirement met: "
+                  f"{fe.get('bandwidth_ratio_meets_ps_order', False)})",
+                  f"- Thermal noise floor over one band (kT+B + NF "
+                  f"{fe.get('noise_figure_db', float('nan')):.0f} dB): "
+                  f"{fe.get('thermal_noise_dbm', float('nan')):.1f} dBm",
+                  "- Single-dwell Pd vs SNR: " + ", ".join(
+                      f"{k}: {v:.2f}" for k, v in rf["pd_vs_snr"].items()),
+                  "- System-level ROC sweep: `figures/roc.png` (`roc_experiment`)"]
+        # Learned-value ablation section (PS: ML-based scheduler).
+        ab = artifact["smart_scan_value_mode_ablation"]
+        lines += ["",
+                  "## SmartScan learned-value ablation",
+                  "",
+                  f"Same protocol, {ab['episodes']} episodes per mode. "
+                  "`learned` is the shipped policy; `heuristic` replaces learned "
+                  "band values with heuristic priorities; `flat` disables value "
+                  "weighting entirely.",
+                  "",
+                  "| value_mode | Avg reward | Threat IR | Intercept rate | Pred. acc. |",
+                  "|---|---|---|---|---|"]
+        for mode in ("learned", "heuristic", "flat"):
+            m = ab[mode]
+            lines.append(f"| {mode} | {m['avg_reward']:.3f} | "
+                         f"{m['threat_intercept_ratio']:.3f} | "
+                         f"{m['intercept_rate']:.3f} | "
+                         f"{m['pct_correct_predictions']:.3f} |")
         lines += ["",
                   f"*Generated {prov['generated_utc']} from commit "
                   f"`{prov['git_commit']}` (dirty={prov['git_dirty']}), "

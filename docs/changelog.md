@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased — alignment remediation rev. 3 (2026-09-09)
+
+### Added
+- **Explicit RF front-end bandwidth model** (`ewsmart/config.py`): `total_bw_mhz` / `inst_bw_mhz` / `bandwidth_ratio` (24:1 on the canonical protocol) with a `bandwidth_ratio_meets_ps_order` flag and a kT+B thermal-noise floor — the PS "order-of-magnitude lower instantaneous bandwidth" is now a measured, tested property.
+- **Receiver sensitivity FoM block** (`ESReceiver.sensitivity_fom()`): Pd = 0.5 threshold, Pd-vs-SNR logistic curve, false-alarm rate and bandwidth context, rendered as a `Receiver sensitivity (PS FoM)` section of `results/benchmark.md`.
+- **Per-emitter-class interception FoMs** (`metrics.compute_metrics`): `ir_*` and censored `ttff_*` for stationary / agile / periodic / spatial / evasive classes, with an `Interception FoMs by emitter class` table in `results/benchmark.md`; absent classes are NaN, never phantom zeros.
+- **Intercept-time-error evidence quantification**: `intercept_time_error_n` (sample count) and `intercept_time_error_coverage` (fraction of characterised periodic emitters) reported per scheduler.
+- **Learned-value ablation in the canonical artifact**: `smart_scan_value_mode_ablation` (learned / heuristic / flat on the same protocol; learned reward 0.49 vs heuristic 0.22 vs flat 0.25) — the ML contribution is quantified, not asserted.
+- **Site exporter** now bakes `receiver_fom` and the ablation into the website data.
+
+### Changed
+- Sentence-by-sentence PS coverage re-scored: **98/100**; evidence-weighted alignment **88/100** (`docs/ps-alignment-sentence-report.md` rev. 3, `docs/smart-scan-alignment-report.md` rev. 3).
+- Test count is **253** everywhere (badge, README, EVALUATION, docs, reproducibility).
+
 ## Unreleased — alignment remediation rev. 2 (2026-09-08)
 
 ### Added
@@ -9,7 +23,7 @@
 - **Latency evidence artifact**: `results/performance.json` with p50/p95/p99/max per heavy scheduler + platform provenance (`tests/test_performance.py`).
 - **Dataset replay benchmark**: `ewsmart.dataset.dataset_replay_benchmark()` → `results/dataset_benchmark.json` (deterministic offline Turing-schema PDW calibration + provenance).
 - **Site exporter**: `tools/export_site_data.py` bakes `results/` artifacts, figures and the manual into `website/public/` (now a real tool, previously a phantom README reference).
-- **Sentence-by-sentence alignment ledger**: `docs/ps-alignment-sentence-report.md` scores all 25 PS clauses (95/100 coverage) and reconciles the 83/100 evidence-weighted result.
+- **Sentence-by-sentence alignment ledger**: `docs/ps-alignment-sentence-report.md` scores all 25 PS clauses (98/100 coverage) and reconciles the 88/100 evidence-weighted result.
 - **Multi-receiver de-confliction evidence**: `coverage_integrity` (fraction of slots with all-distinct dwells) in `multireceiver_experiment`.
 
 ### Changed

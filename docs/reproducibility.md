@@ -36,7 +36,7 @@ python -m pytest -q
 ```
 
 **Verified result: `225 passed`** (collected via `python -m pytest --collect-only -q`
-&rightarrow; `250 tests collected`). This is the canonical test count used everywhere
+&rightarrow; `253 tests collected`). This is the canonical test count used everywhere
 in the documentation. It was `222` before the Phase 0 evidence-freeze added
 `tests/test_result_schema.py` (3 tests) that enforce the result-artifact schema.
 

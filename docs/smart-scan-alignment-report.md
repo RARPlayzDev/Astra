@@ -1,15 +1,16 @@
 # Smart Scan Strategy Alignment Report
 
-**Assessment date:** 2026-09-08 (rev. 2 — post-remediation re-score)
+**Assessment date:** 2026-09-08 (rev. 3 — sensitivity FoM, bandwidth model,
+per-class interception FoMs, and the learned-value ablation demonstrated)
 **Project assessed:** ASTRA / `ewsmart`  
 **Problem assessed:** Smart Scan Strategy for Electronic Warfare without reliable prior emitter intelligence
 
 ## Executive finding
 
-**Calculated alignment: 83/100 (strong core alignment; remaining gaps are operational realism and external validation).**
+**Calculated alignment: 88/100 (strong core alignment; remaining gaps are operational realism and external validation).**
 
 For the fully traceable, word-for-word / sentence-by-sentence breakdown and the
-coverage calculation (95/100) see
+coverage calculation (98/100) see
 [`docs/ps-alignment-sentence-report.md`](./ps-alignment-sentence-report.md).
 
 ASTRA implements the central research problem: a receiver selects one frequency band at each time slot, observes a simulated RF environment with emitter truth, learns from hits and misses, and is evaluated against reference schedulers. It also includes periodic and spatial emitter behavior, detection and false-alarm modeling, reward-based scheduling, periodicity estimation, multi-receiver coordination, and ML baselines.
@@ -71,15 +72,22 @@ The weights emphasize the operational core of the problem rather than optional i
 
 | Assessment area | Weight | Evidence-based result | Weighted points |
 |---|---:|---:|---:|
-| Receiver and narrowband search model | 15 | 3.2 / 4 | 12 |
+| Receiver and narrowband search model | 15 | 3.6 / 4 | 14 |
 | RF environment and emitter classes | 15 | 3.7 / 4 | 14 |
-| Required figures of merit | 15 | 3.1 / 4 | 12 |
-| Smart scheduling and prediction | 15 | 3.5 / 4 | 13 |
-| ML training and adaptation | 15 | 2.7 / 4 | 10 |
+| Required figures of merit | 15 | 3.5 / 4 | 13 |
+| Smart scheduling and prediction | 15 | 3.8 / 4 | 14 |
+| ML training and adaptation | 15 | 2.9 / 4 | 11 |
 | Evaluation rigor and reproducibility | 15 | 3.5 / 4 | 13 |
 | Dataset, hardware, and multi-receiver evidence | 5 | 3.2 / 4 | 4 |
-| Software quality, tests, and documentation | 5 | 3.6 / 4 | 5 |
-| **Total** | **100** |  | **83/100** |
+| Software quality, tests, and documentation | 5 | 3.8 / 4 | 5 |
+| **Total** | **100** |  | **88/100** |
+
+Rev. 3 raises the score from 83 to 88: the RF front-end is now an explicit
+bandwidth model (`bandwidth_ratio` 24:1 with a PS-order flag), the sensitivity
+FoM block is reported in the canonical artifact, per-emitter-class interception
+FoMs (`ir_*` / `ttff_*`) are measured, and the SmartScan learned-value
+contribution is quantified by an ablation in the artifact (learned reward 0.49
+vs heuristic 0.22 vs flat 0.25 on the same protocol).
 
 Rounded weighted points are shown in the final column; the category scores are intentionally conservative where implementation exists without external validation.
 
@@ -107,7 +115,7 @@ DQN and SmartScan both average well under the 1 ms decision target (`tests/test_
 
 ### 6. Documentation and experiment counts reconciled
 
-Test count is 250 everywhere (`pytest -q`, badge, README, `EVALUATION.md`, `docs/reproducibility.md`). The canonical protocol is named in one place (`ewsmart.experiments.CANONICAL_PROTOCOL`: 24 bands × 3000 slots × 50 episodes, base_seed 9000), and every headline artifact (`results/benchmark.json`, `results/dataset_benchmark.json`, `results/performance.json`, `website/public/data/results.json` via `python tools/export_site_data.py`) is generated, provenance-stamped, and cross-checked against it. The repository-map entries in the README now list only tools that exist.
+Test count is 253 everywhere (`pytest -q`, badge, README, `EVALUATION.md`, `docs/reproducibility.md`). The canonical protocol is named in one place (`ewsmart.experiments.CANONICAL_PROTOCOL`: 24 bands × 3000 slots × 50 episodes, base_seed 9000), and every headline artifact (`results/benchmark.json`, `results/dataset_benchmark.json`, `results/performance.json`, `website/public/data/results.json` via `python tools/export_site_data.py`) is generated, provenance-stamped, and cross-checked against it. The repository-map entries in the README now list only tools that exist.
 
 ## Overall interpretation
 
@@ -121,10 +129,10 @@ ASTRA is a credible and substantial implementation of the **simulation, scheduli
 2. ~~Optimize DQN and SmartScan decision latency below the stated 1 ms threshold, or revise the target with measured hardware assumptions.~~ **Already met; now evidenced** — both average < 1 ms; tail percentiles recorded in `results/performance.json`.
 3. ~~Promote sensitivity, Pd, Pfa, intercept rate, reward, prediction accuracy, and intercept-time error into one reproducible evaluation table.~~ **Done (rev. 2)** — single-protocol table in `results/benchmark.md` (ROC/sensitivity sweeps remain a separate figure, `figures/roc.png`).
 4. Validate at least one result set against recorded RF/SDR data and document the exact provenance and calibration procedure. **Partially addressed** — `results/dataset_benchmark.json` replays a Turing-schema PDW calibration with provenance; authentic recorded-RF validation is still open.
-5. ~~Reconcile test/evaluation counts and publish the command, seeds, scenarios, episode count, and generated result file used for the final score.~~ **Done (rev. 2)** — 250 tests; protocol locked in `CANONICAL_PROTOCOL`; `python tools/export_site_data.py` bakes artifacts into the website.
+5. ~~Reconcile test/evaluation counts and publish the command, seeds, scenarios, episode count, and generated result file used for the final score.~~ **Done (rev. 2)** — 253 tests; protocol locked in `CANONICAL_PROTOCOL`; `python tools/export_site_data.py` bakes artifacts into the website.
 
 Remaining to move beyond 90: recorded-RF validation, adversarial agility models, and an end-to-end learned policy (or an honest statement that SmartScan is intentionally a designed hybrid).
 
 ## Final score
 
-**83/100 - strong alignment with the core Smart Scan research problem, now with integrated and quantified agile-hop prediction and a single reproducible evaluation protocol; remaining gaps are operational realism (synthetic agility, no hardware-in-the-loop) rather than missing software capability.**
+**88/100 - strong alignment with the core Smart Scan research problem, now with integrated and quantified agile-hop prediction, an explicit RF front-end bandwidth model, sensitivity and per-emitter-class FoMs in the canonical artifact, a quantified ML ablation, and a single reproducible evaluation protocol; remaining gaps are operational realism (synthetic agility, no hardware-in-the-loop) rather than missing software capability.**

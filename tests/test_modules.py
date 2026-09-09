@@ -453,8 +453,14 @@ def test_evaluate_ci_matches_evaluate_means():
     scheds = [SequentialSweep(8, seed=1)]
     res, ci = evaluate_ci(scheds, episodes=2, n_bands=8, T=300, base_seed=21)
     for k, a in ci["openloop-sequential"].items():
-        assert res["openloop-sequential"][k] == pytest.approx(
-            a["mean"] if a["mean"] is not None else float("nan"))
+        # Metrics that are undefined for the whole scenario (e.g. per-class
+        # interception of an emitter class the scenario does not contain)
+        # aggregate to mean None; both evaluate paths must report NaN then.
+        if a["mean"] is None or a["mean"] != a["mean"]:
+            got = res["openloop-sequential"][k]
+            assert got != got, f"expected NaN for {k}, got {got!r}"
+        else:
+            assert res["openloop-sequential"][k] == pytest.approx(a["mean"])
 
 
 if __name__ == "__main__":

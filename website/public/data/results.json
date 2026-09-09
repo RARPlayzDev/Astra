@@ -877,8 +877,8 @@
     "base_seed": 9000
   },
   "benchmark_provenance": {
-    "generated_utc": "2026-09-08T16:50:34Z",
-    "git_commit": "b86e8061fbf7abb5b962e544e7c29e9537a24bf6",
+    "generated_utc": "2026-09-09T19:22:16Z",
+    "git_commit": "dad81c862aa8e9f4a3a2a77dfa312a2b517af1d1",
     "git_dirty": true,
     "python": "3.14.2",
     "platform": "Windows-11-10.0.26200-SP0"
@@ -1270,5 +1270,57 @@
     "rl-dqn",
     "openloop-priority",
     "openloop-sequential"
-  ]
+  ],
+  "receiver_fom": {
+    "sens_db": 0.0,
+    "pd_mid_offset_db": 6.0,
+    "pd50_snr_db": 6.0,
+    "pd_k_db": 3.0,
+    "base_false_alarm_rate": 0.0002,
+    "pd_vs_snr": {
+      "-6": 0.0174,
+      "-3": 0.046,
+      "+0": 0.1156,
+      "+3": 0.2609,
+      "+6": 0.485,
+      "+9": 0.7091,
+      "+12": 0.8544,
+      "+15": 0.924,
+      "+18": 0.9526
+    },
+    "frontend": {
+      "freq_min_mhz": 2000.0,
+      "freq_max_mhz": 18000.0,
+      "total_bw_mhz": 16000.0,
+      "n_bands": 24,
+      "inst_bw_mhz": 666.6666666666666,
+      "bandwidth_ratio": 24.0,
+      "bandwidth_ratio_meets_ps_order": true,
+      "noise_figure_db": 6.0,
+      "thermal_noise_dbm": -79.76091259055681,
+      "required_input_sens_dbm": -79.76091259055681,
+      "sens_db": 0.0
+    }
+  },
+  "smart_scan_value_mode_ablation": {
+    "episodes": 15,
+    "learned": {
+      "avg_reward": 0.48842800000000003,
+      "threat_intercept_ratio": 0.9277777777777776,
+      "intercept_rate": 0.7099777777777779,
+      "pct_correct_predictions": 0.5279722222222222
+    },
+    "heuristic": {
+      "avg_reward": 0.21599999999999994,
+      "threat_intercept_ratio": 0.9222222222222222,
+      "intercept_rate": 0.5034444444444444,
+      "pct_correct_predictions": 0.7245555555555557
+    },
+    "flat": {
+      "avg_reward": 0.24971822222222223,
+      "threat_intercept_ratio": 0.9722222222222221,
+      "intercept_rate": 0.5320666666666667,
+      "pct_correct_predictions": 0.746388888888889
+    }
+  }
 }

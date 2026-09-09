@@ -70,6 +70,34 @@ class ESReceiver:
         z = (snr_db - (self.env.sens_db + self.pd_mid_offset)) / self.pd_k
         return float(0.97 / (1.0 + np.exp(-z)))
 
+    def sensitivity_fom(self) -> dict:
+        """Receiver sensitivity figure-of-merit block (PS FoM: sensitivity).
+
+        ``pd50_snr_db`` is the single-dwell SNR at which Pd = 0.485 (the
+        logistic mid-point, i.e. the classical sensitivity threshold); the
+        ``pd_vs_snr`` curve is the empirical single-dwell detection
+        probability over a reference SNR grid.  The RF front-end bandwidth
+        context from the scenario config is included so sensitivity is always
+        reported against an explicit instantaneous bandwidth.
+        """
+        bw = None
+        cfg = getattr(self.env, "cfg", None)
+        if cfg is not None and hasattr(cfg, "bandwidth_model"):
+            bw = cfg.bandwidth_model()
+        grid = [-6.0, -3.0, 0.0, 3.0, 6.0, 9.0, 12.0, 15.0, 18.0]
+        curve = {f"{snr:+g}": round(self.detection_prob(snr), 4)
+                 for snr in grid}
+        return {
+            "sens_db": float(self.env.sens_db),
+            "pd_mid_offset_db": float(self.pd_mid_offset),
+            "pd50_snr_db": float(self.env.sens_db + self.pd_mid_offset),
+            "pd_k_db": float(self.pd_k),
+            "base_false_alarm_rate": float(self.base_fa),
+            "pd_vs_snr": curve,
+            "frontend": bw,
+        }
+
+
     def dwell(self, band: int, t: int, build_pdws: bool = True) -> DwellResult:
         """Tune to ``band`` at slot ``t`` and return the measurement result.
 

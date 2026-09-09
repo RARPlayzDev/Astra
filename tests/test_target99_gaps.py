@@ -409,5 +409,72 @@ def test_benchmark_report_includes_hop_and_provenance(tmp_path):
     assert "next-hop prediction" in text
 
 
+# ---------------------------------------------------------------- Phase 6 --
+# PS-alignment remediation: explicit sensitivity FoM, per-emitter-class
+# interception FoMs, and the learned-value ablation in the benchmark artifact.
+
+
+def test_receiver_sensitivity_fom_block():
+    """PS FoM 'sensitivity': explicit Pd-0.5 threshold + Pd-vs-SNR curve."""
+    env = RFEnvironment(n_bands=12, T=600, seed=7)
+    fom = ESReceiver(env, seed=7).sensitivity_fom()
+    assert fom["pd50_snr_db"] == pytest.approx(
+        fom["sens_db"] + fom["pd_mid_offset_db"])
+    curve = fom["pd_vs_snr"]
+    snrs = sorted(float(k.replace("dB", "").replace("+", "").strip())
+                  for k in curve)
+    vals = [curve[f"{s:+g}"] for s in snrs]
+    # Logistic Pd must be non-decreasing in SNR and hit the high regime.
+    assert all(b >= a - 1e-9 for a, b in zip(vals, vals[1:]))
+    assert vals[-1] > 0.9
+    # Front-end bandwidth context: instantaneous BW is an order below total.
+    fe = fom["frontend"]
+    assert fe["bandwidth_ratio"] >= 10.0
+    assert fe["bandwidth_ratio_meets_ps_order"] is True
+
+
+def test_per_class_interception_foms():
+    """PS: interception ratio + intercept time vs agile and spatial emitters."""
+    env = RFEnvironment(n_bands=12, T=900, seed=11)
+    tr = run_episode(env, SmartScanScheduler(env.n_bands, seed=11), seed=11)
+    m = compute_metrics(env, tr)
+    kinds_present = {e.kind for e in env.emitters}
+    for kind in ("stationary", "agile", "periodic", "spatial"):
+        if kind in kinds_present:
+            ir = m[f"ir_{kind}"]
+            assert 0.0 <= ir <= 1.0, kind
+            tt = m[f"ttff_{kind}"]
+            assert 0.0 <= tt <= env.T, kind
+    # Classes absent from the scenario must be NaN, never phantom zeros.
+    if "evasive" not in kinds_present:
+        assert np.isnan(m["ir_evasive"])
+        assert np.isnan(m["ttff_evasive"])
+    # Intercept-time error coverage: both the sample count and the fraction of
+    # characterised periodic emitters behind the mean error are reported.
+    assert "intercept_time_error_n" in m
+    assert "intercept_time_error_coverage" in m
+    assert 0.0 <= m["intercept_time_error_coverage"] <= 1.0
+
+
+def test_benchmark_reports_sensitivity_and_ablation(tmp_path):
+    """The canonical artifact carries the sensitivity FoM + ML ablation."""
+    import tempfile, os
+    jp = tmp_path / "b.json"
+    mp = tmp_path / "b.md"
+    art = benchmark_report(str(jp), str(mp), n_bands=6, T=300, episodes=1,
+                           base_seed=99)
+    data = json.loads(jp.read_text())
+    fe = data["receiver_fom"]["frontend"]
+    # The ratio is structural: one band is one instantaneous channel.
+    assert fe["bandwidth_ratio"] == pytest.approx(6.0)
+    assert fe["inst_bw_mhz"] == pytest.approx(fe["total_bw_mhz"] / 6.0)
+    assert {"learned", "heuristic", "flat"} == set(
+        data["smart_scan_value_mode_ablation"]) - {"episodes"}
+    text = mp.read_text()
+    assert "Receiver sensitivity (PS FoM)" in text
+    assert "SmartScan learned-value ablation" in text
+    assert "Interception FoMs by emitter class" in text
+
+
 
 

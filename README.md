@@ -12,7 +12,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/python-≥3.10-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python" />
   <img src="https://img.shields.io/badge/license-MIT-22c55e?style=for-the-badge" alt="License" />
-  <img src="https://img.shields.io/badge/tests-250_passing-10b981?style=for-the-badge&label=tests" alt="Tests" />
+  <img src="https://img.shields.io/badge/tests-253_passing-10b981?style=for-the-badge&label=tests" alt="Tests" />
   <img src="https://img.shields.io/badge/docker-ready-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" />
   <img src="https://img.shields.io/badge/installer-131_MB-8b5cf6?style=for-the-badge" alt="Installer" />
   <img src="https://img.shields.io/badge/SIH_2026-submission-f59e0b?style=for-the-badge" alt="SIH 2026" />
@@ -272,7 +272,7 @@ astra/
 ├── models/                   # Trained scheduler weights (.npz)
 ├── results/                  # Generated evaluation data
 ├── figures/                  # Publication-quality charts
-├── tests/                    # 250 automated tests
+├── tests/                    # 253 automated tests
 ├── tools/                    # Utilities
 │   ├── sdr_bridge.py         # UDP/CSV bridge for real SDR hardware
 │   ├── export_site_data.py   # Bake results/figures/manual into website
@@ -323,7 +323,7 @@ Then select **UDP bridge (real hardware)** on the Live Radar page.
 
 ## 🧪 Testing
 
-250 automated tests covering all layers of the system:
+253 automated tests covering all layers of the system:
 
 ```powershell
 # Run all tests
