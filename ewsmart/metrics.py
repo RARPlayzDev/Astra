@@ -14,6 +14,9 @@ from dataclasses import dataclass, field
 
 METRIC_LABELS = {
     "avg_reward": "Avg Reward per Dwell",
+    "avg_net_reward": "Avg Net Reward per Dwell (after cost)",
+    "switch_rate": "Band Switch Rate (/slot)",
+    "cost_per_dwell": "Resource Cost per Dwell",
     "total_reward": "Total Episode Reward",
     "threat_intercept_ratio": "Threat Interception Ratio",
     "intercept_ratio": "All-Emitter Interception Ratio",
@@ -22,7 +25,12 @@ METRIC_LABELS = {
     "mean_time_to_first_intercept": "Mean Time to First Intercept (slots)",
     "threat_mean_ttff": "Threat Time to First Intercept (slots)",
     "threat_ttff_censored": "Censored Threat Latency (slots)",
-    "pct_correct_predictions": "Prediction Accuracy",
+    "pct_correct_predictions": "Prediction Accuracy (steady state)",
+    "pct_correct_predictions_full": "Prediction Accuracy (full episode)",
+    "intercept_fraction_of_transmissions":
+        "Pd - Fraction of Transmissions Intercepted",
+    "threat_intercept_fraction_of_transmissions":
+        "Pd - Threat Transmissions Intercepted",
     "avg_intercept_time_error": "Intercept-Time Prediction Error (slots)",
     "intercept_time_error_n": "Intercept-Time Error Samples",
     "intercept_time_error_coverage": "Intercept-Time Error Coverage",
@@ -65,6 +73,7 @@ class Trace:
     first_intercept: dict[int, int] = field(default_factory=dict)
     prediction_errors: list[float] = field(default_factory=list)
     ambiguous: list[bool] = field(default_factory=list)  # co-channel dwells
+    costs: list[float] = field(default_factory=list)  # explicit resource cost
 
 
 def json_safe(obj):
@@ -170,8 +179,56 @@ def compute_metrics(env, trace: Trace) -> dict:
         n_miss = len(ids) - len(got)
         class_out[f"ttff_{kind}"] = (sum(tt) + n_miss * T) / len(ids)
 
+    # --- explicit cost model (PS FoM: "Avg Reward / cost function") -------
+    # Resource costs (band-switch settle time + per-dwell operating budget)
+    # are recorded per slot in ``trace.costs``; net reward is gross reward
+    # minus those costs.  Legacy traces without a costs field are treated as
+    # zero-cost so every consumer stays backward compatible.
+    rewards_arr = np.asarray(trace.rewards, dtype=float)
+    n_rew = len(rewards_arr)
+    tc = getattr(trace, "costs", None)
+    if tc is None or len(tc) != n_rew:
+        costs_arr = np.zeros(n_rew, dtype=float)
+    else:
+        costs_arr = np.asarray(tc, dtype=float)
+    net_rewards = rewards_arr - costs_arr
+    n_switches = int(np.sum(actions[1:] != actions[:-1])) if T > 1 else 0
+
+    # --- system-level probability of detection (PS FoM D3a) ----------------
+    # Pd at the scheduler level is "what fraction of actual transmissions
+    # did the scheduler-receiver system intercept": a true detection credited
+    # while dwelling on the emitter's band during one of its ON slots.  This
+    # is distinct from the receiver-level per-dwell curve
+    # (ESReceiver.detection_prob) and from threat_intercept_ratio ("found at
+    # least once in T slots", which any long-lived scan almost guarantees).
+    seq = env.band_seq
+    n_emit = seq.shape[0]
+    n_slots = min(T, len(actions))
+    if n_slots < 1:
+        pdt, pdt_thr = 0.0, 0.0
+    else:
+        on = seq[:, :n_slots] >= 0
+        hit_b = np.broadcast_to(
+            np.asarray(hits[:n_slots], dtype=bool)[None, :], (n_emit, n_slots))
+        intercepted_trans = (on & (seq[:, :n_slots] == actions[:n_slots][None, :])
+                             & hit_b)
+        n_trans = int(on.sum())
+        pdt = float(intercepted_trans.sum()) / n_trans if n_trans else 0.0
+        thr_vec = np.asarray([e.threat for e in env.emitters], dtype=bool)
+        n_thr_trans = int(on[thr_vec].sum())
+        pdt_thr = (float(intercepted_trans[thr_vec].sum()) / n_thr_trans
+                   if n_thr_trans else 0.0)
+    # Full-episode prediction accuracy (no warm-up exclusion) alongside the
+    # steady-state figure: reporting both makes the calibration transient
+    # visible instead of silently re-scoring it away.
+    pct_correct_full = (float(np.mean(preds == truth_present))
+                        if len(preds) else 0.0)
+
     return {
         "avg_reward": float(np.mean(trace.rewards)) if T else 0.0,
+        "avg_net_reward": float(net_rewards.mean()) if n_rew else 0.0,
+        "switch_rate": n_switches / max(1, T - 1),
+        "cost_per_dwell": float(costs_arr.mean()) if n_rew else 0.0,
         "total_reward": float(np.sum(trace.rewards)),
         "intercept_ratio": len(intercepted) / max(1, len(env.emitters)),
         "threat_intercept_ratio": len(ttff_threats) / max(1, len(threat_ids)),
@@ -181,6 +238,9 @@ def compute_metrics(env, trace: Trace) -> dict:
         "threat_mean_ttff": float(np.mean(ttff_threats)) if ttff_threats else float(T),
         "threat_ttff_censored": float(threat_ttff_censored),
         "pct_correct_predictions": pct_correct,
+        "pct_correct_predictions_full": pct_correct_full,
+        "intercept_fraction_of_transmissions": pdt,
+        "threat_intercept_fraction_of_transmissions": pdt_thr,
         "avg_intercept_time_error": float(np.mean(est_errs)) if est_errs else float("nan"),
         "intercept_time_error_n": len(est_errs),
         "intercept_time_error_coverage": (sum(1 for eid in periodic_ids

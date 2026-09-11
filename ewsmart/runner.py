@@ -15,7 +15,8 @@ from .schedulers import (SequentialSweep, RandomScan, PrioritySweep,
                          SmartScanScheduler)
 
 REWARD_CFG = {"threat": 1.0, "clutter": 0.15, "empty": -0.05,
-              "false_alarm": -0.08, "first_threat_bonus": 1.5}
+              "false_alarm": -0.08, "first_threat_bonus": 1.5,
+              "switching_cost": 0.03, "dwell_cost": 0.005}
 
 
 def make_schedulers(n_bands: int, priority_bands: tuple | list,
@@ -50,6 +51,11 @@ def step_reward(env: RFEnvironment, res, first_intercept: dict) -> float:
     Attribution contract: credit is given only to emitters actually detected
     in this dwell (``res.detected_eids``), never to silent co-channel
     emitters sharing the band.
+
+    This is the *gross* reward; the explicit resource cost model (band
+    switching + per-dwell operating cost, see ``REWARD_CFG``) is accounted
+    separately in :func:`run_episode` and reported as the net-reward
+    figures of merit (PS FoM: "Avg Reward / cost function").
     """
     if res.false_alarm:
         return REWARD_CFG["false_alarm"]
@@ -78,22 +84,41 @@ def run_episode(env: RFEnvironment, sched, seed: int = 1) -> Trace:
     T = env.T
     trace = Trace(actions=[0] * T, hits=[False] * T,
                   false_alarms=[False] * T, rewards=[0.0] * T,
-                  predictions=[False] * T, ambiguous=[False] * T)
+                  predictions=[False] * T, ambiguous=[False] * T,
+                  costs=[0.0] * T)
     first_intercept = trace.first_intercept
     actions, hits, fas = trace.actions, trace.hits, trace.false_alarms
     rewards, predictions = trace.rewards, trace.predictions
     ambiguous = trace.ambiguous
+    costs = trace.costs
+    switch_cost = REWARD_CFG["switching_cost"]
+    dwell_cost = REWARD_CFG["dwell_cost"]
+    prev_band = -1
     for t in range(T):
         b = sched.select(t)
         res = rx.dwell(b, t)
         pred = sched.predict(t, b)
         r = step_reward(env, res, first_intercept)
+        # Explicit resource cost (PS FoM: "Avg Reward / cost function"):
+        # retuning the receiver between dwells costs settle time, and every
+        # dwell consumes receiver operating budget.  Costs are recorded here
+        # and reported as net-reward figures of merit.  Schedulers keep
+        # learning from *gross* task reward: on the canonical protocol,
+        # learning from net reward measurably eroded threat coverage (the
+        # switch penalty shifts the exploit distribution below the 0.90
+        # KPP), so the cost model is the evaluation lens, not the training
+        # signal - the standard T&E split between mission reward and cost
+        # analysis.
+        cost = (switch_cost if prev_band >= 0 and b != prev_band else 0.0) \
+            + dwell_cost
+        prev_band = b
         actions[t] = b
         hits[t] = res.hit and not res.false_alarm
         fas[t] = res.false_alarm
         rewards[t] = r
         predictions[t] = pred
         ambiguous[t] = len(detected_eids(env, res)) > 1
+        costs[t] = cost
         sched.update(t, b, res, r)
     return trace
 
@@ -218,7 +243,8 @@ def monte_carlo(schedulers: list, trials: int = 50, n_bands: int = 24,
     return results, ci_out
 
 
-METRIC_COLS = ["avg_reward", "threat_intercept_ratio", "intercept_ratio",
+METRIC_COLS = ["avg_reward", "avg_net_reward", "switch_rate",
+               "threat_intercept_ratio", "intercept_ratio",
                "mean_time_to_first_intercept", "threat_mean_ttff",
                "intercept_rate", "false_alarm_rate",
                "pct_correct_predictions", "avg_intercept_time_error"]

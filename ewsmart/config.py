@@ -35,6 +35,7 @@ class ScenarioConfig:
     dwell_range: tuple = (3, 9)
     agile_mode: str = "random"  # "random" | "markov" (structured hopping)
     noise_figure_db: float = 6.0  # receiver front-end noise figure
+    dwell_time_us: float = 1.0  # coherent integration time per dwell
 
     @classmethod
     def from_json(cls, path: str) -> "ScenarioConfig":
@@ -86,9 +87,18 @@ class ScenarioConfig:
         bandwidth plus the receiver noise figure; ``sens_db`` is interpreted
         relative to the *received* signal, so ``required_input_sens_dbm`` is
         the input-referred floor a real front-end would need for 0 dB SNR.
+        ``processing_gain_db`` is the time-bandwidth integration gain a
+        receiver collects from coherently integrating one dwell: 10 log10
+        (B . tau) with tau = ``dwell_time_us`` - the link that lets the
+        sensitivity figure-of-merit be reported as a *minimum detectable
+        signal in dBm* (the classical radiometer equation) rather than as a
+        dimensionless offset.
         """
         inst_bw_hz = self.inst_bw_mhz * 1e6
         thermal = -174.0 + 10.0 * math.log10(inst_bw_hz)
+        tau_s = max(self.dwell_time_us, 1e-3) * 1e-6
+        tb_product = inst_bw_hz * tau_s
+        gain = 10.0 * math.log10(max(tb_product, 1.0))
         return {
             "freq_min_mhz": float(self.freq_min_mhz),
             "freq_max_mhz": float(self.freq_max_mhz),
@@ -98,6 +108,9 @@ class ScenarioConfig:
             "bandwidth_ratio": self.bandwidth_ratio,
             "bandwidth_ratio_meets_ps_order": bool(self.bandwidth_ratio >= 10.0),
             "noise_figure_db": float(self.noise_figure_db),
+            "dwell_time_us": float(self.dwell_time_us),
+            "time_bandwidth_product": tb_product,
+            "processing_gain_db": gain,
             "thermal_noise_dbm": thermal + float(self.noise_figure_db),
             "required_input_sens_dbm": thermal + float(self.noise_figure_db),
             "sens_db": float(self.sens_db),

@@ -5,6 +5,8 @@ cooperating receivers experience independent noise, as physically required.
 """
 from __future__ import annotations
 
+import math
+
 import numpy as np
 from dataclasses import dataclass
 
@@ -79,6 +81,15 @@ class ESReceiver:
         probability over a reference SNR grid.  The RF front-end bandwidth
         context from the scenario config is included so sensitivity is always
         reported against an explicit instantaneous bandwidth.
+
+        Sensitivity is additionally anchored in **physical units** through
+        the radiometer equation: with kT+B+NF thermal floor ``N``, coherent
+        integration gain ``G = 10 log10(B tau)`` and required post-detection
+        SNR ``S``, the minimum detectable signal is ``MDS_dBm = N + S - G``.
+        ``pd50_mds_dbm`` and ``mds_dbm_at_pd90`` are the input powers (dBm)
+        needed for Pd = 0.5 and Pd = 0.9 respectively, and
+        ``pd_vs_input_power_dbm`` transposes the Pd curve onto that physical
+        input-power axis.
         """
         bw = None
         cfg = getattr(self.env, "cfg", None)
@@ -87,13 +98,26 @@ class ESReceiver:
         grid = [-6.0, -3.0, 0.0, 3.0, 6.0, 9.0, 12.0, 15.0, 18.0]
         curve = {f"{snr:+g}": round(self.detection_prob(snr), 4)
                  for snr in grid}
+        # Physical anchor: input power (dBm) that produces post-detection
+        # SNR ``snr`` = thermal floor + SNR - integration gain.
+        thermal = float(bw["thermal_noise_dbm"]) if bw else float('nan')
+        gain = float(bw.get("processing_gain_db", 0.0)) if bw else 0.0
+        def _input_dbm(snr_db: float) -> float:
+            return thermal + snr_db - gain
+        pd50 = float(self.env.sens_db + self.pd_mid_offset)
+        z90 = -math.log((0.97 / 0.90) - 1.0)  # SNR z where Pd = 0.9
+        pd90 = pd50 + self.pd_k * z90
         return {
             "sens_db": float(self.env.sens_db),
             "pd_mid_offset_db": float(self.pd_mid_offset),
-            "pd50_snr_db": float(self.env.sens_db + self.pd_mid_offset),
+            "pd50_snr_db": pd50,
             "pd_k_db": float(self.pd_k),
             "base_false_alarm_rate": float(self.base_fa),
             "pd_vs_snr": curve,
+            "pd50_mds_dbm": round(_input_dbm(pd50), 2),
+            "mds_dbm_at_pd90": round(_input_dbm(pd90), 2),
+            "pd_vs_input_power_dbm": {
+                f"{snr:+g}": round(_input_dbm(snr), 2) for snr in grid},
             "frontend": bw,
         }
 
@@ -118,9 +142,20 @@ class ESReceiver:
         pdws = ()
         if build_pdws and det:
             toa_t = t * 1000.0
+            thermal = None
+            gain = 0.0
+            cfg = getattr(self.env, "cfg", None)
+            if cfg is not None and hasattr(cfg, "bandwidth_model"):
+                fe = cfg.bandwidth_model()
+                thermal = float(fe["thermal_noise_dbm"])
+                gain = float(fe.get("processing_gain_db", 0.0))
             pdws = tuple({
                 "toa_us": toa_t, "freq_mhz": e.freq_mhz,
                 "pw_us": e.pw_us, "pa_db": s, "aoa_deg": a,
+                # Absolute received power (dBm): the same radiometer anchor
+                # as the sensitivity FoM, so PDWs carry physical units.
+                "pa_dbm": round(thermal + s - gain, 2)
+                if thermal is not None else None,
             } for s, a, e in det)
         fa = False
         hit = bool(det)

@@ -506,7 +506,7 @@ class SmartScanScheduler(BaseScheduler):
                  lock_hits: int = 5, recon_factor: int = 12,
                  burst_horizon: int = 480, exploit_ramp: float = 0.60,
                  value_mode: str = "learned", hop_weight: float = 0.45,
-                 hop_min_obs: int = 3):
+                 hop_min_obs: int = 3, hop_patrol: bool = False):
         super().__init__(n_bands, seed)
         if value_mode not in ("learned", "heuristic", "flat"):
             raise ValueError(
@@ -515,12 +515,19 @@ class SmartScanScheduler(BaseScheduler):
         self.value_mode = value_mode
         self.hop_weight = float(hop_weight)
         self.hop_min_obs = int(hop_min_obs)
+        self.hop_patrol = bool(hop_patrol)
         self.explore_eps = explore_eps * 0.6  # slightly less random waste
         self.lock_hits = lock_hits
         self.recon_steps = recon_factor * n_bands
         self.burst_horizon = burst_horizon
         self.exploit_ramp = exploit_ramp
         self.horizon: int | None = None
+        # Cross-episode memory (consolidated in end_episode, rehydrated in
+        # reset): per-band value priors, online-logistic occupancy weights
+        # and the agile-hop transition model all survive episode boundaries,
+        # so the scheduler is genuinely *trained* on hits and misses.
+        self.memory: dict | None = None
+        self.episodes_seen = 0
         self.reset()
 
     def reset(self, horizon: int | None = None) -> None:
@@ -555,9 +562,63 @@ class SmartScanScheduler(BaseScheduler):
         self.hop_last_t: dict[tuple, int] = {}
         self.hop_dt: dict[tuple, float] = {}
         self.hop_succ: dict[tuple, dict[int, dict[int, int]]] = {}
+        # Known footprint of tracked agile emitters (source + successor
+        # bands).  Patrolled at an accelerated revisit rate in select() -
+        # against effectively random hops, fast patrol of the hop-set is the
+        # only strategy that out-follows a blind full-band sweep.
+        self.hop_watch: set[int] = set()
+        self._last_patrol_t = -10 ** 9
+        # --- warm start from cross-episode memory (if any) ---
+        if self.memory is not None:
+            m = self.memory
+            self.mu = m["mu"].copy()
+            self.n = np.maximum(1.0, m["n"].copy())
+            for lg, w0, n0 in zip(self.logit, m["logit_w"], m["logit_n"]):
+                lg.w = w0.copy()
+                lg.n = int(n0)
+            self.hop_succ = {k: {p: dict(row) for p, row in v.items()}
+                             for k, v in m["hop_succ"].items()}
+
+    # Memory consolidation rates: how strongly the just-finished episode's
+    # statistics are blended into the cross-episode priors.
+    _MU_BLEND = 0.5    # per-band value estimates
+    _N_DECAY = 0.5     # visit counts (keeps UCB exploration alive)
+    _HOP_DECAY = 0.7   # hop transition counts
+    _LOGIT_BLEND = 0.5  # online logistic occupancy weights
 
     def end_episode(self) -> None:
-        pass
+        """Consolidate this episode's learning into cross-episode memory.
+
+        The PS requires the scheduler to be *trained based on hits and
+        misses*: per-band value priors, the online logistic occupancy
+        weights and the causal agile-hop transition model are blended into
+        a persistent memory here and rehydrated by ``reset()`` at the start
+        of the next episode, giving every new episode a warm start
+        (shorter reconnaissance, faster lock acquisition).
+        """
+        self.episodes_seen += 1
+        logit_w = [lg.w.copy() for lg in self.logit]
+        logit_n = [int(lg.n) for lg in self.logit]
+        hop = {k: {p: dict(row) for p, row in v.items()}
+               for k, v in self.hop_succ.items()}
+        if self.memory is None:
+            self.memory = {"mu": self.mu.copy(),
+                           "n": np.maximum(1.0, self.n.copy()),
+                           "logit_w": logit_w, "logit_n": logit_n,
+                           "hop_succ": hop}
+            return
+        m = self.memory
+        m["mu"] = (1.0 - self._MU_BLEND) * m["mu"] + self._MU_BLEND * self.mu
+        m["n"] = np.maximum(1.0, self._N_DECAY * m["n"]
+                            + (1.0 - self._N_DECAY) * self.n)
+        for w_mem, w_ep in zip(m["logit_w"], logit_w):
+            w_mem += self._LOGIT_BLEND * (w_ep - w_mem)
+        for k, v in hop.items():
+            dst = m["hop_succ"].setdefault(k, {})
+            for p, row in v.items():
+                d = dst.setdefault(p, {})
+                for b, c in row.items():
+                    d[b] = int(self._HOP_DECAY * d.get(b, 0) + c)
 
     @staticmethod
     def _cluster_hits(points: list[tuple], tol_db: float = 1.5,
@@ -745,8 +806,17 @@ class SmartScanScheduler(BaseScheduler):
                 m = self.hop_dt.get(key)
                 self.hop_dt[key] = float(dt) if m is None \
                     else 0.8 * m + 0.2 * float(dt)
+            self.hop_watch.add(prev)
+            self.hop_watch.add(band)
         self.hop_last_band[key] = band
         self.hop_last_t[key] = t
+        # Track the agile emitter's footprint (source band; the destination
+        # is added on the transition-count branch below).
+        self.hop_watch.add(band)
+        if len(self.hop_watch) > 16:
+            keep = set(sorted(self.hop_watch,
+                              key=lambda b: -self.last_visit[b])[:12])
+            self.hop_watch = keep
         # Bound memory: keep only the most recently active streams.
         if len(self.hop_last_band) > 48:
             oldest = min(self.hop_last_band, key=self.hop_last_t.get)
@@ -842,6 +912,30 @@ class SmartScanScheduler(BaseScheduler):
         for b, dl in self.burst.items():
             if t < dl and b not in self.est:
                 return b
+        # Experimental urgent-hop pursuit / hop-set patrol (disabled by
+        # default).  Measured on the canonical protocol (30 episodes), these
+        # slot-redistribution rules do NOT beat a blind sweep at following
+        # effectively-random hops: closing the factor-~1.4 follow-rate gap
+        # costs more coverage and reward than its follow-rate gain is worth,
+        # because the destination of an unpredictable hop carries no
+        # exploitable structure.  They remain available (``hop_patrol=True``)
+        # for structured mobility scenarios where the transition model has
+        # real predictive content (``agile_mode=\"markov\"``).
+        if self.hop_patrol:
+            hop = self._hop_bonus(t)
+            top = int(np.argmax(hop))
+            if hop[top] >= 0.8:
+                return top
+            if self.hop_weight > 0 and hop.max() <= 0.0 and self.hop_succ:
+                watch: set[int] = set()
+                for succ in self.hop_succ.values():
+                    for prev, row in succ.items():
+                        watch.add(prev)
+                        watch.update(b for b in row if 0 <= b < self.n_bands)
+                if watch:
+                    wb = max(watch, key=lambda b: t - self.last_visit[b])
+                    if t - self.last_visit[wb] > 2.0 * len(watch):
+                        return wb
         if self.rng.random() < self.explore_eps:
             return int(self.rng.integers(self.n_bands))
         # Reconnaissance floor: bound the maximum revisit latency of any band
@@ -935,12 +1029,39 @@ class SmartScanScheduler(BaseScheduler):
                                "R": float(e["R"]),
                                "n": int(e["n"]),
                                "aoa": float(e.get("aoa", -1.0))}
-        return {"est": est_out, "persistent": sorted(int(b) for b in self.persistent)}
+        mem = None
+        if self.memory is not None:
+            m = self.memory
+            mem = {"mu": [float(x) for x in m["mu"]],
+                   "n": [float(x) for x in m["n"]],
+                   "logit_w": [[float(v) for v in w] for w in m["logit_w"]],
+                   "logit_n": [int(v) for v in m["logit_n"]],
+                   "hop": [[k[0], k[1], p, b, c]
+                           for k, succ in m["hop_succ"].items()
+                           for p, row in succ.items()
+                           for b, c in row.items()]}
+        return {"est": est_out,
+                "persistent": sorted(int(b) for b in self.persistent),
+                "memory": mem}
 
     def load_state(self, state: dict) -> None:
         """Restore a snapshot produced by :meth:`get_state`."""
         self.est = {int(b): dict(e) for b, e in state["est"].items()}
         self.persistent = set(state.get("persistent", []))
+        mem = state.get("memory")
+        if mem is not None:
+            self.memory = {
+                "mu": np.asarray(mem["mu"], dtype=float),
+                "n": np.asarray(mem["n"], dtype=float),
+                "logit_w": [np.asarray(w, dtype=float)
+                            for w in mem["logit_w"]],
+                "logit_n": list(mem["logit_n"]),
+                "hop_succ": {},
+            }
+            for k0, k1, p, b, c in mem.get("hop", []):
+                dst = self.memory["hop_succ"].setdefault((int(k0), int(k1)), {})
+                dst = dst.setdefault(int(p), {})
+                dst[int(b)] = int(c)
 
 
 class MetaScheduler(BaseScheduler):
