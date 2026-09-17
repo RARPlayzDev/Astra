@@ -302,7 +302,8 @@ def test_env_extreme_many_bands():
 
 def test_env_zero_emitters_metrics_safe():
     cfg = ScenarioConfig(n_bands=6, T=120, seed=1, n_stationary=0, n_agile=0,
-                         n_periodic=0, n_spatial=0, n_clutter=0)
+                         n_periodic=0, n_spatial=0, n_clutter=0,
+                         n_fhss=0, n_tdma=0)
     env = RFEnvironment(cfg)
     assert env.emitters == []
     m = compute_metrics(env, run_episode(env, SmartScanScheduler(6, seed=2),
@@ -315,7 +316,8 @@ def test_env_empty_emitter_list_argument_accepted():
     # RFEnvironment built from a config that yields zero emitters behaves
     # like the `emitters=[]` degenerate case: queries stay safe.
     cfg = ScenarioConfig(n_bands=4, T=60, seed=5, n_stationary=0, n_agile=0,
-                         n_periodic=0, n_spatial=0, n_clutter=0)
+                         n_periodic=0, n_spatial=0, n_clutter=0,
+                         n_fhss=0, n_tdma=0)
     env = RFEnvironment(cfg)
     assert env.emitters == []
     assert env.band_seq.size == 0

@@ -15,10 +15,12 @@ from .config import ScenarioConfig
 from .exceptions import (ConfigurationError, SimulationBoundsError,
                          InvalidBandError)
 
-KINDS = ("stationary", "agile", "periodic", "spatial", "evasive")
+KINDS = ("stationary", "agile", "periodic", "spatial", "evasive",
+         "fhss", "tdma")
 
 _INT_FIELDS = ("n_bands", "T", "seed", "n_stationary", "n_agile",
-               "n_periodic", "n_spatial", "n_evasive", "n_clutter")
+               "n_periodic", "n_spatial", "n_evasive", "n_clutter",
+               "n_fhss", "n_tdma")
 _RANGE_FIELDS = ("period_range", "on_len_range", "hop_set_range",
                  "dwell_range")
 
@@ -78,6 +80,15 @@ def _validate_config(cfg: ScenarioConfig) -> None:
         raise ConfigurationError(
             f"ScenarioConfig.agile_mode must be 'random' or 'markov', "
             f"got {getattr(cfg, 'agile_mode', None)!r}")
+    pfa = float(getattr(cfg, "cfar_pfa", 1e-3))
+    if not np.isfinite(pfa) or not 0.0 < pfa < 1.0:
+        raise ConfigurationError(
+            f"ScenarioConfig.cfar_pfa must lie in (0, 1), got {pfa!r}")
+    cap = float(getattr(cfg, "capture_range_db", 30.0))
+    if not np.isfinite(cap) or cap < 0.0:
+        raise ConfigurationError(
+            f"ScenarioConfig.capture_range_db must be a finite non-negative "
+            f"number, got {cap!r}")
 
 
 @dataclass(frozen=True)
@@ -184,6 +195,17 @@ class RFEnvironment:
         if n_evasive:
             base2 = base + cfg.n_spatial
             add("evasive", base2 + max(1, n_evasive // 2), n_evasive)
+        # Communication signals (PS: "communication *or* radar").  FHSS nets
+        # hop fast across a wide hop set; TDMA stations burst briefly on a
+        # fixed channel.  Both are non-threat COMINT-class signals by default
+        # so existing threat benchmarks stay comparable; per-class figures of
+        # merit (ir_fhss / ir_tdma / ir_comm) cover them explicitly.
+        n_fhss = int(getattr(cfg, "n_fhss", 0) or 0)
+        n_tdma = int(getattr(cfg, "n_tdma", 0) or 0)
+        if n_fhss:
+            add("fhss", 0, n_fhss)
+        if n_tdma:
+            add("tdma", 0, n_tdma)
         for _ in range(cfg.n_clutter):
             b = int(self.rng.integers(cfg.n_bands))
             rad = self.scene_radius_km * np.sqrt(self.rng.random())
@@ -263,6 +285,22 @@ class RFEnvironment:
             on_len = int(self.rng.integers(olo, ohi + 1))
             return EmitterSpec(eid, kind, band, hop_set=hops,
                                period=period, on_len=on_len, dwell=1, **common)
+        if kind == "fhss":
+            # FHSS communication net: hops every 1-2 slots across a wide hop
+            # set (combat-net radio style agility, faster than radar agility).
+            if c.n_bands < 2:
+                return EmitterSpec(eid, kind, band, hop_set=(band,), dwell=1, **common)
+            k = max(4, int(min(c.n_bands, 10)))
+            hops = tuple(sorted(int(x) for x in self.rng.choice(c.n_bands, size=k, replace=False)))
+            return EmitterSpec(eid, kind, hops[0], hop_set=hops,
+                               dwell=int(self.rng.integers(1, 3)), **common)
+        if kind == "tdma":
+            # TDMA burst communication station: short bursts on a fixed
+            # channel separated by long silent gaps (slot-level duty cycle
+            # of a few percent), modelled with a large period / tiny on_len.
+            return EmitterSpec(eid, kind, band,
+                               period=int(self.rng.integers(30, 150)),
+                               on_len=int(self.rng.integers(1, 4)), **common)
         raise ValueError(kind)
 
     def _generate(self) -> np.ndarray:
@@ -271,9 +309,18 @@ class RFEnvironment:
         seq = np.full((E, T), -1, dtype=np.int16)
         markov_rows: dict[int, np.ndarray] = {}
         for i, e in enumerate(self.emitters):
-            if e.kind == "stationary":
-                seq[i, :] = e.home_band
-            elif e.kind == "agile":
+            if e.kind == "stationary" or e.kind == "tdma":
+                if e.kind == "stationary":
+                    seq[i, :] = e.home_band
+                else:  # tdma bursts: phase-window generation
+                    phase = int(self.rng.integers(e.period))
+                    s = -phase
+                    while s < T:
+                        a, bnd = max(s, 0), min(s + e.on_len, T)
+                        if bnd > a:
+                            seq[i, a:bnd] = e.home_band
+                        s += e.period
+            elif e.kind in ("agile", "fhss"):
                 t0 = 0
                 markov = getattr(self.cfg, "agile_mode", "random") == "markov"
                 if markov:

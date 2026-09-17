@@ -70,8 +70,13 @@ def test_full_episode_wall_clock_sane():
 
 def _latencies(sched, seed: int = 3, n_ticks: int = N_TICKS,
                warmup: int = WARMUP_TICKS) -> list:
-    """Per-decision scheduler cost in ms (select + predict + update)."""
-    env = RFEnvironment(n_bands=N_BANDS, T=n_ticks, seed=seed)
+    """Per-decision scheduler cost in ms (select + predict + update).
+
+    The benchmark environment pins the original radar-only emitter mix so
+    the latency gate measures *scheduler* cost, not scene density.
+    """
+    env = RFEnvironment(n_bands=N_BANDS, T=n_ticks, seed=seed,
+                        n_fhss=0, n_tdma=0)
     rx = ESReceiver(env, seed=seed + 1)
     sched.reset(horizon=n_ticks)
     for t in range(warmup):

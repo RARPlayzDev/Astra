@@ -16,7 +16,14 @@ from .schedulers import (SequentialSweep, RandomScan, PrioritySweep,
 
 REWARD_CFG = {"threat": 1.0, "clutter": 0.15, "empty": -0.05,
               "false_alarm": -0.08, "first_threat_bonus": 1.5,
-              "switching_cost": 0.03, "dwell_cost": 0.005}
+              "switching_cost": 0.03, "dwell_cost": 0.005,
+              # TTFF shaping (PS: "minimize intercept time"): the
+              # first-intercept bonus is scaled by remaining-episode
+              # earliness so late first intercepts earn proportionally
+              # less.  This puts time-to-first-intercept directly into the
+              # optimisation objective instead of leaving it a narrated
+              # consequence metric.
+              "ttff_urgency": 1.0}
 
 
 def make_schedulers(n_bands: int, priority_bands: tuple | list,
@@ -68,7 +75,13 @@ def step_reward(env: RFEnvironment, res, first_intercept: dict) -> float:
             if eid not in first_intercept:
                 first_intercept[eid] = res.t
                 if ems.get(eid) is not None and ems[eid].threat:
-                    r += REWARD_CFG["first_threat_bonus"]
+                    urgency = REWARD_CFG.get("ttff_urgency", 0.0)
+                    # Earliness weight in (0, 1]: 1.0 at slot 0, decaying
+                    # linearly to 0 at the episode horizon - intercepting the
+                    # threat sooner is worth strictly more reward.
+                    earliness = max(0.05, 1.0 - res.t / max(1, env.T))
+                    r += REWARD_CFG["first_threat_bonus"] * \
+                        (urgency * earliness + (1.0 - urgency))
         return r
     return REWARD_CFG["empty"]
 

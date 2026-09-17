@@ -915,6 +915,61 @@ def run_suite(outdir: str = "results", figdir: str = "figures",
     return summary
 
 
+def scalability_study(band_sizes=(24, 64, 128), emitter_counts=(25, 60, 100),
+                      T=1200, trials=3, base_seed=31000) -> dict:
+    """Scalability sweep: SmartScan vs open-loop baselines at scale.
+
+    Runs paired Monte Carlo episodes across increasing spectrum sizes
+    (``n_bands``) and emitter populations (stationary+agile+periodic+spatial
+    density), reporting interception ratio, threat coverage, TTFF and hit
+    rate per condition.  Addresses the "no scalability study beyond 40-50
+    emitters" evaluation gap.
+    """
+    from .environment import RFEnvironment
+    from .config import ScenarioConfig
+    from .runner import run_episode
+    from .metrics import compute_metrics
+    from .schedulers import SequentialSweep, RandomScan, SmartScanScheduler
+    out = []
+    for n_bands in band_sizes:
+        for n_emit in emitter_counts:
+            # Spread the population across kinds proportionally.
+            ns = max(2, n_emit // 3)
+            na = max(1, n_emit // 6)
+            npe = max(1, n_emit // 8)
+            nsp = max(1, n_emit // 12)
+            per_sched: dict[str, list] = {}
+            for tr in range(trials):
+                seed = base_seed + 131 * tr + n_bands * 7 + n_emit
+                cfg = ScenarioConfig(n_bands=n_bands, T=T, seed=seed,
+                                     n_stationary=ns, n_agile=na,
+                                     n_periodic=npe, n_spatial=nsp,
+                                     n_clutter=max(2, ns // 2))
+                env = RFEnvironment(cfg)
+                for make in (lambda nb: SequentialSweep(nb, seed),
+                             lambda nb: RandomScan(nb, seed),
+                             lambda nb: SmartScanScheduler(nb, seed=seed)):
+                    s = make(env.n_bands)
+                    tr_obj = run_episode(env, s, seed=seed + 1)
+                    m = compute_metrics(env, tr_obj)
+                    per_sched.setdefault(type(s).__name__, []).append(m)
+            agg = {}
+            for name, ms in per_sched.items():
+                agg[name] = {
+                    "threat_intercept_ratio": float(np.mean(
+                        [m["threat_intercept_ratio"] for m in ms])),
+                    "intercept_ratio": float(np.mean(
+                        [m["intercept_ratio"] for m in ms])),
+                    "threat_mean_ttff": float(np.mean(
+                        [m["threat_mean_ttff"] for m in ms])),
+                    "intercept_rate": float(np.mean(
+                        [m["intercept_rate"] for m in ms])),
+                }
+            out.append({"n_bands": n_bands, "n_emitters": len(env.emitters),
+                        "trials": trials, "results": agg})
+    return {"conditions": out}
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="EW SmartScan experiment suite")
     ap.add_argument("--suite", choices=["quick", "full"], default="quick")

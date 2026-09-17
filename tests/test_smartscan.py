@@ -110,7 +110,8 @@ from ewsmart.receiver import DwellResult
 def _noise_env(n_bands=8, T=1500, seed=11):
     """Environment with zero emitters: only receiver false alarms remain."""
     cfg = ScenarioConfig(n_bands=n_bands, T=T, seed=seed, n_stationary=0,
-                         n_agile=0, n_periodic=0, n_spatial=0, n_clutter=0)
+                         n_agile=0, n_periodic=0, n_spatial=0, n_clutter=0,
+                         n_fhss=0, n_tdma=0)
     return RFEnvironment(cfg)
 
 

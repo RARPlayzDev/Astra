@@ -77,6 +77,10 @@ export default function Operations({ resetKey, running, onStartMission }: Props)
   const [teamSize, setTeamSize] = useState(1);
   const [sens, setSens] = useState(6);
   const [useSaved, setUseSaved] = useState(false);
+  const [nFhss, setNFhss] = useState(3);
+  const [nTdma, setNTdma] = useState(2);
+  const [cfarPfa, setCfarPfa] = useState(0.001);
+  const [dwellUs, setDwellUs] = useState(1);
   const bufs = useRef<Record<string, Buf>>({ smart: newBuf(), other: newBuf() });
   const canvases = useRef<Record<string, HTMLCanvasElement | null>>({
     "smart-scan": null, other: null,
@@ -129,7 +133,8 @@ export default function Operations({ resetKey, running, onStartMission }: Props)
 
   const launch = () => {
     kpisSideName.current = schedA;
-    onStartMission({ schedA, schedB, teamSize, sensOffset: sens, useSaved });
+    onStartMission({ schedA, schedB, teamSize, sensOffset: sens, useSaved,
+                     nFhss, nTdma, cfarPfa, dwellTimeUs: dwellUs });
   };
 
   const names = Object.keys(kpis);
@@ -236,7 +241,34 @@ export default function Operations({ resetKey, running, onStartMission }: Props)
                    onChange={(e) => setUseSaved(e.target.checked)} />
             Load saved weights
           </label>
+          <label>FHSS comm nets
+            <input type="number" min={0} max={12} value={nFhss}
+                   onChange={(e) => setNFhss(Math.max(0, Number(e.target.value)))} />
+          </label>
+          <label>TDMA comm stations
+            <input type="number" min={0} max={12} value={nTdma}
+                   onChange={(e) => setNTdma(Math.max(0, Number(e.target.value)))} />
+          </label>
+          <label>CFAR P<sub>fa</sub>
+            <select value={cfarPfa}
+                    onChange={(e) => setCfarPfa(Number(e.target.value))}>
+              <option value={0.001}>1e-3</option>
+              <option value={0.0001}>1e-4</option>
+              <option value={0.000001}>1e-6</option>
+            </select>
+          </label>
+          <label>Dwell time
+            <select value={dwellUs}
+                    onChange={(e) => setDwellUs(Number(e.target.value))}>
+              {[0.1, 1, 5, 20].map((v) => <option key={v} value={v}>{v} &micro;s</option>)}
+            </select>
+          </label>
         </div>
+        <p className="tbl-note" style={{ margin: "6px 0 0" }}>
+          Communication emitters exercise the COMINT half of the problem
+          statement; CFAR P<sub>fa</sub> and dwell time drive the physically
+          coupled radiometer + Albersheim + CA-CFAR detection chain.
+        </p>
       </div>
 
       {advRows.length > 0 && a && b && (

@@ -286,13 +286,20 @@ class LiveArena:
     def __init__(self, n_bands: int = 24, T: int = 2400, speed: int = 400,
                  base_seed: int = 4242, sched_a: str = "smart-scan",
                  sched_b: str = "openloop-sequential", team_size: int = 1,
-                 sens_offset: float = 6.0, use_saved: bool = False):
+                 sens_offset: float = 6.0, use_saved: bool = False,
+                 n_fhss: int = 3, n_tdma: int = 2, cfar_pfa: float = 1e-3,
+                 dwell_time_us: float = 1.0):
         self.n_bands, self.T, self.speed, self.base_seed = \
             n_bands, T, max(20, speed), base_seed
         self.side_policy = {"smart-scan": sched_a, "openloop-sequential": sched_b}
         self.team_size = team_size
         self.sens_offset = sens_offset
         self.use_saved = use_saved
+        # PS-coverage controls: communication emitters + detection physics
+        self.n_fhss = int(n_fhss)
+        self.n_tdma = int(n_tdma)
+        self.cfar_pfa = float(cfar_pfa)
+        self.dwell_time_us = float(dwell_time_us)
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
         self.frames: deque = deque(maxlen=1000)
@@ -326,7 +333,10 @@ class LiveArena:
         seed = self.base_seed + self.generation * 7919
         runners = []
         for i, side in enumerate(("smart-scan", "openloop-sequential")):
-            env = RFEnvironment(n_bands=self.n_bands, T=self.T, seed=seed)
+            env = RFEnvironment(n_bands=self.n_bands, T=self.T, seed=seed,
+                                n_fhss=self.n_fhss, n_tdma=self.n_tdma,
+                                cfar_pfa=self.cfar_pfa,
+                                dwell_time_us=self.dwell_time_us)
             runners.append(_Runner(
                 side, env, seed + 100 * i,
                 policy=self.side_policy[side], team=self.team_size,

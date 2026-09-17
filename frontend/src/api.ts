@@ -78,6 +78,18 @@ export const getModels = (): Promise<{ models: ModelInfo[] }> =>
   fetch("/api/models").then(j);
 export const getDiagnostics = (): Promise<Diagnostics> =>
   fetch("/api/diagnostics").then(j);
+
+/* ---------------------------- PS coverage audit ------------------------- */
+export type PSCheck = {
+  check: string; ps_phrase: string; ok: boolean;
+  evidence: Record<string, unknown>;
+};
+export type PSCoverage = {
+  passed: number; total: number; coverage_pct: number; checks: PSCheck[];
+  note?: string;
+};
+export const getPsCoverage = (seed?: number): Promise<PSCoverage> =>
+  fetch(`/api/ps-coverage${seed != null ? `?seed=${seed}` : ""}`).then(j);
 export const figureUrl = (name: string) => `/api/figures/${name}`;
 export const manualUrl = "/manual";
 
@@ -121,6 +133,7 @@ export type MissionConfig = {
   speed?: number; scenario?: string; n_bands?: number; T?: number;
   schedA?: string; schedB?: string;
   teamSize?: number; sensOffset?: number; useSaved?: boolean;
+  nFhss?: number; nTdma?: number; cfarPfa?: number; dwellTimeUs?: number;
 };
 export const startMission = (opts: MissionConfig = {}) => {
   const q = new URLSearchParams();
@@ -133,6 +146,10 @@ export const startMission = (opts: MissionConfig = {}) => {
   if (opts.teamSize && opts.teamSize > 1) q.set("team_size", String(opts.teamSize));
   if (opts.sensOffset != null) q.set("sens_offset", String(opts.sensOffset));
   if (opts.useSaved) q.set("use_saved", "true");
+  if (opts.nFhss != null) q.set("n_fhss", String(opts.nFhss));
+  if (opts.nTdma != null) q.set("n_tdma", String(opts.nTdma));
+  if (opts.cfarPfa != null) q.set("cfar_pfa", String(opts.cfarPfa));
+  if (opts.dwellTimeUs != null) q.set("dwell_time_us", String(opts.dwellTimeUs));
   return fetch(`/api/live/start?${q}`, { method: "POST" }).then(j);
 };
 export const stopMission = () =>

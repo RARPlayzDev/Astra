@@ -43,6 +43,11 @@ METRIC_LABELS = {
     "ir_periodic": "Interception Ratio - Periodic",
     "ir_spatial": "Interception Ratio - Spatial Scan",
     "ir_evasive": "Interception Ratio - Evasive",
+    "ir_fhss": "Interception Ratio - FHSS Communications",
+    "ir_tdma": "Interception Ratio - TDMA Communications",
+    "ir_comm": "Interception Ratio - All Communications (COMINT)",
+    "spatial_cycle_intercept_fraction":
+        "Per-Rotation-Cycle Spatial Interception Fraction",
     "ttff_stationary": "TTFF - Stationary (slots)",
     "ttff_agile": "TTFF - Frequency Agile (slots)",
     "ttff_periodic": "TTFF - Periodic (slots)",
@@ -167,7 +172,8 @@ def compute_metrics(env, trace: Trace) -> dict:
     # yield NaN so they are excluded from Monte Carlo aggregates rather than
     # diluting the averages with phantom zeros.
     class_out: dict[str, float] = {}
-    for kind in ("stationary", "agile", "periodic", "spatial", "evasive"):
+    for kind in ("stationary", "agile", "periodic", "spatial", "evasive",
+                 "fhss", "tdma"):
         ids = {e.eid for e in env.emitters if e.kind == kind}
         if not ids:
             class_out[f"ir_{kind}"] = float("nan")
@@ -178,6 +184,40 @@ def compute_metrics(env, trace: Trace) -> dict:
         tt = [trace.first_intercept[i] for i in got]
         n_miss = len(ids) - len(got)
         class_out[f"ttff_{kind}"] = (sum(tt) + n_miss * T) / len(ids)
+    # Combined COMINT coverage: all communication-signal emitters combined.
+    comm_ids = {e.eid for e in env.emitters if e.kind in ("fhss", "tdma")}
+    if comm_ids:
+        got_c = [i for i in intercepted if i in comm_ids]
+        class_out["ir_comm"] = len(got_c) / len(comm_ids)
+    else:
+        class_out["ir_comm"] = float("nan")
+
+    # --- per-rotation-cycle spatial interception (PS: "interception ratio ...
+    # ... against spatially scanning ... emitters") --------------------------
+    # For every spatially scanning radar, split the episode into its rotation
+    # cycles (``period`` slots each) and record whether at least one main-beam
+    # illumination in each cycle was intercepted.  The fraction of cycles with
+    # coverage is a far stricter figure than "seen at least once" and is the
+    # cycle-resolved companion to ``ir_spatial``.
+    spatial_rows = [e for e in env.emitters if e.kind == "spatial"]
+    if spatial_rows:
+        cyc_cov, cyc_tot = 0, 0
+        for e in spatial_rows:
+            row = env.band_seq[e.eid]
+            for c0 in range(0, T, max(1, e.period)):
+                c1 = min(T, c0 + e.period)
+                if c1 - c0 < 1:
+                    continue
+                cyc_tot += 1
+                seen = any(hit_b and row[t] == b
+                           for t, (b, hit_b) in
+                           zip(range(c0, c1), zip(trace.actions[c0:c1],
+                                                  hits[c0:c1])))
+                cyc_cov += int(seen)
+        class_out["spatial_cycle_intercept_fraction"] = (
+            cyc_cov / cyc_tot if cyc_tot else float("nan"))
+    else:
+        class_out["spatial_cycle_intercept_fraction"] = float("nan")
 
     # --- explicit cost model (PS FoM: "Avg Reward / cost function") -------
     # Resource costs (band-switch settle time + per-dwell operating budget)

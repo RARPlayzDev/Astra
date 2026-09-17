@@ -1,5 +1,63 @@
 import { useEffect, useState } from "react";
-import { getFigures, getSummary, figureUrl, type Summary } from "../api";
+import { getFigures, getSummary, getPsCoverage, figureUrl, type Summary } from "../api";
+
+function PsCoveragePanel() {
+  const [cov, setCov] = useState<Awaited<ReturnType<typeof getPsCoverage>> | null>(null);
+  const [err, setErr] = useState(false);
+  const [seed, setSeed] = useState(20260917);
+  const reload = (s: number) => {
+    setErr(false);
+    getPsCoverage(s).then(setCov).catch(() => setErr(true));
+  };
+  useEffect(() => { reload(seed); /* eslint-disable-next-line */ }, []);
+  return (
+    <div className="panel">
+      <h3>Problem-statement coverage audit (live self-test)</h3>
+      <div className="body">
+        {err && <p className="tbl-note">Audit endpoint unavailable (run the suite or restart the service).</p>}
+        {cov && (
+          <>
+            <p className="tbl-note" style={{ marginTop: 0 }}>
+              {cov.passed}/{cov.total} checks pass ({cov.coverage_pct}%). Every
+              check is <b>executed live</b> against the running system when this
+              page loads &mdash; nothing is narrated from a static report. The
+              audit covers communication signals (FHSS/TDMA COMINT), the
+              radiometer + Albersheim + CA-CFAR detection coupling, intercept-time
+              prediction for periodic <i>and</i> frequency-agile emitters,
+              per-rotation-cycle spatial coverage, and the reward/cost figures
+              of merit.
+            </p>
+            <table className="data">
+              <thead><tr><th>Check</th><th>PS phrase</th><th>Verdict</th></tr></thead>
+              <tbody>
+                {cov.checks.map((c) => (
+                  <tr key={c.check}>
+                    <td className="txt">{c.check}</td>
+                    <td className="txt">{c.ps_phrase}</td>
+                    <td><span className={"badge " + (c.ok ? "pass" : "fail")}>
+                      {c.ok ? "PASS" : "FAIL"}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="controls-row" style={{ marginTop: 10 }}>
+              <button className="tbtn" onClick={() => reload(seed)}>
+                Re-run audit (same seed)
+              </button>
+              <button className="tbtn" onClick={() => {
+                const s = Math.floor(Math.random() * 100000);
+                setSeed(s); reload(s);
+              }}>
+                Re-run with fresh seed
+              </button>
+              <span className="readout">seed {seed}</span>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
 
 const SCHED_TITLES: Record<string, string> = {
   "smart-scan": "SmartScan (proposed)",
@@ -137,6 +195,7 @@ export default function Analysis() {
       <p className="lede">
         All values produced by the experiment suite from stored seeds.
       </p>
+      <PsCoveragePanel />
       {!s && <div className="panel"><div className="body">No results found. Run
         <code className="inline"> python -m ewsmart.experiments --suite full</code>.</div></div>}
       {s && (<>

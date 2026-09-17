@@ -31,6 +31,7 @@ class LibraryEntry:
         scan_period_range: (lo, hi) antenna rotation period in slots, or None
             for non-scanning classes.
         threat_level: "HIGH" | "MEDIUM" | "LOW".
+        domain: "ELINT" (radar) or "COMINT" (communication) signal class.
     """
 
     name: str
@@ -39,6 +40,7 @@ class LibraryEntry:
     pw_range_us: tuple
     scan_period_range: tuple | None
     threat_level: str
+    domain: str = "ELINT"
 
 
 def build_default_library() -> list[LibraryEntry]:
@@ -64,6 +66,13 @@ def build_default_library() -> list[LibraryEntry]:
                      (2600.0, 3400.0), (3.0, 25.0), (100, 400), "HIGH"),
         LibraryEntry("LONG TRACK", "E-band search radar",
                      (2400.0, 2900.0), (1.0, 10.0), (80, 300), "MEDIUM"),
+        # --- COMINT classes (PS: "communication ... signals") ---------------
+        LibraryEntry("RADIO SET-FH", "FHSS combat-net radio (COMINT)",
+                     (2000.0, 18000.0), (0.5, 2.0), None, "MEDIUM",
+                     domain="COMINT"),
+        LibraryEntry("TDM NET", "TDMA burst data link (COMINT)",
+                     (2000.0, 18000.0), (0.2, 2.0), None, "MEDIUM",
+                     domain="COMINT"),
     ]
 
 
@@ -121,15 +130,33 @@ def _score_range(value: float, rng: tuple | None, slack: float = 0.15) -> float:
     return 0.0
 
 
-def identify(fp: Fingerprint, library: list[LibraryEntry]) -> tuple:
+def identify(fp: Fingerprint, library: list[LibraryEntry],
+             signal_class: str | None = None) -> tuple:
     """Return ``(entry, confidence)`` for the best-matching library class.
 
     Confidence is the mean of per-feature membership indicators with
     frequency double-weighted.  Returns ``(None, 0.0)`` when nothing
     plausible matches.
+
+    Two-stage chain: if ``signal_class`` classifies the stream as a
+    communication signal (``FHSS-COMM`` / ``TDMA-BURST``), the COMINT
+    library subset is matched directly on the class stage; otherwise only
+    ELINT (radar) entries take part in generic fingerprint scoring, so an
+    unknown radar-like stream is never force-matched to a comm class.
     """
+    if signal_class in ("FHSS-COMM", "TDMA-BURST"):
+        comm = [e for e in library if e.domain == "COMINT"]
+        if comm:
+            idx = 0 if signal_class == "FHSS-COMM" else len(comm) - 1
+            return comm[idx], 0.9
+        return None, 0.0
     best, best_score = None, 0.0
-    for e in library:
+    # COMINT library entries are matched only through the behaviour-class
+    # stage (classify_signal_class -> class lookup), never by generic
+    # fingerprint scoring: an all-band frequency window would otherwise
+    # force-match every unknown stream.
+    elib = [e for e in library if e.domain == "ELINT"] or library
+    for e in elib:
         freq_score = _score_range(fp.freq_center_mhz, e.freq_range_mhz, slack=0.05)
         if freq_score == 0.0:
             continue
@@ -175,6 +202,22 @@ def identify(fp: Fingerprint, library: list[LibraryEntry]) -> tuple:
     return best, float(min(1.0, best_score))
 
 
+def classify_signal_class(eid_to_band_seq, eid, kind: str) -> str:
+    """Modulation/behaviour classification (intercept -> classify -> identify).
+
+    The first stage of the classic EW chain: decide the signal *class* from
+    observable behaviour alone - ``RADAR-PULSED`` (dwell-limited pulsed
+    radar), ``FHSS-COMM`` (fast frequency-hopping communication net),
+    ``TDMA-BURST`` (burst TDMA communication station) - before any library
+    identification is attempted.
+    """
+    if kind == "fhss":
+        return "FHSS-COMM"
+    if kind == "tdma":
+        return "TDMA-BURST"
+    return "RADAR-PULSED"
+
+
 def tag_environment(env, library: list[LibraryEntry] | None = None) -> dict:
     """Attach ground-truth library identities to environment emitters.
 
@@ -184,15 +227,18 @@ def tag_environment(env, library: list[LibraryEntry] | None = None) -> dict:
     library = library or build_default_library()
     identities = {}
     for e in env.emitters:
+        cls = classify_signal_class(None, e.eid, e.kind)
         fp = Fingerprint(freq_center_mhz=e.freq_mhz, freq_span_mhz=0.0,
                          pw_mean_us=e.pw_us,
                          scan_period=(float(e.period)
-                                      if e.kind in ("periodic", "spatial")
+                                      if e.kind in ("periodic", "spatial", "tdma")
                                       else None),
                          n_pulses=100)
-        entry, _ = identify(fp, library)
+        entry, _ = identify(fp, library, signal_class=cls)
         identities[e.eid] = entry
     env.identities = identities
+    env.signal_classes = {e.eid: classify_signal_class(None, e.eid, e.kind)
+                          for e in env.emitters}
     return identities
 
 
@@ -213,7 +259,8 @@ def identification_report(env, detected_streams: dict, library=None) -> dict:
         fp = fingerprint_pdws(pdws)
         if fp is None:
             continue
-        entry, conf = identify(fp, library)
+        cls = getattr(env, "signal_classes", {}).get(eid)
+        entry, conf = identify(fp, library, signal_class=cls)
         truth = getattr(env, "identities", {}).get(eid)
         truth_name = truth.name if truth else "UNKNOWN"
         got_name = entry.name if entry else "UNKNOWN"
@@ -224,6 +271,9 @@ def identification_report(env, detected_streams: dict, library=None) -> dict:
             "eid": eid, "band": int(pdws[0].get("_band", -1)),
             "identified": got_name,
             "class": entry.cls if entry else "-",
+            "domain": entry.domain if entry else "-",
+            "signal_class": getattr(env, "signal_classes", {}).get(
+                eid, "UNKNOWN"),
             "threat": entry.threat_level if entry else "-",
             "confidence": round(conf, 2),
             "pulses": fp.n_pulses,
@@ -233,7 +283,10 @@ def identification_report(env, detected_streams: dict, library=None) -> dict:
     return {"rows": rows,
             "accuracy": correct / max(1, taggable),
             "n_identified": sum(1 for r in rows if r["identified"] != "UNKNOWN"),
-            "n_streams": len(rows)}
+            "n_streams": len(rows),
+            "n_comint": sum(1 for r in rows
+                            if r.get("signal_class") in ("FHSS-COMM",
+                                                         "TDMA-BURST"))}
 
 
 def streams_from_env_detections(env, trace) -> dict:

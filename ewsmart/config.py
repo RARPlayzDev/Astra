@@ -36,6 +36,12 @@ class ScenarioConfig:
     agile_mode: str = "random"  # "random" | "markov" (structured hopping)
     noise_figure_db: float = 6.0  # receiver front-end noise figure
     dwell_time_us: float = 1.0  # coherent integration time per dwell
+    # --- communication-signal emitters (PS: "communication *or* radar") ----
+    n_fhss: int = 3   # FHSS communication nets (fast frequency hopping)
+    n_tdma: int = 2   # TDMA burst communication stations
+    # --- detection-processing model ----------------------------------------
+    cfar_pfa: float = 1e-3      # CA-CFAR design false-alarm probability
+    capture_range_db: float = 30.0  # co-channel near-far masking dynamic range
 
     @classmethod
     def from_json(cls, path: str) -> "ScenarioConfig":

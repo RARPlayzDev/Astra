@@ -76,6 +76,103 @@ class UniformPredictor:
         return [self.predict(band)]
 
 
+class HopDwellPredictor:
+    """Temporal hop prediction for frequency-agile emitters (Phase 2b).
+
+    Beyond *which band* an agile emitter hops to (TransitionPredictor), this
+    predictor estimates *when* the emitter will next be on-frequency: it
+    maintains a per-band dwell-length distribution from observed dwell spans
+    and returns ``(predicted_band, predicted_on_time)`` for the next
+    intercept window.  This closes the PS gap of intercept-time prediction
+    "against ... frequency agile emitters".
+    """
+
+    def __init__(self, n_bands: int, alpha: float = 0.5):
+        self.n_bands = n_bands
+        self.trans = TransitionPredictor(n_bands, alpha)
+        self.dwell_observations: dict[int, list[int]] = {}
+        self._current_band: int | None = None
+        self._current_start: int | None = None
+
+    def observe(self, band: int, t: int) -> None:
+        """Feed one detected slot ``(band, t)`` of an agile emitter."""
+        if band is None:
+            return
+        if self._current_band is None:
+            self._current_band, self._current_start = band, t
+            return
+        if band == self._current_band:
+            return
+        # Hop observed: record completed dwell length and transition.
+        if self._current_start is not None:
+            self.dwell_observations.setdefault(
+                self._current_band, []).append(max(1, t - self._current_start))
+        self.trans.observe(self._current_band, band)
+        self._current_band, self._current_start = band, t
+
+    def _mean_dwell(self, band: int) -> float:
+        obs = self.dwell_observations.get(band, [])
+        return float(np.mean(obs)) if obs else 2.0
+
+    def predict_next_on(self, band: int | None, t_now: int) -> tuple | None:
+        """Predict ``(next_band, next_on_time)`` for an agile emitter.
+
+        Uses the learned transition distribution for the *destination band*
+        and the learned dwell-length statistics for the *current band* to
+        estimate when that hop occurs: ``t_pred = t_now + mean_dwell``.
+        Returns ``None`` with no observation history.
+        """
+        if band is None:
+            return None
+        nxt = self.trans.predict(band)
+        if nxt is None:
+            return None
+        t_pred = int(round(t_now + self._mean_dwell(band)))
+        return nxt, t_pred
+
+
+def evaluate_agile_intercept_time(env: RFEnvironment) -> dict:
+    """Mean absolute error of agile-emitter next-ON time prediction.
+
+    Strictly causal: at each hop into slot ``t`` the predictor has only seen
+    hops at slots ``<= t``; the prediction made at the hop is compared against
+    the true start of the *next* dwell window from the truth sequence.
+    Returns ``{"n": samples, "agile_intercept_time_error": mean_abs_err,
+    "band_top1_accuracy": ...}`` (NaN error when no agile emitters exist).
+    """
+    rows = [i for i, e in enumerate(env.emitters) if e.kind == "agile"]
+    if not rows:
+        return {"n": 0, "agile_intercept_time_error": float("nan"),
+                "band_top1_accuracy": float("nan")}
+    errs: list[float] = []
+    band_hits = band_n = 0
+    for i in rows:
+        seq = env.band_seq[i]
+        pred = HopDwellPredictor(env.n_bands)
+        prev: int | None = None
+        for t in range(env.T):
+            b = int(seq[t])
+            if b < 0:
+                continue
+            if prev is not None and b != prev:
+                # Score the prediction made from the *previous* band against
+                # the actual hop (causal: nothing after ``t`` has been seen).
+                p = pred.predict_next_on(prev, t)
+                if p is not None:
+                    pb, pt = p
+                    band_hits += int(pb == b)
+                    band_n += 1
+                    errs.append(abs(pt - t))
+            pred.observe(b, t)
+            prev = b
+    if not errs:
+        return {"n": 0, "agile_intercept_time_error": float("nan"),
+                "band_top1_accuracy": float("nan")}
+    return {"n": len(errs),
+            "agile_intercept_time_error": float(np.mean(errs)),
+            "band_top1_accuracy": band_hits / max(1, band_n)}
+
+
 PREDICTORS = {"transition": TransitionPredictor,
               "persistence": PersistencePredictor,
               "uniform": UniformPredictor}

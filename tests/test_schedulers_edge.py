@@ -248,7 +248,8 @@ def test_env_extreme_many_bands():
 
 def test_env_zero_emitters_metrics_safe():
     cfg = ScenarioConfig(n_bands=6, T=120, seed=1, n_stationary=0, n_agile=0,
-                         n_periodic=0, n_spatial=0, n_clutter=0)
+                         n_periodic=0, n_spatial=0, n_clutter=0,
+                         n_fhss=0, n_tdma=0)
     env = RFEnvironment(cfg)
     assert env.emitters == []
     from ewsmart.runner import run_episode

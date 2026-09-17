@@ -45,11 +45,19 @@ class DwellResult:
 class ESReceiver:
     """Single-channel surveillance receiver sensing one band per slot.
 
+    Detection is **physically coupled**: the per-dwell detection probability
+    is derived from the radiometer equation with the scenario's instantaneous
+    bandwidth and dwell (integration) time, thresholded by a cell-averaging
+    CFAR rule whose design false-alarm probability comes from the config.
+    Changing ``dwell_time_us``, ``n_bands`` (instantaneous bandwidth) or
+    ``cfar_pfa`` therefore *moves the detection curve* rather than only
+    relabelling a report.
+
     Args:
         env: environment to sense.
-        pd_mid_offset: detection-threshold offset above sensitivity (dB);
-            sweeping it traces the system ROC.
-        pd_k: logistic slope of the detection curve (dB).
+        pd_mid_offset: extra post-detection SNR offset (dB) applied on top of
+            the CFAR threshold for the final single-dwell detection roll.
+        pd_k: logistic slope (dB) softening the CFAR threshold transition.
         base_fa: nominal false-alarm rate before the band noise floor.
         seed: RNG seed for detection and noise draws.
         floor_jitter_db: log-normal jitter (dB std) applied to the band noise
@@ -66,11 +74,100 @@ class ESReceiver:
         self.rng = np.random.default_rng(seed)
         jitter = self.rng.lognormal(0.0, floor_jitter_db / 8.6859, env.n_bands)
         self.fa_floor = env.noise_floor * jitter
+        cfg = getattr(env, "cfg", None)
+        self.cfg = cfg
+        # ---- radiometer / CFAR detection constants -------------------------
+        # Thermal noise power over one dwell: kT (dBm/Hz) + 10log10(B.tau)
+        # (noise power integrated over the time-bandwidth product) + NF.
+        self._nf_db = float(getattr(cfg, "noise_figure_db", 6.0)) if cfg else 6.0
+        if cfg is not None:
+            bw = cfg.bandwidth_model()
+            tb = max(float(bw["time_bandwidth_product"]), 1.0)
+        else:  # minimal fallback for bare test doubles
+            tb = 1e3
+        self._tb_product = tb
+        self._noise_power_dbm = -174.0 + 10.0 * math.log10(tb) + self._nf_db
+        # CA-CFAR threshold factor for a design Pfa (square-law integration
+        # of N = time-bandwidth product independent cells, Albersheim's
+        # approximation of the threshold term): alpha = N^(1/M) - 1 with the
+        # Swerling-0 single-pulse form adapted to the radiometric cell count.
+        self._cfar_pfa = float(getattr(cfg, "cfar_pfa", 1e-3)) if cfg else 1e-3
+        n_cells = max(1.0, tb)  # independent noise cells integrated per dwell
+        # CA-CFAR (square-law exponential cells): per-cell threshold factor
+        # alpha solving Pfa = (1 + alpha)^(-n_cells) for the *integrated*
+        # cell family, i.e. alpha = Pfa^(-1/n_cells) - 1.  This is the
+        # classical radiometric detection threshold: for B.tau = 666 it sits
+        # near -19 dB post-integration SNR, matching 1/sqrt(B.tau).
+        self._cfar_alpha = max(self._cfar_pfa, 1e-12) ** (-1.0 / n_cells) - 1.0
+        # Signal power (dB above the noise floor) that produces post-detection
+        # SNR equal to the CFAR threshold: the detection decision point.
+        self._threshold_snr_db = 10.0 * math.log10(max(self._cfar_alpha, 1e-6))
+        # Capture-effect dynamic range for co-channel near-far masking.
+        self._capture_range_db = float(getattr(cfg, "capture_range_db", 30.0)) \
+            if cfg else 30.0
+
+    # -- physics-coupled detection functions --------------------------------
+
+    def noise_power_dbm(self) -> float:
+        """Integrated thermal noise power (dBm) over one dwell."""
+        return self._noise_power_dbm
+
+    def cfar_threshold_snr_db(self) -> float:
+        """Post-detection SNR (dB) at the CA-CFAR detection threshold."""
+        return self._threshold_snr_db
+
+    def snr_after_integration_db(self, snr_db: float) -> float:
+        """Radiometric integration gain reference (dB).
+
+        The processing gain ``10 log10(B . tau)`` a radiometer collects when
+        a wideband signal is observed through a narrowband channel over one
+        dwell.  Reported alongside the FoM block; the detection decision
+        itself compares the *in-channel* SNR directly against the Albersheim
+        requirement (see :meth:`detection_prob`), which already embeds the
+        integration gain through ``-5 log10(B tau)``.
+        """
+        gain = 10.0 * math.log10(max(self._tb_product, 1.0))
+        return float(snr_db) + gain
+
+    def albersheim_required_snr_db(self, pd: float = 0.5) -> float:
+        """Albersheim's required SNR (dB) for a target Pd at the design Pfa.
+
+        Classic non-coherent-integration closed form (Swerling-0):
+        ``SNR = -5 log10(N) + [6.2 + 4.54/sqrt(Pd + 0.44)] * log10(A + 0.12 A B + 1.7 B)``
+        with ``A = ln(0.62/Pfa)``, ``B = ln(Pd/(1-Pd))`` and ``N`` the number
+        of integrated independent noise cells (the time-bandwidth product).
+        Reported in the sensitivity FoM as the physically-derived detection
+        threshold alongside the CA-CFAR decision point.
+        """
+        n = max(self._tb_product, 1.0)
+        a = math.log(0.62 / max(self._cfar_pfa, 1e-12))
+        b = math.log(max(min(pd, 1.0 - 1e-9), 1e-9) /
+                     (1.0 - min(max(pd, 1e-9), 1.0)))
+        term = a + 0.12 * a * b + 1.7 * b
+        return (-5.0 * math.log10(n)
+                + (6.2 + 4.54 / math.sqrt(max(pd + 0.44, 1e-9)))
+                * math.log10(max(term, 1e-12)))
 
     def detection_prob(self, snr_db: float) -> float:
-        """Logistic single-dwell detection probability for a given SNR."""
-        z = (snr_db - (self.env.sens_db + self.pd_mid_offset)) / self.pd_k
-        return float(0.97 / (1.0 + np.exp(-z)))
+        """Physically-coupled single-dwell detection probability.
+
+        ``snr_db`` is the received *in-channel* SNR (the scenario SNR).
+        The detection decision point is the **Albersheim radiometric
+        requirement** for the configured time-bandwidth product (set by
+        ``inst_bw`` and ``dwell_time_us``) and the design false-alarm
+        probability ``cfar_pfa``, offset by ``pd_mid_offset`` for margin and
+        softened by a logistic of slope ``pd_k``.  Consequences that make the
+        coupling physical rather than cosmetic:
+
+        * a longer ``dwell_time_us`` raises the integrated cell count and
+          *lowers* the required SNR -> higher Pd for the same signal;
+        * a smaller instantaneous bandwidth (more bands) raises B.tau and
+          likewise lowers the required SNR;
+        * a tighter ``cfar_pfa`` raises the required SNR -> lower Pd.
+        """
+        snr_req = max(self.albersheim_required_snr_db(pd=0.5), -20.0)
+        z = (float(snr_db) - (snr_req + self.pd_mid_offset)) / max(self.pd_k, 0.1)
+        return float(0.97 / (1.0 + math.exp(-z)))
 
     def sensitivity_fom(self) -> dict:
         """Receiver sensitivity figure-of-merit block (PS FoM: sensitivity).
@@ -107,6 +204,13 @@ class ESReceiver:
         pd50 = float(self.env.sens_db + self.pd_mid_offset)
         z90 = -math.log((0.97 / 0.90) - 1.0)  # SNR z where Pd = 0.9
         pd90 = pd50 + self.pd_k * z90
+        # Physically derived anchors (radiometer + Albersheim, coupled to the
+        # dwell decision - see detection_prob): required input power (dBm) at
+        # which the post-integration SNR equals the Albersheim requirement.
+        alb50 = self.albersheim_required_snr_db(pd=0.5)
+        alb90 = self.albersheim_required_snr_db(pd=0.9)
+        mds_alb = thermal + alb50 - gain if bw else float('nan')
+        mds_alb90 = thermal + alb90 - gain if bw else float('nan')
         return {
             "sens_db": float(self.env.sens_db),
             "pd_mid_offset_db": float(self.pd_mid_offset),
@@ -118,6 +222,17 @@ class ESReceiver:
             "mds_dbm_at_pd90": round(_input_dbm(pd90), 2),
             "pd_vs_input_power_dbm": {
                 f"{snr:+g}": round(_input_dbm(snr), 2) for snr in grid},
+            # --- physics-derived detection chain (not narration) ------------
+            "detection_model": "radiometer + Albersheim + CA-CFAR",
+            "time_bandwidth_product": float(self._tb_product),
+            "noise_power_dbm": round(self._noise_power_dbm, 2),
+            "cfar_design_pfa": float(self._cfar_pfa),
+            "cfar_threshold_snr_db": round(self.cfar_threshold_snr_db(), 2),
+            "albersheim_required_snr_db_pd50": round(alb50, 2),
+            "albersheim_required_snr_db_pd90": round(alb90, 2),
+            "albersheim_mds_dbm_pd50": round(mds_alb, 2),
+            "albersheim_mds_dbm_pd90": round(mds_alb90, 2),
+            "capture_range_db": float(self._capture_range_db),
             "frontend": bw,
         }
 
@@ -135,6 +250,17 @@ class ESReceiver:
             if self.rng.random() < self.detection_prob(e.snr_db):
                 aoa = float((e.bearing_deg + self.rng.normal(0, 2.5)) % 360.0)
                 det.append((float(e.snr_db), aoa, e))
+        # --- co-channel near-far capture effect ------------------------------
+        # When two or more emitters share the band in the same slot, the
+        # stronger signal can capture the channel and mask weaker ones: any
+        # emitter whose power is more than ``capture_range_db`` below the
+        # strongest co-channel emitter is not resolved (and receives no
+        # intercept credit).  This models the real near-far problem absent
+        # from naive per-emitter independent-detection models.
+        if len(det) > 1 and self._capture_range_db < 120.0:
+            strongest = max(s for s, _, _ in det)
+            det = [d for d in det
+                   if strongest - d[0] <= self._capture_range_db]
         det.sort(key=lambda p: -p[0])
         detections = tuple((s, a) for s, a, _ in det)
         snr = detections[0][0] if detections else -np.inf

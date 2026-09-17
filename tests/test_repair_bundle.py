@@ -177,7 +177,7 @@ def test_transmission_intercept_fraction_handbuilt_perfect():
     # a transmission-intercept fraction of exactly 1.0.
     env = RFEnvironment(n_bands=8, T=120, seed=3, n_stationary=1,
                         n_agile=0, n_periodic=0, n_spatial=0,
-                        n_evasive=0, n_clutter=0)
+                        n_evasive=0, n_clutter=0, n_fhss=0, n_tdma=0)
     sta = [e for e in env.emitters if e.kind == "stationary"][0]
     band, eid = sta.home_band, sta.eid
     assert np.all(env.band_seq[eid] == band), "stationary emitter always on"
