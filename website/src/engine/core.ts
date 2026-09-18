@@ -27,6 +27,10 @@ export interface Emitter {
   bearingDeg: number;
   homeBand: number;
   hopSet: number[];
+  /** LPI waveform (energy spread over a large time-bandwidth product). */
+  lpi?: boolean;
+  /** Coherent time-bandwidth product of the waveform. */
+  tbProduct?: number;
   dwell: number;
   period: number;
   onLen: number;
@@ -49,6 +53,12 @@ export interface Scenario {
   periodRange: [number, number];
   freqMinMhz: number;
   freqMaxMhz: number;
+  /** Share of radars using LPI waveforms (teardown rev. 5). */
+  lpiFraction?: number;
+  /** Matched-filter / de-chirp chain on the receiver (default on). */
+  matchedFilter?: boolean;
+  /** AOA measurement model: interferometer (CRLB) or fixed 2.5 deg. */
+  aoaModel?: "interferometer" | "fixed";
 }
 
 export const DEFAULT_SCENARIO: Scenario = {
@@ -96,10 +106,21 @@ export class RFEnvironment {
       const p = kind === "stationary" || kind === "agile"
         ? 1 : Math.round(cfg.periodRange[0] + r() *
             (cfg.periodRange[1] - cfg.periodRange[0]));
+      // LPI waveform: energy spread over a large time-bandwidth product, so
+      // the in-channel SNR is lower by exactly the gain a matched filter
+      // recovers (mirrors environment.py's LPI emitter model).
+      const lpi = (kind !== "agile") &&
+        r() < (cfg.lpiFraction ?? 0);
+      const tb = lpi ? 256 : 1;
+      const rawSnr = cfg.snrMeanDb + randn(r) * cfg.snrStdDb;
       this.emitters.push({
         eid: eid++,
         kind, threat,
-        snrDb: Math.max(2, cfg.snrMeanDb + randn(r) * cfg.snrStdDb),
+        snrDb: lpi
+          ? rawSnr - 10 * Math.log10(tb)
+          : Math.max(2, rawSnr),
+        lpi,
+        tbProduct: tb,
         freqMhz: +(bandFreq(band, cfg) + randn(r) * 8).toFixed(1),
         bearingDeg: +((Math.atan2(rad * Math.sin(ang), rad * Math.cos(ang))
           * 180 / Math.PI % 360 + 360) % 360).toFixed(1),
@@ -186,14 +207,35 @@ export class ESReceiver {
     const z = (snrDb - (-10 + this.pdMidOffset)) / this.pdK;
     return 0.97 / (1 + Math.exp(-z));
   }
+  /** Matched-filter / de-chirp coherent gain for an LPI waveform (dB). */
+  private mfGain(e: Emitter): number {
+    if (!e.lpi || !(this.env.cfg as any).matchedFilter) return 0;
+    return 10 * Math.log10(Math.max(e.tbProduct ?? 1, 1));
+  }
+  /**
+   * Dual-baseline phase-interferometer AOA error (deg), CRLB-coupled.
+   * sigma_theta = lambda / (2*pi*d*cos(theta)) * 1/sqrt(2*SNR), fine baseline
+   * d = 0.20 m.  The legacy constant 2.5 deg model stays selectable so the
+   * two can be compared live.
+   */
+  private aoaError(e: Emitter): number {
+    if ((this.env.cfg as any).aoaModel === "fixed") return 2.5;
+    const lam = 299792458 / (e.freqMhz * 1e6);
+    const snrLin = Math.pow(10, (e.snrDb + this.mfGain(e)) / 10);
+    const sigmaPhi = 1 / Math.sqrt(2 * snrLin);
+    const deg = (lam / (2 * Math.PI * 0.20 * 0.7071)) * sigmaPhi * 180 / Math.PI;
+    return Math.min(45, deg);
+  }
   dwell(band: number, t: number): DwellResult {
     const ems = this.env.emittersAt(band, t);
     const dets: DwellResult["detections"] = [];
     for (const e of ems) {
-      if (this.rng() < this.detectionProb(e.snrDb)) {
+      const gain = this.mfGain(e);
+      if (this.rng() < this.detectionProb(e.snrDb + gain)) {
+        const sigma = this.aoaError(e);
         dets.push({
-          snrDb: e.snrDb,
-          aoaDeg: (e.bearingDeg + this.rng() * 5 - 2.5 + 360) % 360,
+          snrDb: e.snrDb + gain,
+          aoaDeg: (e.bearingDeg + randn(this.rng) * sigma + 360) % 360,
           eid: e.eid,
         });
       }
