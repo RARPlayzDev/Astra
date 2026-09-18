@@ -81,6 +81,11 @@ export default function Operations({ resetKey, running, onStartMission }: Props)
   const [nTdma, setNTdma] = useState(2);
   const [cfarPfa, setCfarPfa] = useState(0.001);
   const [dwellUs, setDwellUs] = useState(1);
+  // Fidelity controls (teardown rev. 5): LPI waveform share, the receiver's
+  // matched-filter chain, and the AOA measurement model.
+  const [lpiFraction, setLpiFraction] = useState(0);
+  const [matchedFilter, setMatchedFilter] = useState(true);
+  const [aoaModel, setAoaModel] = useState("interferometer");
   const bufs = useRef<Record<string, Buf>>({ smart: newBuf(), other: newBuf() });
   const canvases = useRef<Record<string, HTMLCanvasElement | null>>({
     "smart-scan": null, other: null,
@@ -134,7 +139,8 @@ export default function Operations({ resetKey, running, onStartMission }: Props)
   const launch = () => {
     kpisSideName.current = schedA;
     onStartMission({ schedA, schedB, teamSize, sensOffset: sens, useSaved,
-                     nFhss, nTdma, cfarPfa, dwellTimeUs: dwellUs });
+                     nFhss, nTdma, cfarPfa, dwellTimeUs: dwellUs,
+    lpiFraction, matchedFilter, aoaModel });
   };
 
   const names = Object.keys(kpis);
@@ -261,6 +267,27 @@ export default function Operations({ resetKey, running, onStartMission }: Props)
             <select value={dwellUs}
                     onChange={(e) => setDwellUs(Number(e.target.value))}>
               {[0.1, 1, 5, 20].map((v) => <option key={v} value={v}>{v} &micro;s</option>)}
+            </select>
+          </label>
+          <label>LPI waveform share
+            <select value={lpiFraction}
+                    onChange={(e) => setLpiFraction(Number(e.target.value))}>
+              {[0, 0.2, 0.5, 1].map((v) => (
+                <option key={v} value={v}>{Math.round(v * 100)}%</option>))}
+            </select>
+          </label>
+          <label>Matched filter
+            <select value={matchedFilter ? "on" : "off"}
+                    onChange={(e) => setMatchedFilter(e.target.value === "on")}>
+              <option value="on">on (de-chirp bank)</option>
+              <option value="off">off (plain radiometer)</option>
+            </select>
+          </label>
+          <label>AOA model
+            <select value={aoaModel}
+                    onChange={(e) => setAoaModel(e.target.value)}>
+              <option value="interferometer">interferometer (CRLB)</option>
+              <option value="fixed">fixed 2.5&deg;</option>
             </select>
           </label>
         </div>
