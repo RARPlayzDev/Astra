@@ -21,8 +21,9 @@ codebase can understand every claim.*
 9. [How to run everything](#9-how-to-run-everything)
 10. [Market landscape: what competes with this](#10-market-landscape-what-competes-with-this)
 11. [Our unique factor](#11-our-unique-factor)
-12. [Honest limitations](#12-honest-limitations)
-13. [Glossary](#13-glossary)
+12. [Simulation fidelity: signal level and hardware](#12-simulation-fidelity-signal-level-and-hardware)
+13. [Honest limitations](#13-honest-limitations)
+14. [Glossary](#14-glossary)
 
 ---
 
@@ -340,27 +341,95 @@ Six elements, in decreasing order of defensibility:
    scheduling → identification, closing the loop the problem statement asked
    for, offline-first.
 6. **Total reproducibility discipline.** Seeds, JSON scenarios, strict JSON
-   outputs, pickle-free artifacts, 250 tests, one-command Docker. Everything a
+   outputs, pickle-free artifacts, 306 tests, one-command Docker. Everything a
    government evaluator would ask to verify a claim already exists in the box.
 
 **Trademark sentence for the pitch:** *SmartScan turns the receiver from a
 torch swept in the dark into an investigator that learns the room — same
 hardware, same spectrum, radically more found.*
 
-## 12. Honest limitations
+## 12. Simulation fidelity: signal level and hardware
+
+A fair criticism of any scheduler study is that it can hide behind its
+abstraction. ASTRA now implements the signal-processing and hardware layers
+that sit underneath the scheduling decision, so the abstraction is a documented
+choice rather than a gap.
+
+**Pulse-level deinterleaving.** A real ES receiver's wideband front-end sees an
+interleaved stream of pulses from every emitter in view — at combat densities
+105–106 pulses per second — and must separate it back into individual emitters
+before anything can be tracked. `ewsmart/deinterleave.py` does exactly that:
+descriptor clustering on (RF, pulse width, AOA), an all-pairs
+difference-of-time-of-arrival histogram for the dominant PRI, coarse-to-fine
+period sharpening by phase-histogram entropy minimisation, and a circular-phase
+test that discriminates fixed, staggered and jittered pulse trains. On a
+four-emitter test scene (fixed 250 µs, staggered three-level 97 µs, jittered
+410 µs ±12%, LPI 600 µs) it recovers every emitter: pulse purity 1.0,
+fragmentation 1.0, mean PRI error 0.4%, PRI-model classification 100%.
+
+**Waveform classes and the matched filter.** Emitters carry a waveform class
+(`pulsed`, `lpi_fmcw`, `lpi_barker`) and a time-bandwidth product. A Low
+Probability of Intercept emitter's in-channel SNR is reduced by exactly
+`10 log10(BT)`, so it is invisible to a plain radiometer — and a receiver
+running the matched-filter / de-chirp bank earns that gain back. Measured on a
+−14 dB emitter with BT = 256: **283 of 300 dwells detected with matched
+filtering, 5 of 300 without.**
+
+**Front-end hardware.** `ewsmart/frontend.py` models what the hardware does to
+a dwell: synthesiser settling time blanks part of every retuned dwell (lost
+integration time, hence lost processing gain), a strong signal above the 1 dB
+compression point raises the noise floor and desensitises weaker co-channel
+emitters, mixer non-linearity folds third-order intermodulation products and
+image/mixer spurs into the band, and a saturating ADC folds odd harmonics back.
+Below P1dB the model is exactly linear, so attaching a front-end never changes
+normal operation.
+
+**Angle of arrival.** Instead of a constant 2.5° Gaussian bearing error, the
+receiver runs a dual-baseline phase interferometer whose error follows the
+Cramér–Rao bound — so it depends on SNR and frequency, and weak or
+high-frequency emitters fingerprint poorly. At 20 dB SNR the measured error is
+0.35–0.5° and unbiased across all bearings; at −10 dB it degrades to tens of
+degrees, exactly as the bound predicts.
+
+**Portability.** The per-slot decision is also implemented in Q8.8 saturating
+fixed point (`ewsmart/realtime.py`): an O(n_bands) integer multiply-accumulate
+with no dynamic allocation and no per-slot transcendental. Over 200 randomised
+states it matches the float reference argmax, and `tools/export_cpp_kernel.py`
+emits the same arithmetic as compilable C++ for an FPGA/DSP port.
+
+**Learning in the decision core.** `ewsmart/meta.py` adds a LinUCB contextual
+bandit over the scheduler's five behaviours. Every dwell outcome trains it on
+which behaviour paid in which situation; a safe action mask means it can never
+select a behaviour whose preconditions do not hold. A full episode trains it
+from 500+ outcome triples, and its learned preferences are directly
+inspectable.
+
+**Scale-invariant tuning.** `ewsmart/calibration.py` derives the behaviour
+constants from the scenario scale (bands, horizon, emitter density) instead of
+hard-coding values tuned for one spectrum size — and reproduces the canonical
+constants exactly, so it is a no-op where the tuning is known good.
+
+## 13. Honest limitations
 
 Stated up front, because credibility is part of the product:
 
-- Detection physics are simplified (logistic Pd curve; scalar bearing, no
-  elevation or full antenna patterns).
-- The DQN reference declines on this sparse-reward task; stronger architectures
-  (dueling, n-step, PPO) are future work.
-- Hardware-in-the-loop has been engineered (UDP PDW bridge) but not yet filmed
-  against physical RF equipment.
+- There is no digitised-I/Q simulation: the receiver works on PDWs and dwell
+  statistics, with modulation represented by waveform class and processing
+  gain.
+- Deinterleaving is the classical textbook pipeline (clustering + DTOA/PRI
+  estimation), not a learned deinterleaver.
+- Propagation is geometric — path loss, multipath and terrain are not modelled.
+- The learned behaviour arbiter currently trains in shadow mode; letting it fly
+  the mission directly is the next step.
+- The DQN reference declines on this sparse-reward task; the flagship is a
+  designed hybrid with online learning, and deep-RL improvement remains future
+  work.
+- Decision latency is Python-bound (~0.5–0.8 ms); the fixed-point kernel and
+  generated C++ header are the porting path to hardware budgets.
 - Identification library profiles are illustrative public-domain classes, not
   operational ELINT data.
 
-## 13. Glossary
+## 14. Glossary
 
 | Term | Meaning |
 |---|---|

@@ -113,6 +113,40 @@ def test_spa_root_served_when_built():
         assert b"root" in r.content
 
 
+def test_ps_coverage_ml_checks_report_measured_learning():
+    """The PS-coverage audit must assert *measured* learning, not stubs.
+
+    Regression: the ML-scheduler check used to pass on the mere existence of
+    an ``end_episode`` method, and the hits/misses training check was
+    hardcoded ``True``.
+    """
+    if not _HAS_API:
+        return _skip()
+    r = client.get("/api/ps-coverage", params={"seed": 0})
+    assert r.status_code == 200
+    checks = {c["check"]: c for c in r.json()["checks"]}
+    ml = checks["schedulers_ml"]["evidence"]["measured"]
+    tr = checks["training_hits_misses"]["evidence"]["measured"]
+    for key in ("logistic_weight_max_delta", "value_ema_max_delta",
+                "dwell_updates", "hop_streams_learned"):
+        assert key in ml, f"ML check must report measured {key}"
+    for key in ("episodes_seen", "memory_mu_max_delta",
+                "logit_observations", "hop_streams_persisted"):
+        assert key in tr, f"training check must report measured {key}"
+    assert ml["logistic_weight_max_delta"] > 1e-9
+    assert ml["value_ema_max_delta"] > 1e-9
+    assert ml["dwell_updates"] > 0
+    assert tr["episodes_seen"] >= 1
+    assert tr["logit_observations"] > 0
+    # ...and the pass flag must be derived from those measurements.
+    assert checks["schedulers_ml"]["ok"] == (
+        ml["logistic_weight_max_delta"] > 1e-9
+        and ml["value_ema_max_delta"] > 1e-9)
+    assert checks["training_hits_misses"]["ok"] == (
+        tr["episodes_seen"] >= 1 and tr["memory_mu_max_delta"] > 1e-9
+        and tr["logit_observations"] > 0)
+
+
 if __name__ == "__main__":
     fns = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     for fn in fns:

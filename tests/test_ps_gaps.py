@@ -230,6 +230,23 @@ def test_scalability_study_small():
             assert 0.0 <= agg["intercept_ratio"] <= 1.0
 
 
+def test_scalability_study_covers_comint_emitters():
+    """The multi-scale study must exercise the full PS emitter mix.
+
+    Regression: `n_fhss` / `n_tdma` used to be omitted from the scalability
+    conditions, so the study silently measured radar-only scenes.
+    """
+    out = scalability_study(band_sizes=(8,), emitter_counts=(12,), T=600,
+                            trials=1, base_seed=4242)
+    cond = out["conditions"][0]
+    assert cond["n_fhss"] >= 1 and cond["n_tdma"] >= 1, \
+        "scalability conditions must include COMINT emitters"
+    for name, agg in cond["results"].items():
+        for key in ("ir_fhss", "ir_tdma", "ir_comm"):
+            assert key in agg, f"{name} aggregate missing {key}"
+            assert 0.0 <= agg[key] <= 1.0
+
+
 # ---------------------------------------------------------------------------
 # Config validation for the new knobs
 # ---------------------------------------------------------------------------

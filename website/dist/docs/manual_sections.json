@@ -1,0 +1,90 @@
+[
+  {
+    "id": "contents",
+    "title": "Contents"
+  },
+  {
+    "id": "1-introduction",
+    "title": "1. Introduction"
+  },
+  {
+    "id": "2-installation",
+    "title": "2. Installation"
+  },
+  {
+    "id": "3-quick-start",
+    "title": "3. Quick start"
+  },
+  {
+    "id": "4-interface-tour",
+    "title": "4. Interface tour"
+  },
+  {
+    "id": "5-operations-perspective",
+    "title": "5. Operations perspective"
+  },
+  {
+    "id": "6-analysis-perspective",
+    "title": "6. Analysis perspective"
+  },
+  {
+    "id": "7-data-sources-perspective",
+    "title": "7. Data & Sources perspective"
+  },
+  {
+    "id": "8-radar-and-sensor-integration",
+    "title": "8. Radar and sensor integration"
+  },
+  {
+    "id": "9-scenarios",
+    "title": "9. Scenarios"
+  },
+  {
+    "id": "10-datasets-and-calibration",
+    "title": "10. Datasets and calibration"
+  },
+  {
+    "id": "11-scheduling-policies",
+    "title": "11. Scheduling policies"
+  },
+  {
+    "id": "12-evaluation-methodology",
+    "title": "12. Evaluation methodology"
+  },
+  {
+    "id": "13-diagnostics-and-troubleshooting",
+    "title": "13. Diagnostics and troubleshooting"
+  },
+  {
+    "id": "14-testing-without-a-radar",
+    "title": "14. Testing without a radar"
+  },
+  {
+    "id": "15-architecture-reference",
+    "title": "15. Architecture reference"
+  },
+  {
+    "id": "16-local-api-reference",
+    "title": "16. Local API reference"
+  },
+  {
+    "id": "17-command-line-tools",
+    "title": "17. Command-line tools"
+  },
+  {
+    "id": "18-file-formats",
+    "title": "18. File formats"
+  },
+  {
+    "id": "19-frequently-asked-questions",
+    "title": "19. Frequently asked questions"
+  },
+  {
+    "id": "20-glossary",
+    "title": "20. Glossary"
+  },
+  {
+    "id": "21-simulation-fidelity-reference",
+    "title": "21. Simulation fidelity reference"
+  }
+]

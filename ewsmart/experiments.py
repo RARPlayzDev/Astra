@@ -921,9 +921,10 @@ def scalability_study(band_sizes=(24, 64, 128), emitter_counts=(25, 60, 100),
 
     Runs paired Monte Carlo episodes across increasing spectrum sizes
     (``n_bands``) and emitter populations (stationary+agile+periodic+spatial
-    density), reporting interception ratio, threat coverage, TTFF and hit
-    rate per condition.  Addresses the "no scalability study beyond 40-50
-    emitters" evaluation gap.
+    density, plus FHSS/TDMA COMINT emitters scaled with the population),
+    reporting interception ratio, threat coverage, TTFF, hit rate and the
+    COMINT interception ratio per condition.  Addresses the "no scalability
+    study beyond 40-50 emitters" evaluation gap.
     """
     from .environment import RFEnvironment
     from .config import ScenarioConfig
@@ -938,13 +939,18 @@ def scalability_study(band_sizes=(24, 64, 128), emitter_counts=(25, 60, 100),
             na = max(1, n_emit // 6)
             npe = max(1, n_emit // 8)
             nsp = max(1, n_emit // 12)
+            # COMINT emitters scale with the population too: the study must
+            # exercise the full "communication *or* radar" emitter mix.
+            nfh = max(1, n_emit // 12)
+            ntd = max(1, n_emit // 20)
             per_sched: dict[str, list] = {}
             for tr in range(trials):
                 seed = base_seed + 131 * tr + n_bands * 7 + n_emit
                 cfg = ScenarioConfig(n_bands=n_bands, T=T, seed=seed,
                                      n_stationary=ns, n_agile=na,
                                      n_periodic=npe, n_spatial=nsp,
-                                     n_clutter=max(2, ns // 2))
+                                     n_clutter=max(2, ns // 2),
+                                     n_fhss=nfh, n_tdma=ntd)
                 env = RFEnvironment(cfg)
                 for make in (lambda nb: SequentialSweep(nb, seed),
                              lambda nb: RandomScan(nb, seed),
@@ -964,8 +970,15 @@ def scalability_study(band_sizes=(24, 64, 128), emitter_counts=(25, 60, 100),
                         [m["threat_mean_ttff"] for m in ms])),
                     "intercept_rate": float(np.mean(
                         [m["intercept_rate"] for m in ms])),
+                    "ir_fhss": float(np.nanmean(
+                        [m.get("ir_fhss", float("nan")) for m in ms])),
+                    "ir_tdma": float(np.nanmean(
+                        [m.get("ir_tdma", float("nan")) for m in ms])),
+                    "ir_comm": float(np.nanmean(
+                        [m.get("ir_comm", float("nan")) for m in ms])),
                 }
             out.append({"n_bands": n_bands, "n_emitters": len(env.emitters),
+                        "n_fhss": nfh, "n_tdma": ntd,
                         "trials": trials, "results": agg})
     return {"conditions": out}
 

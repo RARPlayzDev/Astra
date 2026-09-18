@@ -244,13 +244,23 @@ def live_start(n_bands: int = 24, T: int = 2400, speed: int = 400,
                team_size: int = 1, sens_offset: float = 6.0,
                use_saved: bool = False,
                n_fhss: int = 3, n_tdma: int = 2,
-               cfar_pfa: float = 1e-3, dwell_time_us: float = 1.0) -> dict:
+               cfar_pfa: float = 1e-3, dwell_time_us: float = 1.0,
+               lpi_fraction: float = 0.0, matched_filter: bool = True,
+               aoa_model: str = "interferometer") -> dict:
     """Start (or restart) the paired live arena with full configuration.
 
     PS-coverage parameters: ``n_fhss`` / ``n_tdma`` inject communication
     signals (COMINT half of the PS), ``cfar_pfa`` sets the CA-CFAR design
     false-alarm probability, and ``dwell_time_us`` is the radiometric
     integration time that physically moves the detection curve.
+
+    Fidelity parameters: ``lpi_fraction`` sets the share of radars using Low
+    Probability of Intercept waveforms, ``matched_filter`` enables the
+    receiver's matched-filter/de-chirp chain (without it LPI emitters stay
+    buried below the noise floor), and ``aoa_model`` selects the bearing
+    measurement model (``interferometer`` = dual-baseline phase
+    interferometer with CRLB-coupled error, or ``fixed`` for the legacy
+    constant-error model used in A/B comparisons).
     """
     global arena
     if scenario:
@@ -269,7 +279,9 @@ def live_start(n_bands: int = 24, T: int = 2400, speed: int = 400,
                           sched_a=sched_a, sched_b=sched_b,
                           team_size=team_size, sens_offset=sens_offset,
                           use_saved=use_saved, n_fhss=n_fhss, n_tdma=n_tdma,
-                          cfar_pfa=cfar_pfa, dwell_time_us=dwell_time_us)
+                          cfar_pfa=cfar_pfa, dwell_time_us=dwell_time_us,
+                          lpi_fraction=lpi_fraction,
+                          matched_filter=matched_filter, aoa_model=aoa_model)
         arena.start()
     except ValueError as exc:
         raise HTTPException(422, str(exc))
@@ -277,7 +289,10 @@ def live_start(n_bands: int = 24, T: int = 2400, speed: int = 400,
             "n_bands": n_bands, "T": T, "team_size": arena.team_size,
             "sens_offset": sens_offset, "use_saved": use_saved,
             "n_fhss": arena.n_fhss, "n_tdma": arena.n_tdma,
-            "cfar_pfa": arena.cfar_pfa, "dwell_time_us": arena.dwell_time_us}
+            "cfar_pfa": arena.cfar_pfa, "dwell_time_us": arena.dwell_time_us,
+            "lpi_fraction": arena.lpi_fraction,
+            "matched_filter": arena.matched_filter,
+            "aoa_model": arena.aoa_model}
 
 
 @app.post("/api/live/stop")
@@ -436,22 +451,57 @@ def _ps_coverage_part2(env, seed, checks, SmartScanScheduler,
     per-cycle coverage, COMINT identification, reward/cost FoM."""
     from ewsmart.metrics import json_safe
     s = SmartScanScheduler(env.n_bands, seed=seed)
+    # Snapshot the scheduler's learned parameters *before* the episode so
+    # the ML/training checks assert measured weight movement, not the mere
+    # existence of a method.
+    w0 = [lg.w.copy() for lg in s.logit]
+    mu0 = s.mu.copy()
     tr = run_episode(env, s, seed=seed + 1)
     m = compute_metrics(env, tr)
 
+    # Check: the scheduler actually *learned* during the episode - every
+    # learned component (online logistic occupancy weights, per-band value
+    # EMAs, causal hop-transition counts) must have moved from its
+    # pre-episode state.
+    w_delta = max(float(np.max(np.abs(lg.w - w_)))
+                  for lg, w_ in zip(s.logit, w0))
+    mu_delta = float(np.max(np.abs(s.mu - mu0)))
+    visits = int(np.sum(s.n)) - s.n_bands  # n starts at ones, +1 per visit
     checks.append({
         "check": "schedulers_ml",
         "ps_phrase": "robust scheduler using machine learning",
-        "ok": callable(getattr(s, "end_episode", None)),
+        "ok": (w_delta > 1e-9 and mu_delta > 1e-9
+               and callable(getattr(s, "end_episode", None))),
         "evidence": {"smart_scan_learners": [
             "value-EMAs", "online logistic", "hop-transition counts"],
-            "also": ["UCB bandit", "linear Q", "DQN"]}})
+            "also": ["UCB bandit", "linear Q", "DQN"],
+            "measured": {
+                "logistic_weight_max_delta": round(w_delta, 6),
+                "value_ema_max_delta": round(mu_delta, 6),
+                "dwell_updates": visits,
+                "hop_streams_learned": len(s.hop_succ)}}})
     s.end_episode()
+    # Check: cross-episode training on hits/misses is real - the episode's
+    # statistics must have been consolidated into persistent memory (value
+    # EMAs differing from the pre-episode state, logistic observations
+    # consumed, and episode counter advanced).
+    mem = s.memory
+    mem_mu_delta = (float(np.max(np.abs(mem["mu"] - mu0)))
+                    if mem is not None else 0.0)
+    logit_obs = sum(int(v) for v in (mem["logit_n"] if mem else []))
     checks.append({
         "check": "training_hits_misses",
         "ps_phrase": "model trained based on hits and misses",
-        "ok": True,
-        "evidence": {"mechanism": "cross-episode value/occupancy consolidation"}})
+        "ok": (mem is not None and s.episodes_seen >= 1
+               and mem_mu_delta > 1e-9 and logit_obs > 0),
+        "evidence": {"mechanism":
+                     "cross-episode value/occupancy consolidation",
+                     "measured": {
+                         "episodes_seen": s.episodes_seen,
+                         "memory_mu_max_delta": round(mem_mu_delta, 6),
+                         "logit_observations": logit_obs,
+                         "hop_streams_persisted":
+                             len(mem["hop_succ"]) if mem else 0}}})
     checks.append({
         "check": "periodic_optimal",
         "ps_phrase": "approaches to intercept a periodic scan receiver "

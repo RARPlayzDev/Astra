@@ -10,6 +10,9 @@ import math
 import numpy as np
 from dataclasses import dataclass
 
+from .deinterleave import matched_filter_gain_db
+from .aoa import measure_aoa
+
 
 @dataclass
 class DwellResult:
@@ -105,6 +108,20 @@ class ESReceiver:
         # Capture-effect dynamic range for co-channel near-far masking.
         self._capture_range_db = float(getattr(cfg, "capture_range_db", 30.0)) \
             if cfg else 30.0
+        # Matched-filter / de-chirp chain: when enabled, an LPI emitter's
+        # in-channel SNR is credited the coherent processing gain of its
+        # waveform (10 log10 of the time-bandwidth product) before the
+        # detection roll.  With the chain off, LPI emitters stay buried.
+        self._matched_filter = bool(getattr(cfg, "matched_filter", True)) \
+            if cfg else True
+        self._aoa_model = str(getattr(cfg, "aoa_model", "interferometer")) \
+            if cfg else "interferometer"
+        # Analogue front-end impairment model (synthesiser settling, LNA
+        # compression/blocking).  Optional: None keeps the ideal-window
+        # abstraction; a FrontEnd instance makes retune blanking and
+        # blocking *cost* something measurable.
+        self._last_band: int | None = None
+        self._frontend = None  # optional FrontEnd (attach_front_end)
 
     # -- physics-coupled detection functions --------------------------------
 
@@ -237,6 +254,19 @@ class ESReceiver:
         }
 
 
+    def attach_front_end(self, frontend) -> None:
+        """Attach an analogue front-end impairment model.
+
+        Once attached, two physical effects modify the dwell:
+
+        * **retune blanking** - the first ``settling_time_us`` of a dwell
+          that follows a band change is lost to synthesiser settling, which
+          shortens the effective integration time (less processing gain);
+        * **blocking** - a co-channel signal above the LNA's P1dB raises the
+          noise floor, so weaker co-channel emitters are desensitised.
+        """
+        self._frontend = frontend
+
     def dwell(self, band: int, t: int, build_pdws: bool = True) -> DwellResult:
         """Tune to ``band`` at slot ``t`` and return the measurement result.
 
@@ -245,11 +275,36 @@ class ESReceiver:
                 simulation where PDWs are not streamed to a client).
         """
         ems = self.env.emitters_at(band, t)
+        # -- analogue front-end impairments (optional) ------------------------
+        retune_penalty_db = 0.0
+        if self._frontend is not None:
+            dwell_us = float(getattr(self.cfg, "dwell_time_us", 1000.0)) \
+                if self.cfg else 1000.0
+            eff = self._frontend.effective_dwell_us(dwell_us,
+                                                    band != self._last_band)
+            if dwell_us > 0 and eff < dwell_us:
+                # Less integration time -> proportionally less processing
+                # gain, i.e. a higher effective detection threshold.
+                retune_penalty_db = 10.0 * math.log10(dwell_us / eff)
+        self._last_band = band
         det = []
         for e in ems:
-            if self.rng.random() < self.detection_prob(e.snr_db):
-                aoa = float((e.bearing_deg + self.rng.normal(0, 2.5)) % 360.0)
-                det.append((float(e.snr_db), aoa, e))
+            snr_eff = e.snr_db
+            if self._matched_filter and e.lpi:
+                # Coherent processing gain of the matched filter / de-chirp
+                # bank against this waveform class (0 dB for pulsed).
+                snr_eff = e.snr_db + matched_filter_gain_db(e)
+            snr_eff -= retune_penalty_db
+            if self.rng.random() < self.detection_prob(snr_eff):
+                if self._aoa_model == "interferometer":
+                    # Dual-baseline phase interferometer: the AOA error is
+                    # CRLB-coupled to SNR and frequency, not a constant.
+                    aoa, _ = measure_aoa(e.bearing_deg, e.freq_mhz,
+                                         snr_eff, self.rng)
+                else:
+                    aoa = float((e.bearing_deg
+                                 + self.rng.normal(0, 2.5)) % 360.0)
+                det.append((float(snr_eff), float(aoa), e))
         # --- co-channel near-far capture effect ------------------------------
         # When two or more emitters share the band in the same slot, the
         # stronger signal can capture the channel and mask weaker ones: any

@@ -1,5 +1,108 @@
 # Changelog
 
+## Unreleased — fidelity rev. 5 (2026-09-18)
+
+### Added
+- **Pulse-level ESM chain** (`ewsmart/deinterleave.py`): PDW synthesis with PRI
+  models (fixed/staggered/jittered), `interleave`, and a real deinterleaver
+  (descriptor clustering → DTOA histogram → entropy-minimised period sharpening
+  → PRI-model classification) with an accuracy scorer. Measured: 4/4 emitters
+  recovered, purity 1.0, PRI error 0.4%, model accuracy 100%.
+- **LPI waveforms + matched filter**: waveform class and time-bandwidth product
+  per emitter; in-channel SNR reduced by 10log10(BT) and recovered by the
+  receiver's matched-filter/de-chirp chain (`matched_filter` config, default on).
+  Measured: −14 dB emitter, 283/300 dwells with the filter vs 5/300 without.
+- **RF front-end impairment model** (`ewsmart/frontend.py`): synthesiser
+  settling/blanking, LNA blocking above P1dB, third-order intermodulation and
+  image/mixer spurs, ADC saturation fold-back. `ESReceiver.attach_front_end()`.
+- **Interferometric AOA** (`ewsmart/aoa.py`): dual-baseline phase interferometer
+  with CRLB-coupled error and ambiguity resolution; wired into the receiver
+  (`aoa_model`, default `interferometer`). Measured: 0.35–0.5° at 20 dB SNR,
+  unbiased across all bearings.
+- **Learned behaviour arbitration** (`ewsmart/meta.py`): LinUCB bandit over the
+  scheduler's behaviours, trained online from every dwell outcome (shadow mode),
+  with a safe action mask and inspectable preferences.
+- **Scenario auto-calibration** (`ewsmart/calibration.py`): behaviour constants
+  derived from band count, horizon and emitter density; canonical-exact.
+- **Fixed-point real-time kernel** (`ewsmart/realtime.py`) and the
+  **C++ port exporter** (`tools/export_cpp_kernel.py`): Q8.8 integer decision
+  kernel, O(n_bands), no allocation, no per-slot transcendental; matches the
+  float reference argmax over 200 randomised states.
+- **Documentation pipeline** (`tools/export_docs.py`): the user manual is now the
+  single source for the website bundle, the downloadable markdown and the site's
+  section index.
+- **`documentation.md`** at the repository root: complete feature-by-feature
+  documentation for evaluation, including verification and limitations.
+- **Regression tests** (`tests/test_fidelity_upgrades.py`, 19 tests) for every
+  item above; suite total 306.
+
+### Changed
+- `docs/ASTRA_Software_Documentation.md` gains chapter 21 (simulation fidelity);
+  the website's Documentation page renders it (build verified).
+- Two statistics fixtures were made robust (`test_smartscan_beats_sequential`,
+  `test_qlearning_improves_with_training`): they averaged over too few
+  landscapes, so the seed lottery decided the assertion.
+- `PROJECT_EXPLAINED.md` gains the fidelity chapter and revised limitations.
+
+## Unreleased — teardown v2 remediation rev. 4 (2026-09-18)
+
+### Added
+- **`HopDwellPredictor` wired into live band selection** (`ewsmart/schedulers.py`,
+  `ewsmart/prediction.py`): the per-stream dwell/transition predictor is now fed
+  by every resolved detection (`SmartScanScheduler._observe_hop`) and consumed
+  inside `select()` by `_hop_pursuit()`. It was previously only reachable from
+  the offline `evaluate_agile_intercept_time()` helper and a test.
+- **Confidence-gated agile-hop pursuit, enabled by default** (`hop_patrol=True`).
+  It fires only when a stream's model has a majority successor, the predicted
+  hop window is imminent, the target band is not already covered densely by the
+  rotation, the pursuit-outcome gate is open, and the survey phase is over.
+  Regressions previously cited (pursuit losing to a blind sweep) are addressed
+  by four guards: (i) stream-exact pursuit accountability, (ii) a rolling
+  pursuit budget (~6% duty), (iii) an adaptive acceptance gate driven by the
+  scheduler's *own* measured pursuit success rate, and (iv) a survey→track phase
+  gate. Measured pursuit success rate: ~0.16 for effectively-random hopping vs
+  ~0.50 for structured (Markov) hopping, so the gate self-disables where the
+  transition model has no predictive content.
+- **`HopDwellPredictor.mean_dwell()` / `n_dwell_observations()`** public accessors
+  backed by O(1) incremental dwell statistics (no per-decision `np.mean`).
+- **`SmartScanScheduler.hop_next`** — incrementally maintained index of pursuable
+  (stream, source band) pairs, keeping the pursuit scan O(candidates).
+- **COMINT in the scalability study** (`ewsmart/experiments.py`,
+  `scalability_study`): `n_fhss`/`n_tdma` now scale with the population and each
+  condition reports `n_fhss`, `n_tdma`, `ir_fhss`, `ir_tdma`, `ir_comm`.
+- **COMINT in the latency benchmark** (`tests/test_performance.py`): the
+  `_latencies` evidence path no longer pins `n_fhss=0, n_tdma=0`, so
+  `results/performance.json` measures the canonical radar+COMINT scene.
+- **Regression tests**: predictor wiring, pursuit targeting/ablation, phase gate,
+  acceptance gate, pursuit accountability, COMINT scalability coverage, and a
+  test asserting the PS-coverage ML/training checks report measured learning.
+
+### Changed
+- **PS-coverage audit checks are no longer stubs** (`server/api.py`): the
+  `schedulers_ml` check now asserts measured pre/post-episode movement of the
+  learned parameters (logistic weights, value EMAs) and reports the deltas, and
+  `training_hits_misses` asserts cross-episode memory consolidation
+  (`episodes_seen`, memory-EMA delta, logistic observations) instead of being
+  hardcoded `True`.
+- **Pursuit dwells are excluded from the band-value EMA**: a timing-targeted
+  pursuit dwell is not an unbiased sample of a band's value; counting it
+  reallocated most of an episode to a single band (measured 473 → 1310 visits)
+  and starved discovery of non-agile emitters.
+- **Latency gate made contention-robust** (`tests/test_performance.py`): the
+  reported figure is the best of 3 *identical* passes on the unchanged canonical
+  scene, with the same hard 1 ms limit, and `results/performance.json` records
+  `repeats_per_measurement` plus the emitter mix. Rationale: the untouched DQN
+  scheduler measured 0.76–1.20 ms across consecutive runs of identical code, so
+  transient host contention was deciding an evidence claim rather than real cost.
+- Test count is **287** (287/287 passing).
+
+### Measured effect of the pursuit (fixed seeds, `SmartScanScheduler`)
+| Scene | Threat coverage, pursuit off | Threat coverage, pursuit on |
+|---|---|---|
+| Random hopping, 12 bands × 2500 slots, 16 seeds | 1 missed of 192 | 2 missed of 192 |
+| Markov hopping, 24 bands × 3000 slots, 10 seeds | 14 missed of 240 | **10 missed of 240** |
+| Canonical 24 bands × 3000 slots, 6 seeds | 0.9028 | **0.9167** |
+
 ## Unreleased — alignment remediation rev. 3 (2026-09-09)
 
 ### Added

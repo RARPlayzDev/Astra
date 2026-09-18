@@ -288,7 +288,9 @@ class LiveArena:
                  sched_b: str = "openloop-sequential", team_size: int = 1,
                  sens_offset: float = 6.0, use_saved: bool = False,
                  n_fhss: int = 3, n_tdma: int = 2, cfar_pfa: float = 1e-3,
-                 dwell_time_us: float = 1.0):
+                 dwell_time_us: float = 1.0, lpi_fraction: float = 0.0,
+                 matched_filter: bool = True,
+                 aoa_model: str = "interferometer"):
         self.n_bands, self.T, self.speed, self.base_seed = \
             n_bands, T, max(20, speed), base_seed
         self.side_policy = {"smart-scan": sched_a, "openloop-sequential": sched_b}
@@ -300,6 +302,11 @@ class LiveArena:
         self.n_tdma = int(n_tdma)
         self.cfar_pfa = float(cfar_pfa)
         self.dwell_time_us = float(dwell_time_us)
+        # Fidelity controls: LPI waveform share, matched-filter chain and the
+        # AOA measurement model (interferometer | monopulse | fixed).
+        self.lpi_fraction = float(lpi_fraction)
+        self.matched_filter = bool(matched_filter)
+        self.aoa_model = str(aoa_model)
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
         self.frames: deque = deque(maxlen=1000)
@@ -336,7 +343,10 @@ class LiveArena:
             env = RFEnvironment(n_bands=self.n_bands, T=self.T, seed=seed,
                                 n_fhss=self.n_fhss, n_tdma=self.n_tdma,
                                 cfar_pfa=self.cfar_pfa,
-                                dwell_time_us=self.dwell_time_us)
+                                dwell_time_us=self.dwell_time_us,
+                                lpi_fraction=self.lpi_fraction,
+                                matched_filter=self.matched_filter,
+                                aoa_model=self.aoa_model)
             runners.append(_Runner(
                 side, env, seed + 100 * i,
                 policy=self.side_policy[side], team=self.team_size,

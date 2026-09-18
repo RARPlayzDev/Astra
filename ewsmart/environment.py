@@ -8,10 +8,13 @@ rotating main beam only illuminates the receiver periodically.
 """
 from __future__ import annotations
 
+import math
+
 import numpy as np
 from dataclasses import dataclass
 
 from .config import ScenarioConfig
+from .deinterleave import PRI_MODELS, WAVEFORMS
 from .exceptions import (ConfigurationError, SimulationBoundsError,
                          InvalidBandError)
 
@@ -89,6 +92,17 @@ def _validate_config(cfg: ScenarioConfig) -> None:
         raise ConfigurationError(
             f"ScenarioConfig.capture_range_db must be a finite non-negative "
             f"number, got {cap!r}")
+    lpi = float(getattr(cfg, "lpi_fraction", 0.0))
+    if not np.isfinite(lpi) or not 0.0 <= lpi <= 1.0:
+        raise ConfigurationError(
+            f"ScenarioConfig.lpi_fraction must lie in [0, 1], got {lpi!r}")
+    tb = getattr(cfg, "lpi_tb_range", (1.0, 1.0))
+    if (not isinstance(tb, (tuple, list)) or len(tb) != 2
+            or not all(np.isfinite(float(v)) for v in tb)
+            or float(tb[0]) < 1.0 or float(tb[0]) > float(tb[1])):
+        raise ConfigurationError(
+            "ScenarioConfig.lpi_tb_range must be a (lo, hi) pair with "
+            f"1 <= lo <= hi, got {tb!r}")
 
 
 @dataclass(frozen=True)
@@ -110,6 +124,14 @@ class EmitterSpec:
         period: revisit interval in slots for periodic/spatial kinds.
         on_len: length of the visible ON window in slots.
         pri_us / pw_us: pulse repetition interval and width (PDW realism).
+        pri_kind: PRI model - ``fixed``, ``staggered`` or ``jittered``.
+        stagger_levels: number of stagger levels when ``pri_kind`` is
+            ``staggered``.
+        jitter_frac: fractional PRI jitter when ``pri_kind`` is ``jittered``.
+        waveform: ``pulsed``, ``lpi_fmcw`` or ``lpi_barker`` (intrapulse
+            modulation class).
+        tb_product: coherent time-bandwidth product of the waveform; drives
+            the matched-filter processing gain for LPI classes.
     """
 
     eid: int
@@ -129,6 +151,16 @@ class EmitterSpec:
     on_len: int = 1
     pri_us: float = 100.0
     pw_us: float = 1.0
+    pri_kind: str = "fixed"
+    stagger_levels: int = 2
+    jitter_frac: float = 0.0
+    waveform: str = "pulsed"
+    tb_product: float = 1.0
+
+    @property
+    def lpi(self) -> bool:
+        """Whether the emitter uses a Low Probability of Intercept waveform."""
+        return str(self.waveform).startswith("lpi")
 
     def __post_init__(self) -> None:
         if self.kind not in KINDS:
@@ -156,6 +188,26 @@ class EmitterSpec:
                 raise ConfigurationError(
                     f"EmitterSpec(eid={self.eid}).hop_set contains an invalid "
                     f"band index {b!r}")
+        if self.pri_kind not in PRI_MODELS:
+            raise ConfigurationError(
+                f"EmitterSpec(eid={self.eid}).pri_kind must be one of "
+                f"{PRI_MODELS}, got {self.pri_kind!r}")
+        if self.waveform not in WAVEFORMS:
+            raise ConfigurationError(
+                f"EmitterSpec(eid={self.eid}).waveform must be one of "
+                f"{WAVEFORMS}, got {self.waveform!r}")
+        if not (np.isfinite(self.pri_us) and self.pri_us > 0.0):
+            raise ConfigurationError(
+                f"EmitterSpec(eid={self.eid}).pri_us must be finite and > 0, "
+                f"got {self.pri_us!r}")
+        if not (np.isfinite(self.pw_us) and self.pw_us > 0.0):
+            raise ConfigurationError(
+                f"EmitterSpec(eid={self.eid}).pw_us must be finite and > 0, "
+                f"got {self.pw_us!r}")
+        if not (np.isfinite(self.tb_product) and self.tb_product >= 1.0):
+            raise ConfigurationError(
+                f"EmitterSpec(eid={self.eid}).tb_product must be >= 1, "
+                f"got {self.tb_product!r}")
 
 
 def _band_to_freq(band: int, n_bands: int, fmin: float, fmax: float) -> float:
@@ -224,6 +276,47 @@ class RFEnvironment:
         rows, cols = np.nonzero(self.band_seq >= 0)
         self.occupancy[self.band_seq[rows, cols], cols] = 1
 
+    def _pulse_descriptors(self, kind: str) -> dict:
+        """Draw physically-plausible pulse descriptors for one emitter.
+
+        Real ELINT/COMINT traffic is distinguished as much by *pulse structure*
+        as by frequency: radar PRIs are typically tens to hundreds of
+        microseconds (fixed, staggered or jittered), communication bursts are
+        much shorter, and a fraction of modern radars use Low Probability of
+        Intercept waveforms whose energy is spread over a large
+        time-bandwidth product.  Drawing all of these here is what makes the
+        pulse-level deinterleaver meaningful instead of decorative.
+        """
+        c = self.cfg
+        lpi_frac = float(getattr(c, "lpi_fraction", 0.2))
+        is_lpi = (kind in ("stationary", "periodic", "spatial", "agile")
+                  and float(self.rng.random()) < lpi_frac)
+        if is_lpi:
+            waveform = str(self.rng.choice(("lpi_fmcw", "lpi_barker")))
+            lo, hi = getattr(c, "lpi_tb_range", (100.0, 1000.0))
+            return dict(waveform=waveform,
+                        tb_product=float(10.0 ** self.rng.uniform(
+                            math.log10(lo), math.log10(hi))),
+                        pri_us=float(self.rng.uniform(200.0, 2000.0)),
+                        pw_us=float(self.rng.uniform(20.0, 200.0)),
+                        pri_kind="fixed", stagger_levels=2, jitter_frac=0.0)
+        if kind in ("fhss", "tdma"):
+            # Burst communications: short pulses, short intervals, no stagger.
+            return dict(waveform="pulsed",
+                        tb_product=float(self.rng.uniform(2.0, 8.0)),
+                        pri_us=float(self.rng.uniform(50.0, 400.0)),
+                        pw_us=float(self.rng.uniform(5.0, 50.0)),
+                        pri_kind="fixed", stagger_levels=2, jitter_frac=0.0)
+        pri_kind = str(self.rng.choice(("fixed", "fixed", "fixed",
+                                       "staggered", "jittered")))
+        return dict(waveform="pulsed",
+                    tb_product=float(self.rng.uniform(1.0, 8.0)),
+                    pri_us=float(self.rng.uniform(20.0, 800.0)),
+                    pw_us=float(self.rng.uniform(0.5, 8.0)),
+                    pri_kind=pri_kind,
+                    stagger_levels=int(self.rng.integers(2, 5)),
+                    jitter_frac=float(self.rng.uniform(0.05, 0.25)))
+
     def _make_spec(self, eid: int, kind: str, threat: bool) -> EmitterSpec:
         """Draw one random emitter of the requested kind from the scenario priors.
 
@@ -249,7 +342,16 @@ class RFEnvironment:
             bearing_deg=bearing,
             x_km=x,
             y_km=y,
+            **self._pulse_descriptors(kind),
         )
+        # LPI emitters spend their (fixed) transmit energy spread across the
+        # waveform's time-bandwidth product, so their *in-channel* SNR is
+        # lower by exactly the processing gain a matched filter would recover.
+        # An LPI emitter is therefore genuinely undetectable to a plain
+        # radiometer and detectable only through coherent processing - the
+        # property the matched-filter receiver model exists to demonstrate.
+        if str(common["waveform"]).startswith("lpi"):
+            common["snr_db"] -= 10.0 * math.log10(max(common["tb_product"], 1.0))
         if kind == "stationary":
             return EmitterSpec(eid, kind, band, **common)
         if kind == "agile":

@@ -1,10 +1,11 @@
 # ASTRA — PS Teardown v2 (Post-Fix Re-Audit)
 
 *Re-audit after implementing the fixes for the brutal teardown. Every fix is
-executable, tested (280/280 pytest passing) and surfaced through the API,
+executable, tested (287/287 pytest passing) and surfaced through the API,
 website console and desktop (exe) app. Live machine-checkable audit:
 `GET /api/ps-coverage` (13/13 = 100% pass) and the "PS coverage audit" panel
-on the Analysis page.*
+on the Analysis page. Rev. 4 (below) closes the four code-level findings of the
+post-fix teardown v2.*
 
 ---
 
@@ -60,13 +61,53 @@ Reading (no sugar-coating):
 | Probability of false alarm | ✅ | ✅ (now CFAR-derived) |
 | System model for the receiver | ⚠️ behavioural | ⚠️→ partially closed: NF cascade, CFAR, near-far, radiometer chain (no ADC/spur model — still an honest gap) |
 | Prediction of intercept time (periodic) | ✅ | ✅ |
-| Prediction of intercept time (frequency-agile) | ❌ | ✅ HopDwellPredictor + measured error metric |
+| Prediction of intercept time (frequency-agile) | ❌ | ✅ HopDwellPredictor, fed by live dwells and driving `select()` via `_hop_pursuit` (rev. 4); plus the offline measured-error metric |
 | Interception ratio vs spatially scanning emitters | ⚠️ "ever seen" | ✅ per-rotation-cycle fraction |
 | ML-based scheduler, minimize intercept time | ⚠️ TTFF not optimised | ✅ TTFF in the reward; deep-RL still a documented negative result |
 | Trained on hits and misses | ✅ | ✅ |
 | Periodic-optimal interception | ✅ | ✅ (unchanged, strongest part) |
 | Algorithms/techniques documented | ✅ | ✅ (+ scalability study) |
 | Simulated RF env with truth | ✅ | ✅ |
+
+## Teardown v2 remediation — rev. 4 (2026-09-18)
+
+The post-fix re-audit's four highest-leverage code findings are addressed. Every
+claim below is measured and covered by a named regression test; nothing here is
+narrated.
+
+| Teardown v2 finding | Fix | Where |
+|---|---|---|
+| `HopDwellPredictor` never imported/called by `SmartScanScheduler`, `DQNScheduler` or `run_episode` — an orphaned class evaluated only offline on ground-truth arrays | Per-stream `HopDwellPredictor` instances are created and fed by `_observe_hop()` from live dwells, and read inside `select()` by `_hop_pursuit()` (candidate index `hop_next`, O(candidates)) | `ewsmart/schedulers.py`, `ewsmart/prediction.py` |
+| Agile hop pursuit hardcoded off (`hop_patrol=False`) because it failed to beat a blind sweep in Monte Carlo | Pursuit enabled by default under four measured guards: stream-exact accountability, rolling budget (~6% duty), adaptive outcome gate, survey→track phase gate | `ewsmart/schedulers.py` |
+| COMINT omitted from the scalability study (`scalability_study`) | `n_fhss` / `n_tdma` scale with the population; each condition reports `n_fhss`, `n_tdma`, `ir_fhss`, `ir_tdma`, `ir_comm` | `ewsmart/experiments.py` |
+| COMINT omitted from the performance benchmark (`_latencies` pinned `n_fhss=0, n_tdma=0` to keep the <1 ms gate green) | The latency evidence path runs the canonical radar+COMINT mix; `results/performance.json` is regenerated on that scene | `tests/test_performance.py` |
+| Rubber-stamp audit checks (`schedulers_ml` passed on `callable(end_episode)`; `training_hits_misses` hardcoded `True`) | Both checks now assert and report measured learning: logistic-weight and value-EMA deltas, dwell updates, hop streams learned; episodes seen, memory-EMA delta, logistic observations, persisted hop streams | `server/api.py` (verified through `GET /api/ps-coverage`) |
+
+### What the pursuit actually does (fixed seeds, `SmartScanScheduler`)
+
+| Scene | Pursuit off | Pursuit on |
+|---|---|---|
+| Random hopping, 12 bands × 2500 slots, 16 seeds | 1 threat missed of 192 | 2 threat missed of 192 |
+| Markov hopping, 24 bands × 3000 slots, 10 seeds | 14 threats missed of 240 | **10 threats missed of 240** |
+| Canonical 24 bands × 3000 slots, 6 seeds (threat coverage) | 0.9028 | **0.9167** |
+| Pursuit success rate, effectively-random hopping | — | 0.164 |
+| Pursuit success rate, structured (Markov) hopping | — | 0.505 |
+
+Reading (no sugar-coating): on effectively-random hopping the pursuit is
+statistically neutral (1 vs 2 missed threats out of 192 — inside seed noise) and
+the adaptive gate switches it off; on structured hopping it is a measured gain
+(+1.4 to +1.7 pp threat coverage). Two mechanisms had to be removed to get there,
+both documented in code: a self-reinforcing loop where pursuit-fed detections
+re-pointed the hop-urgency bonus at one band (473 → 1310 visits of a single band)
+and pursuit dwells inflating that band's value estimate. A gate built on an
+aggregate transition "lift" statistic was implemented, measured **not** to
+separate random from Markov hopping at live observation density, and removed in
+favour of the outcome-based gate above.
+
+Remaining honest gaps (unchanged by rev. 4): no ADC/spur/settling model, no
+pulse-level deinterleaving, no propagation-physics power model, deep-RL still a
+documented negative result, and the smart-scan decision cost remains
+Python-bound (~0.54 ms mean on the recorded platform).
 
 **Remaining honest gaps (documented, not hidden):** no ADC/spur/dynamic-range
 receiver architecture, no pulse-level deinterleaving, no propagation/

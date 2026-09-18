@@ -25,6 +25,7 @@ const SECTIONS: Section[] = [
   { id: "18-file-formats", title: "File Formats", heading: "18. File formats" },
   { id: "19-frequently-asked-questions", title: "FAQ", heading: "19. Frequently asked questions" },
   { id: "20-glossary", title: "Glossary", heading: "20. Glossary" },
+  { id: "21-simulation-fidelity-reference", title: "Simulation Fidelity", heading: "21. Simulation fidelity reference" },
 ];
 
 /** Find a section by matching h2 heading text */

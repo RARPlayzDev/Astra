@@ -39,6 +39,15 @@ class ScenarioConfig:
     # --- communication-signal emitters (PS: "communication *or* radar") ----
     n_fhss: int = 3   # FHSS communication nets (fast frequency hopping)
     n_tdma: int = 2   # TDMA burst communication stations
+    # --- waveform / pulse-structure model (pulse-level ESM chain) ----------
+    lpi_fraction: float = 0.2   # share of radars using LPI waveforms
+    lpi_tb_range: tuple = (100.0, 1000.0)  # LPI time-bandwidth product range
+    matched_filter: bool = True  # receiver implements matched filtering
+    # --- AOA measurement model ---------------------------------------------
+    # "interferometer": dual-baseline phase interferometer (CRLB-coupled,
+    # SNR- and frequency-dependent error); "fixed": legacy constant 2.5 deg
+    # Gaussian model kept for A/B comparison.
+    aoa_model: str = "interferometer"
     # --- detection-processing model ----------------------------------------
     cfar_pfa: float = 1e-3      # CA-CFAR design false-alarm probability
     capture_range_db: float = 30.0  # co-channel near-far masking dynamic range
@@ -49,7 +58,8 @@ class ScenarioConfig:
         with open(path) as f:
             raw = json.load(f)
         known = {k: v for k, v in raw.items() if k in cls.__dataclass_fields__}
-        for key in ("period_range", "on_len_range", "hop_set_range", "dwell_range"):
+        for key in ("period_range", "on_len_range", "hop_set_range",
+                    "dwell_range", "lpi_tb_range"):
             if key in known:
                 known[key] = tuple(known[key])
         return cls(**known)

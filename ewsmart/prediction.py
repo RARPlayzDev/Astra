@@ -91,6 +91,10 @@ class HopDwellPredictor:
         self.n_bands = n_bands
         self.trans = TransitionPredictor(n_bands, alpha)
         self.dwell_observations: dict[int, list[int]] = {}
+        # Incremental dwell statistics: mean dwell must be O(1) to read,
+        # because the live scheduler queries it on every decision.
+        self._dwell_sum: dict[int, int] = {}
+        self._dwell_n: dict[int, int] = {}
         self._current_band: int | None = None
         self._current_start: int | None = None
 
@@ -105,14 +109,35 @@ class HopDwellPredictor:
             return
         # Hop observed: record completed dwell length and transition.
         if self._current_start is not None:
-            self.dwell_observations.setdefault(
-                self._current_band, []).append(max(1, t - self._current_start))
+            b0 = self._current_band
+            d = max(1, t - self._current_start)
+            self.dwell_observations.setdefault(b0, []).append(d)
+            self._dwell_sum[b0] = self._dwell_sum.get(b0, 0) + d
+            self._dwell_n[b0] = self._dwell_n.get(b0, 0) + 1
         self.trans.observe(self._current_band, band)
         self._current_band, self._current_start = band, t
 
     def _mean_dwell(self, band: int) -> float:
-        obs = self.dwell_observations.get(band, [])
-        return float(np.mean(obs)) if obs else 2.0
+        n = self._dwell_n.get(band, 0)
+        # Cold start (or a band whose dwell length was never completed):
+        # fall back to the typical dwell span so a prediction time can still
+        # be formed, clamped to at least one slot.
+        if not n:
+            obs = self.dwell_observations.get(band, [])
+            return float(sum(obs)) / len(obs) if obs else 2.0
+        return self._dwell_sum[band] / n
+
+    def mean_dwell(self, band: int) -> float:
+        """Public accessor: mean observed dwell length on ``band``.
+
+        Falls back to 2.0 slots with no observation history (used by the
+        live scheduler when reasoning about an immature stream).
+        """
+        return self._mean_dwell(band)
+
+    def n_dwell_observations(self, band: int) -> int:
+        """Number of completed dwell spans observed on ``band``."""
+        return self._dwell_n.get(band, len(self.dwell_observations.get(band, ())))
 
     def predict_next_on(self, band: int | None, t_now: int) -> tuple | None:
         """Predict ``(next_band, next_on_time)`` for an agile emitter.

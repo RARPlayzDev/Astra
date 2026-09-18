@@ -456,6 +456,95 @@ def test_per_class_interception_foms():
     assert 0.0 <= m["intercept_time_error_coverage"] <= 1.0
 
 
+def _pursuit_scheduler(n: int = 6, seed: int = 0, **kw):
+    """SmartScan with the scoring terms equalised so the pursuit decides."""
+    base = dict(explore_eps=0.0, exploit_ramp=0.0, recon_factor=0,
+                value_mode="flat")
+    base.update(kw)
+    return SmartScanScheduler(n, seed=seed, **base)
+
+
+def test_hop_dwell_predictor_is_wired_into_live_scheduling():
+    """The PS intercept-time predictor must be fed by, and readable from,
+    the live scheduler - not only by the offline evaluation helper."""
+    from ewsmart import schedulers as sched_mod
+    s = SmartScanScheduler(6, seed=0)
+    assert s.hop_pred == {}, "no stream observed yet"
+    _feed_hop_stream(s, [1, 2, 1, 2, 1, 2, 1])  # dt=4, snr=18 -> key (36, 2)
+    assert len(s.hop_pred) == 1, "live dwells must feed the predictor"
+    pred = next(iter(s.hop_pred.values()))
+    assert isinstance(pred, sched_mod.HopDwellPredictor)
+    assert pred.n_dwell_observations(1) >= 3
+    assert pred.mean_dwell(1) == pytest.approx(4.0)
+    # ...and the policy holds an incrementally maintained pursuable index.
+    assert s.hop_next[((36, 2), 1)][0] == 2
+    assert s.hop_next[((36, 2), 2)][0] == 1
+
+
+def test_hop_pursuit_dwells_on_predicted_successor():
+    """Inside the predicted hop window the pursuit must select the
+    HopDwellPredictor's successor band (and vanish when ablated)."""
+    s = _pursuit_scheduler(pursuit_phase_frac=0.0)
+    _feed_hop_stream(s, [1, 2, 1, 2, 1, 2, 1], t0=0, dt=4)  # last hit t=24
+    s.last_visit[:] = 0  # target band not visited recently
+    # Predicted next-on time is 24 + mean_dwell(1) = 28; t=29 is imminent.
+    assert s._hop_pursuit(29) == 2
+    assert s.select(29) == 2
+    # Ablation control: no predictor -> no pursuit dwell.
+    off = _pursuit_scheduler(pursuit_phase_frac=0.0, hop_weight=0.0)
+    _feed_hop_stream(off, [1, 2, 1, 2, 1, 2, 1], t0=0, dt=4)
+    off.last_visit[:] = 0
+    assert off._hop_pursuit(29) is None
+    assert off.select(29) == 0
+
+
+def test_pursuit_phase_gate_holds_tracking_until_survey_completes():
+    """Survey first, track later: the same state must not pursuit early."""
+    s = _pursuit_scheduler(pursuit_phase_frac=0.5)
+    s.reset(horizon=240)  # recon_steps = 72 -> tracking starts at slot 156
+    _feed_hop_stream(s, [1, 2, 1, 2, 1, 2, 1], t0=0, dt=4)
+    s.last_visit[:] = 0
+    assert s._hop_pursuit(29) is None, "pursuit must wait for the survey"
+    early = _pursuit_scheduler(pursuit_phase_frac=0.0)
+    early.reset(horizon=240)
+    _feed_hop_stream(early, [1, 2, 1, 2, 1, 2, 1], t0=0, dt=4)
+    early.last_visit[:] = 0
+    assert early._hop_pursuit(29) == 2
+
+
+def test_pursuit_acceptance_gate_adapts_to_measured_outcomes():
+    """The pursuit self-disables when its measured success rate collapses."""
+    from ewsmart import schedulers as sched_mod
+    s = SmartScanScheduler(6, seed=0)
+    assert s._pursuit_allowed(0) is True, "optimistic before any outcome"
+    for _ in range(4):
+        s.pursuit_hist.append(True)
+    assert s._pursuit_allowed(0) is True, "measured success keeps it open"
+    s2 = SmartScanScheduler(6, seed=0)
+    for _ in range(4):
+        s2.pursuit_hist.append(False)
+    s2._pursuit_last_test = 100
+    assert s2._pursuit_allowed(100) is False, "failures must close the gate"
+    assert s2._pursuit_allowed(100 + sched_mod._PURSUIT_PROBATION - 1) is False
+    assert s2._pursuit_allowed(100 + sched_mod._PURSUIT_PROBATION) is True, \
+        "probation retry allows recovery in a changed scene"
+
+
+def test_pursuit_accountability_blocks_a_stream_after_a_miss():
+    """A pursuit that fails to intercept its stream is not repeated blindly.""" 
+    s = _pursuit_scheduler(pursuit_phase_frac=0.0)
+    _feed_hop_stream(s, [1, 2, 1, 2, 1, 2, 1], t0=0, dt=4)
+    s.last_visit[:] = 0
+    assert s._hop_pursuit(29) == 2
+    # Resolve the armed pursuit with a dwell that sees a *different* stream.
+    res = DwellResult(band=2, t=29, hit=True, false_alarm=False, snr_db=11.0,
+                      truth_present=True, detections=((11.0, 200.0),),
+                      detected_eids=(9,))
+    s.update(29, 2, res, 0.2)
+    assert s.pursuit_miss.get((36, 2), 0) == 1
+    assert s._hop_pursuit(31) is None or s._pursuit is None
+
+
 def test_benchmark_reports_sensitivity_and_ablation(tmp_path):
     """The canonical artifact carries the sensitivity FoM + ML ablation."""
     import tempfile, os

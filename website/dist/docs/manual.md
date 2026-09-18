@@ -28,6 +28,7 @@ Version 2.0.0 Â· SIH 2026 prototype Â· simulation-based research software, n
 18. [File formats](#18-file-formats)
 19. [Frequently asked questions](#19-frequently-asked-questions)
 20. [Glossary](#20-glossary)
+21. [Simulation fidelity reference](#21-simulation-fidelity-reference)
 
 ---
 
@@ -190,7 +191,7 @@ Parameters (threat coverage â‰¥ 0.90, prediction accuracy â‰¥ 0.50, fals
 rate â‰¤ 5Ã—10â»â´ per slot). Only systems passing every KPP are considered
 mission-capable and ranked by the Mission Effectiveness Score (MES).
 
-**Monte Carlo table.** Mean Â± 95% confidence intervals across 200 held-out
+**Monte Carlo table.** Mean Â± 95% confidence intervals across 50 held-out (canonical protocol: 24 bands × 3000 slots, base_seed 9000)
 episodes for reward, threat coverage, prediction accuracy, intercept rate,
 false-alarm rate, time-to-first-intercept and intercept-time prediction error.
 Paired permutation tests on the gated score separate SmartScan from every
@@ -358,7 +359,7 @@ Following defence test & evaluation practice:
    problem-statement figures of merit (Pd, Pfa performance, intercept rate,
    reward, prediction accuracy, intercept-time error).
 3. **Statistics.** Paired per-episode permutation tests on the gated score with
-   Holm-Bonferroni correction; 200 held-out episodes; 95% confidence intervals.
+   Holm-Bonferroni correction; 50 held-out episodes; 95% confidence intervals.
 
 Headline outcome: **SmartScan is the only mission-capable scheduler in the
 field** and leads every comparator at p < 1e-4 on gated MES. Learning claims
@@ -510,7 +511,154 @@ make the strategy the only variable.
 | Dwell | One listening interval on one band |
 | Slot | Discrete time step of the simulation (default 1 ms) |
 | Phase lock (ASTRA) | Validated estimate of a periodic emitter's period and window timing |
-| KPP | Key Performance Parameter â€” hard pass/fail requirement |
-| MES | Mission Effectiveness Score â€” composite FoM after gating |
-| CEP | Circular Error Probable â€” median geolocation error radius |
+| KPP | Key Performance Parameter — hard pass/fail requirement |
+| MES | Mission Effectiveness Score — composite FoM after gating |
+| CEP | Circular Error Probable — median geolocation error radius |
 
+---
+
+## 21. Simulation fidelity reference
+
+ASTRA's scheduler works on a discrete band/time grid because scheduling is what
+it studies. This chapter documents the *physical* layers underneath that grid:
+pulse-level signal processing, waveform classes, front-end impairments, the
+angle-of-arrival measurement, and the two deployment artifacts (scenario
+auto-calibration and the fixed-point kernel). Each module states what it does,
+how it works, and which measured number demonstrates it.
+
+### 21.1 Pulse-level deinterleaving (`ewsmart/deinterleave.py`)
+
+**What it does.** A real ES receiver's wideband front-end receives an
+interleaved stream of pulses from every emitter in view — at combat densities
+10^5–10^6 pulses/second — and must separate that stream back into individual
+emitters before anything can be tracked or identified. ASTRA performs that
+separation instead of assuming it away.
+
+**How it works.** Four classical stages:
+
+1. `emit_pulse_train` synthesises one emitter's pulses in a dwell (TOA, RF,
+   pulse width, amplitude, AOA) from its PRI model.
+2. `interleave` builds the raw, time-ordered PDW stream a receiver would see.
+3. `deinterleave` separates it: descriptor clustering on (RF, PW, AOA), then an
+   all-pairs difference-of-time-of-arrival histogram to find the dominant PRI,
+   then coarse-to-fine period sharpening by *phase-histogram entropy
+   minimisation*, then a circular-phase test that discriminates
+   fixed / staggered / jittered / aperiodic trains.
+4. `deinterleave_accuracy` scores the result against ground truth.
+
+Two details matter physically: amplitude is derived with the peak-to-average
+term (`pri/pw`) that makes a low-duty pulsed radar detectable at a lower
+average power, and a staggered train's reported PRI is the *mean interval*
+(frame/k) — the quantity a real PRI estimator reports.
+
+**Measured.** Four emitters (fixed 250 µs, staggered 3-level 97 µs, jittered
+410 µs ±12%, LPI 600 µs) interleaved into one stream: fragmentation 1.0, pulse
+purity 1.0, attributed fraction 1.0, mean PRI error 0.4%, PRI-model
+classification 100%. The deinterleaver never reads the ground-truth label
+(leakage asserted by test).
+
+### 21.2 Waveform classes and the matched filter
+
+**What it does.** Models Low Probability of Intercept radar: an emitter may
+spread its energy over a large time-bandwidth product so that it sits *below*
+the noise floor in any one channel.
+
+**How it works.** `EmitterSpec.waveform` is `pulsed`, `lpi_fmcw` or
+`lpi_barker` with a time-bandwidth product `tb_product`. An LPI emitter's
+in-channel SNR is reduced by exactly `10 log10(BT)`; a receiver running the
+matched-filter / de-chirp bank (`matched_filter: true`, on by default) earns
+that gain back before the detection decision.
+
+**Measured.** A −14 dB in-channel LPI emitter with BT = 256 (24.1 dB gain):
+283 of 300 dwells detected with the matched filter, 5 of 300 without. The
+switch is in the scenario config, so the comparison is reproducible.
+
+### 21.3 RF front-end impairments (`ewsmart/frontend.py`)
+
+**What it does.** Models the hardware between the antenna and the digitiser so
+its costs are measurable rather than narrated.
+
+| Effect | Model |
+|---|---|
+| Retune settling | `settling_time_us` of each retuned dwell is blanked (integration time, hence processing gain, is lost) |
+| LNA blocking | above the 1 dB compression point the noise floor rises (compression + LO phase-noise reciprocal mixing) |
+| Mixer non-linearity | third-order products 2f1−f2 / 2f2−f1 at level `3*P_tone − 2*IP3`; image and `m*f_RF ± n*f_LO` spur responses enumerated |
+| ADC | 12-bit full-scale saturation with odd-harmonic fold-back bounded by the spurious-free dynamic range |
+
+**How to use it.** `ESReceiver.attach_front_end(FrontEnd(FrontEndSpec(...)))`.
+Below P1dB the model is *exactly* linear (zero noise rise), so attaching a
+front-end never silently changes normal operation; the impairment appears only
+where physics says it should.
+### 21.4 Angle-of-arrival measurement (`ewsmart/aoa.py`)
+
+**What it does.** Replaces the constant 2.5 degree Gaussian bearing error with a
+dual-baseline phase interferometer whose error is coupled to SNR and frequency
+through the Cramer-Rao bound.
+
+**How it works.** The coarse (5 cm) baseline measures the angle unambiguously
+across the field of view; the fine (20 cm) baseline is four times more precise
+but wraps, so its ambiguity is resolved against the coarse estimate, with exact
+hypothesis ties broken by angular proximity, as real systems do. A
+front/back-ambiguous single array face is modelled honestly: the folded bearing
+is restored using the observation hemisphere, standing in for the second array
+face. `aoa_model: "monopulse"` or `"fixed"` select the alternative models.
+
+**Measured.** At 20 dB SNR the error is 0.35-0.5 degrees and unbiased across all
+eight compass bearings; at -10 dB it degrades to tens of degrees
+(CRLB-consistent). That coupling is the point: weak or high-frequency emitters
+fingerprint poorly, which the scheduler experiences as stream fragmentation.
+
+### 21.5 Scenario auto-calibration (`ewsmart/calibration.py`)
+
+**What it does.** Derives the scheduler's behaviour constants from the scenario
+scale instead of hard-coding values tuned for 24 bands x 3000 slots.
+
+**How it works.** `calibrate(n_bands, T, n_emitters)` returns `recon_factor`,
+`burst_horizon`, `stale_revisit_factor`, `pursuit_budget`, `pursuit_window`,
+`hop_min_obs`, `lock_hits` and `exploit_ramp`, each from a documented formula
+over the band, time and density scales. On the canonical scenario it reproduces
+the shipped constants exactly, so calibration is a no-op where the tuning is
+known good and adapts elsewhere: an 8-band radio survey or a 128-band full
+ELINT sweep both get appropriately sized behaviour.
+
+### 21.6 Fixed-point real-time kernel (`ewsmart/realtime.py`)
+
+**What it does.** Provides the per-slot decision in Q8.8 integer arithmetic as
+the concrete port artifact for FPGA/DSP deployment.
+
+**How it works.** Every statistic is quantised once on write with saturation;
+the per-slot score is an integer multiply-accumulate over `n_bands` lanes
+(O(n_bands), no dynamic allocation, no per-slot transcendental); the log/sqrt
+terms are cached and recomputed only when the underlying statistics change.
+`tools/export_cpp_kernel.py` emits the same arithmetic as a header-only C++
+kernel (`build/rtl/astra_policy_kernel.hpp`) plus a `kernel_metadata.json`
+complexity contract.
+
+**Measured.** Over 200 randomised states the fixed-point argmax matches the
+float reference, and the recorded decision cost remains under the 1 ms gate.
+
+### 21.7 Learned behaviour arbitration (`ewsmart/meta.py`)
+
+**What it does.** Adds a genuine learning component to the *decision core*: a
+linear-upper-confidence-bound contextual bandit that learns which behaviour
+(survey, pursue, probe, camp, rotate) pays in which situation, from hits and
+misses alone.
+
+**How it works.** The scheduler tags every decision with the behaviour that
+produced it and, on the dwell result, folds `(context, behaviour, reward)` into
+the arbiter. A safe action mask means the arbiter can only choose among
+behaviours whose preconditions hold, so an immature model cannot destabilise a
+proven policy; its learned preferences are inspectable via `arbiter.score()`.
+Cross-episode persistence is available through `get_state` / `set_state`.
+
+**Measured.** A full episode trains the arbiter from 500+ outcome triples, and
+in a two-armed test it converges to preferring the rewarded behaviour.
+
+### 21.8 Documentation pipeline
+
+`tools/export_docs.py` makes this manual the single source of truth: it
+converts the markdown to HTML for the website's Documentation page
+(`website/src/content/docsHtml.ts`), copies it to
+`website/public/docs/manual.md` for the "Download (.md)" button, and emits the
+section index the site's table of contents is built from. The desktop
+application serves the same file at `/manual`; nothing is maintained twice.

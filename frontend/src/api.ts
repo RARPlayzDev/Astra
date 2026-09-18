@@ -134,6 +134,7 @@ export type MissionConfig = {
   schedA?: string; schedB?: string;
   teamSize?: number; sensOffset?: number; useSaved?: boolean;
   nFhss?: number; nTdma?: number; cfarPfa?: number; dwellTimeUs?: number;
+  lpiFraction?: number; matchedFilter?: boolean; aoaModel?: string;
 };
 export const startMission = (opts: MissionConfig = {}) => {
   const q = new URLSearchParams();
@@ -150,6 +151,10 @@ export const startMission = (opts: MissionConfig = {}) => {
   if (opts.nTdma != null) q.set("n_tdma", String(opts.nTdma));
   if (opts.cfarPfa != null) q.set("cfar_pfa", String(opts.cfarPfa));
   if (opts.dwellTimeUs != null) q.set("dwell_time_us", String(opts.dwellTimeUs));
+  if (opts.lpiFraction != null) q.set("lpi_fraction", String(opts.lpiFraction));
+  if (opts.matchedFilter != null)
+    q.set("matched_filter", opts.matchedFilter ? "true" : "false");
+  if (opts.aoaModel) q.set("aoa_model", opts.aoaModel);
   return fetch(`/api/live/start?${q}`, { method: "POST" }).then(j);
 };
 export const stopMission = () =>

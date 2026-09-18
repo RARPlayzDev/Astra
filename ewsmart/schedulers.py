@@ -18,6 +18,7 @@ from collections import deque
 
 from . import periodic
 from .dqn import DQNAgent
+from .prediction import HopDwellPredictor
 from .exceptions import (ConfigurationError, InvalidBandError,
                          SimulationBoundsError, InvalidDwellResultError,
                          InvalidRewardError)
@@ -27,6 +28,42 @@ from .exceptions import (ConfigurationError, InvalidBandError,
 def ang_dist(a1: float, a2: float) -> float:
     """Circular distance between two angles in degrees (0..180)."""
     return abs((float(a1) - float(a2) + 180.0) % 360.0 - 180.0)
+
+
+# Confidence-gated agile-hop pursuit thresholds (see SmartScanScheduler.
+# _hop_pursuit).  A predicted hop is "imminent" within _PURSUIT_GUARD slots
+# of the predicted next-on time, and the pursuit must clear both the
+# confidence floor (majority-successor probability x urgency) and the
+# adaptive outcome gate below.
+_PURSUIT_GUARD = 2
+_PURSUIT_MIN_CONF = 0.45
+# Pursuit budget: at most this many pursuit dwells per rolling window of
+# _PURSUIT_WINDOW slots (~6% duty), so following tracked agile emitters can
+# never crowd out discovery of unseen weak emitters.
+_PURSUIT_BUDGET = 6
+_PURSUIT_WINDOW = 100
+# Minimum revisit interval for the pursuit target band: pursuing a band the
+# rotation already covers densely wastes the dwell and feeds the hop-urgency
+# bonus (a self-reinforcing loop).  The effective window is
+# max(_PURSUIT_REDUNDANT, 2 x predicted dwell span).
+_PURSUIT_REDUNDANT = 3
+# Adaptive acceptance gate: the scheduler scores its own pursuit outcomes and
+# keeps pursuing only while the measured success rate (predicted stream
+# actually intercepted on the predicted band) stays above
+# _PURSUIT_MIN_SUCCESS.  Measured on the canonical mix, that rate is ~0.16 for
+# effectively-random hopping and ~0.50 for structured (Markov) hopping, so the
+# gate switches the pursuit off where the transition model has no real
+# predictive content - decided online from outcomes, never from scene labels.
+_PURSUIT_HIST = 12          # rolling outcome window (pursuit attempts)
+_PURSUIT_PRIOR_OK = 2       # optimistic prior successes ...
+_PURSUIT_PRIOR_N = 6        # ... over this many pseudo-attempts
+_PURSUIT_MIN_SUCCESS = 0.30
+_PURSUIT_PROBATION = 250    # while rejected, re-test this often (recovery)
+# Phase gate: pursuit is a *tracking* behaviour, so it is held back until the
+# wide-area survey phase has had its chance to discover the scene (mirrors ES
+# doctrine: survey -> cue -> track).  Measured on the canonical mix, 0.4
+# removes the residual cost of pursuing before the emitter portfolio is known.
+_PURSUIT_PHASE_FRAC = 0.4
 
 
 class BaseScheduler:
@@ -506,7 +543,14 @@ class SmartScanScheduler(BaseScheduler):
                  lock_hits: int = 5, recon_factor: int = 12,
                  burst_horizon: int = 480, exploit_ramp: float = 0.60,
                  value_mode: str = "learned", hop_weight: float = 0.45,
-                 hop_min_obs: int = 3, hop_patrol: bool = False):
+                 hop_min_obs: int = 3, hop_patrol: bool = True,
+                 pursuit_phase_frac: float = _PURSUIT_PHASE_FRAC):
+        """``hop_patrol`` gates the confidence-gated agile-hop pursuit in
+        :meth:`_hop_pursuit` (on by default; it only ever fires when the
+        stream's hop model has a majority successor, the measured pursuit
+        outcomes are paying off, and the survey phase has completed).
+        ``pursuit_phase_frac`` sets how far into the episode the pursuit
+        stays disabled (fraction of the post-reconnaissance horizon)."""
         super().__init__(n_bands, seed)
         if value_mode not in ("learned", "heuristic", "flat"):
             raise ValueError(
@@ -516,6 +560,7 @@ class SmartScanScheduler(BaseScheduler):
         self.hop_weight = float(hop_weight)
         self.hop_min_obs = int(hop_min_obs)
         self.hop_patrol = bool(hop_patrol)
+        self.pursuit_phase_frac = float(pursuit_phase_frac)
         self.explore_eps = explore_eps * 0.6  # slightly less random waste
         self.lock_hits = lock_hits
         self.recon_steps = recon_factor * n_bands
@@ -562,6 +607,35 @@ class SmartScanScheduler(BaseScheduler):
         self.hop_last_t: dict[tuple, int] = {}
         self.hop_dt: dict[tuple, float] = {}
         self.hop_succ: dict[tuple, dict[int, dict[int, int]]] = {}
+        # Per-stream dwell/transition predictor (HopDwellPredictor): learns
+        # dwell-length statistics + Laplace-smoothed transitions from the
+        # same SNR/AOA-fingerprint streams, and is consumed live by
+        # ``_hop_pursuit`` inside ``select()`` (PS: intercept-time
+        # prediction against frequency-agile emitters).
+        self.hop_pred: dict[tuple, HopDwellPredictor] = {}
+        # Incrementally maintained index of *pursuable* (stream, source band)
+        # pairs: only rows with a mature majority successor appear here, so
+        # the pursuit scan is O(candidates) instead of O(all streams x bands).
+        self.hop_next: dict[tuple, tuple] = {}
+        # Pursuit accountability: streams whose predicted destination
+        # produced no intercept are blocked from further pursuit until the
+        # stream yields a fresh detection (prevents chasing a phantom
+        # majority successor learned from an immature transition row).
+        self.pursuit_miss: dict[tuple, int] = {}
+        self._pursuit: tuple | None = None
+        self._pursuit_times: deque = deque()
+        # Rolling pursuit outcomes (adaptive acceptance gate) + the slot of
+        # the last armed pursuit (for probation re-testing).
+        self.pursuit_hist: deque = deque(maxlen=_PURSUIT_HIST)
+        self._pursuit_last_test = -10 ** 9
+        # Learned behaviour arbitration (LinUCB): shadow mode by default --
+        # it observes every (context, behaviour, outcome) triple the fixed
+        # policy produces and learns which behaviour pays in which situation;
+        # its learned preferences are inspectable via ``arbiter.score``.
+        from .meta import BehaviourArbiter
+        self.arbiter = BehaviourArbiter(6, rng=self.rng)
+        self._last_behaviour: str | None = None
+        self._behaviour_t: int | None = None
         # Known footprint of tracked agile emitters (source + successor
         # bands).  Patrolled at an accelerated revisit rate in select() -
         # against effectively random hops, fast patrol of the hop-set is the
@@ -578,6 +652,7 @@ class SmartScanScheduler(BaseScheduler):
                 lg.n = int(n0)
             self.hop_succ = {k: {p: dict(row) for p, row in v.items()}
                              for k, v in m["hop_succ"].items()}
+            self._rebuild_hop_next()
 
     # Memory consolidation rates: how strongly the just-finished episode's
     # statistics are blended into the cross-episode priors.
@@ -801,6 +876,14 @@ class SmartScanScheduler(BaseScheduler):
         if prev is not None and last_t is not None and prev != band:
             succ = self.hop_succ.setdefault(key, {}).setdefault(prev, {})
             succ[band] = succ.get(band, 0) + 1
+            # Refresh the pursuable-candidate index for the row just changed
+            # (rows only ever grow, so no other row can change here).
+            tot = sum(succ.values())
+            top_b = max(succ, key=succ.get)
+            if tot >= self.hop_min_obs and 2 * succ[top_b] >= tot:
+                self.hop_next[(key, prev)] = (top_b, succ[top_b] / tot)
+            else:
+                self.hop_next.pop((key, prev), None)
             dt = t - last_t
             if dt > 0:
                 m = self.hop_dt.get(key)
@@ -810,6 +893,14 @@ class SmartScanScheduler(BaseScheduler):
             self.hop_watch.add(band)
         self.hop_last_band[key] = band
         self.hop_last_t[key] = t
+        # Feed the per-stream dwell/transition predictor: every resolved
+        # detection updates the stream's dwell-length statistics and (when
+        # the band changes) the transition counts used by ``_hop_pursuit``.
+        if key not in self.hop_pred:
+            self.hop_pred[key] = HopDwellPredictor(self.n_bands)
+        self.hop_pred[key].observe(band, t)
+        # A fresh on-frequency detection re-arms the stream for hop pursuit.
+        self.pursuit_miss.pop(key, None)
         # Track the agile emitter's footprint (source band; the destination
         # is added on the transition-count branch below).
         self.hop_watch.add(band)
@@ -821,8 +912,12 @@ class SmartScanScheduler(BaseScheduler):
         if len(self.hop_last_band) > 48:
             oldest = min(self.hop_last_band, key=self.hop_last_t.get)
             for d in (self.hop_last_band, self.hop_last_t,
-                      self.hop_succ, self.hop_dt):
+                      self.hop_succ, self.hop_dt, self.hop_pred,
+                      self.pursuit_miss):
                 d.pop(oldest, None)
+            if self.hop_next:
+                self.hop_next = {k: v for k, v in self.hop_next.items()
+                                 if k[0] != oldest}
 
     def _hop_bonus(self, t: int) -> np.ndarray:
         """Urgency-weighted successor distribution for imminent agile hops.
@@ -856,6 +951,124 @@ class SmartScanScheduler(BaseScheduler):
                     bonus[b] += mass * c
         return bonus
 
+    def _rebuild_hop_next(self) -> None:
+        """Rebuild the pursuable-candidate index from ``hop_succ``.
+
+        Used after a warm start (cross-episode memory rehydration), when the
+        transition counts arrive wholesale rather than one observation at a
+        time.  A pair qualifies only with a mature, majority successor.
+        """
+        self.hop_next = {}
+        for key, rows in self.hop_succ.items():
+            for prev, row in rows.items():
+                tot = sum(row.values())
+                if tot < self.hop_min_obs:
+                    continue
+                top_b = max(row, key=row.get)
+                if 2 * row[top_b] >= tot:
+                    self.hop_next[(key, prev)] = (top_b, row[top_b] / tot)
+
+    def _pursuit_allowed(self, t: int) -> bool:
+        """Adaptive acceptance gate for hop pursuit, from measured outcomes.
+
+        The scheduler scores its own pursuit attempts (did the dwell on the
+        predicted band actually intercept the predicted stream?) and keeps
+        pursuing only while the prior-smoothed success rate stays at or above
+        ``_PURSUIT_MIN_SUCCESS``.  Where hopping is effectively random the
+        success rate collapses and the pursuit self-disables, leaving the
+        proven value-weighted rotation; where hopping is structured it stays
+        enabled.  While rejected, a probation attempt is permitted every
+        ``_PURSUIT_PROBATION`` slots so a changed scene can recover.
+        """
+        hist = self.pursuit_hist
+        if not hist:
+            return True  # optimistic: gather the first outcomes
+        ok = math.fsum(1.0 for h in hist if h) + _PURSUIT_PRIOR_OK
+        n = len(hist) + _PURSUIT_PRIOR_N
+        if ok / n >= _PURSUIT_MIN_SUCCESS:
+            return True
+        return (t - self._pursuit_last_test) >= _PURSUIT_PROBATION
+
+    def _hop_pursuit(self, t: int) -> int | None:
+        """Confidence-gated agile-hop pursuit using the HopDwellPredictor.
+
+        For each tracked stream whose model has *real predictive content*,
+        predicts ``(next_band, next_on_time)`` from the learned dwell-length
+        statistics and Laplace-smoothed transition counts.  A stream is
+        pursuable only when ALL of the following hold:
+
+        * the adaptive acceptance gate is open (``_pursuit_allowed``): the
+          scheduler's own measured pursuit success rate must be at or above
+          ``_PURSUIT_MIN_SUCCESS`` — against effectively-random agility it
+          collapses and the scheduler keeps the proven value-weighted
+          rotation;
+        * >= ``hop_min_obs`` completed dwell spans on the current band;
+        * >= ``hop_min_obs`` observed transitions from the current band;
+        * a *majority* successor (top-1 transition probability >= 0.5);
+        * the predicted next hop is imminent (within ``_PURSUIT_GUARD``
+          slots of ``t_last + mean_dwell``);
+        * the target band is not already covered densely by the rotation
+          (not dwelt within ``max(_PURSUIT_REDUNDANT, 2 x mean_dwell)``).
+
+        A pursuit that fails to intercept the pursued stream blocks that
+        stream until fresh evidence arrives, and total pursuit dwells are
+        budget-capped per rolling window, so the pursuit can never erode
+        discovery of weak non-agile threats.  Returns the band to pursue,
+        or ``None``.
+        """
+        if self.hop_weight <= 0 or not self.hop_last_band:
+            return None
+        # Phase gate: survey first, then track (see _PURSUIT_PHASE_FRAC).
+        if self.pursuit_phase_frac > 0.0 and self.horizon is not None:
+            track_start = self.recon_steps + self.pursuit_phase_frac * (
+                self.horizon - self.recon_steps)
+            if t < track_start:
+                return None
+        if not self._pursuit_allowed(t):
+            return None  # measured outcomes say the hop model is not paying
+        best_band, best_conf, best_key = None, 0.0, None
+        # Scan only indexed candidates (mature rows with a majority
+        # successor) whose stream is still on the row's source band.
+        for (key, prev), (top_b, p_top) in self.hop_next.items():
+            if self.hop_last_band.get(key) != prev:
+                continue  # stream has moved on since this row was recorded
+            if self.pursuit_miss.get(key, 0) >= 1:
+                continue  # a prior pursuit of this stream missed: needs
+                # fresh on-frequency evidence before it is trusted again
+            pred = self.hop_pred.get(key)
+            last_t = self.hop_last_t.get(key)
+            if pred is None or last_t is None:
+                continue
+            if pred.n_dwell_observations(prev) < self.hop_min_obs:
+                continue  # dwell statistics not mature yet
+            md = pred.mean_dwell(prev)
+            # Predicted start of the stream's next dwell window.
+            t_next = last_t + md
+            dt = t - t_next
+            if dt < -_PURSUIT_GUARD or dt > _PURSUIT_GUARD:
+                continue  # hop window not imminent (or already passed)
+            # Redundancy gate: skip when the rotation already covers the
+            # target band densely (revisit interval shorter than twice the
+            # predicted dwell span).  Otherwise the pursuit would (a) spend a
+            # dwell the rotation was about to spend anyway and (b) feed the
+            # hop-urgency bonus, which re-points the rotation at that band -
+            # a self-reinforcing loop measured to concentrate most of an
+            # episode on a single band and starve discovery elsewhere.
+            if t - self.last_visit[top_b] <= max(_PURSUIT_REDUNDANT, 2.0 * md):
+                continue
+            urgency = 1.0 - min(1.0, abs(dt) / _PURSUIT_GUARD)
+            conf = p_top * urgency
+            if conf > best_conf:
+                best_band, best_conf, best_key = top_b, conf, key
+        if best_band is None or best_conf < _PURSUIT_MIN_CONF:
+            return None
+        # Arm accountability: the very next dwell on ``best_band`` must
+        # intercept the pursued stream, or the stream is blocked from pursuit
+        # and the outcome feeds the adaptive acceptance gate.
+        self._pursuit = (best_key, best_band, t)
+        self._pursuit_last_test = t
+        return best_band
+
     def next_hop_topk(self, band: int, k: int = 3) -> list[int]:
         """Model's most likely successor bands of ``band`` across streams.
 
@@ -871,9 +1084,27 @@ class SmartScanScheduler(BaseScheduler):
                     counts[b] = counts.get(b, 0) + c
         return sorted(counts, key=lambda b: -counts[b])[:max(1, k)]
 
+    def _arbiter_features(self, t: int) -> np.ndarray:
+        """O(1) context vector for the behaviour arbiter (see meta.py)."""
+        from .meta import behaviour_features
+        horizon = self.horizon or 1
+        recon_done = float(np.count_nonzero(self.n > 1)) / max(1, self.n_bands)
+        flat = [x for dq in self.visit_hits for x in list(dq)[-6:]]
+        hit_rate = (sum(flat) / len(flat)) if flat else 0.0
+        credible = sum(1 for b in self.est if self._credible(b))
+        return behaviour_features(
+            t_frac=t / max(1, horizon),
+            recon_done=recon_done,
+            credible_locks=credible,
+            hop_predictability=min(1.0, len(self.hop_next) / 8.0),
+            recent_hit_rate=hit_rate,
+            unseen_bands=int(np.count_nonzero(self.n <= 1)),
+        )
+
     def select(self, t: int) -> int:
         self._check_t(t)
         if t < self.recon_steps:
+            self._last_behaviour = "survey"
             return int(t % self.n_bands)
         mu_eff = self._value_estimates()
         for b, dl in list(self.burst.items()):
@@ -906,43 +1137,46 @@ class SmartScanScheduler(BaseScheduler):
             if self.miss[b] < 2 and d <= 2 and d < best_probe_d:
                 best_probe, best_probe_d = b, d
         if best_lock is not None:
+            self._last_behaviour = "probe"
             return best_lock
         if best_probe is not None:
+            self._last_behaviour = "probe"
             return best_probe
         for b, dl in self.burst.items():
             if t < dl and b not in self.est:
+                self._last_behaviour = "camp"
                 return b
-        # Experimental urgent-hop pursuit / hop-set patrol (disabled by
-        # default).  Measured on the canonical protocol (30 episodes), these
-        # slot-redistribution rules do NOT beat a blind sweep at following
-        # effectively-random hops: closing the factor-~1.4 follow-rate gap
-        # costs more coverage and reward than its follow-rate gain is worth,
-        # because the destination of an unpredictable hop carries no
-        # exploitable structure.  They remain available (``hop_patrol=True``)
-        # for structured mobility scenarios where the transition model has
-        # real predictive content (``agile_mode=\"markov\"``).
-        if self.hop_patrol:
-            hop = self._hop_bonus(t)
-            top = int(np.argmax(hop))
-            if hop[top] >= 0.8:
-                return top
-            if self.hop_weight > 0 and hop.max() <= 0.0 and self.hop_succ:
-                watch: set[int] = set()
-                for succ in self.hop_succ.values():
-                    for prev, row in succ.items():
-                        watch.add(prev)
-                        watch.update(b for b in row if 0 <= b < self.n_bands)
-                if watch:
-                    wb = max(watch, key=lambda b: t - self.last_visit[b])
-                    if t - self.last_visit[wb] > 2.0 * len(watch):
-                        return wb
         if self.rng.random() < self.explore_eps:
             return int(self.rng.integers(self.n_bands))
         # Reconnaissance floor: bound the maximum revisit latency of any band
         # so emerging emitters cannot hide behind exploitation of known ones.
+        # Hop pursuit is placed *after* this floor so chasing a tracked agile
+        # stream can never starve the discovery of unseen emitters.
         stale = int(np.argmax(t - self.last_visit))
         if t - self.last_visit[stale] > 6 * self.n_bands:
+            self._last_behaviour = "survey"
             return stale
+        # Confidence-gated agile-hop pursuit (enabled by default).  The
+        # per-stream HopDwellPredictor drives live band selection ONLY when
+        # its model has real predictive content: mature dwell statistics and
+        # a majority successor transition.  Earlier revisions disabled this
+        # unconditionally because slot-redistribution rules lost to a blind
+        # sweep against effectively-random hops; the majority-successor gate
+        # plus stream-exact pursuit accountability (a missed prediction
+        # blocks the stream until fresh evidence) and a rolling budget cap
+        # keep the pursuit from eroding discovery of weak non-agile threats.
+        pursue = None
+        if self.hop_patrol:
+            while (self._pursuit_times
+                   and t - self._pursuit_times[0] > _PURSUIT_WINDOW):
+                self._pursuit_times.popleft()
+            if len(self._pursuit_times) < _PURSUIT_BUDGET:
+                pursue = self._hop_pursuit(t)
+                if pursue is not None:
+                    self._pursuit_times.append(t)
+        if pursue is not None:
+            self._last_behaviour = "pursue"
+            return pursue
         if self.rng.random() < self._exploit_prob(t):
             if self.value_mode == "flat":
                 return int(self.rng.integers(self.n_bands))
@@ -955,6 +1189,7 @@ class SmartScanScheduler(BaseScheduler):
         score = mu_eff + 0.55 * np.sqrt(np.log(t + 2) / self.n) \
             + (0.16 + 0.14 * unseen) * recency + 0.35 * lprob \
             + self.hop_weight * self._hop_bonus(t)
+        self._last_behaviour = "rotate"
         return int(np.argmax(score))
 
     def _persistent_confirmed(self, band: int) -> bool:
@@ -997,6 +1232,29 @@ class SmartScanScheduler(BaseScheduler):
         self._check_band(band)
         r = self._check_reward(r)
         hit, _ = self._check_res(res)
+        # Resolve armed hop pursuit: the dwell must intercept the *pursued
+        # stream* (matched by its SNR+AOA fingerprint), not merely any
+        # emitter on the band.  A miss blocks that stream from further
+        # pursuit until it yields a fresh detection (see _hop_pursuit).
+        p = self._pursuit
+        is_pursuit_dwell = False
+        if p is not None:
+            p_key, p_band, p_t = p
+            if band == p_band:
+                is_pursuit_dwell = True
+                det_keys = {(round(float(sn) * 2.0), int(ao // 15.0))
+                            for sn, ao in (res.detections
+                                           if not res.false_alarm else ())}
+                ok = p_key in det_keys
+                self.pursuit_hist.append(ok)
+                if ok:
+                    self.pursuit_miss.pop(p_key, None)
+                else:
+                    self.pursuit_miss[p_key] = \
+                        self.pursuit_miss.get(p_key, 0) + 1
+                self._pursuit = None
+            elif t > p_t + _PURSUIT_GUARD:
+                self._pursuit = None
         self.logit[band].observe(t, hit)
         self.visit_times[band].append(t)
         self.last_visit[band] = t
@@ -1014,9 +1272,35 @@ class SmartScanScheduler(BaseScheduler):
             self.new_hits[band] += len(res.detections) or 1
             self._maybe_lock(band, t)
         self._validate_locks(t, band, hit)
-        self.mu[band] += (r - self.mu[band]) / self.n[band]
-        self.mu *= 0.999
-        self.n[band] += 1
+        # Learned behaviour arbitration (shadow mode): every (context,
+        # behaviour, outcome) triple trains the LinUCB arbiter, so the
+        # scheduler accumulates a learned, inspectable model of which
+        # behaviour pays in which situation - without letting an immature
+        # model override the proven policy.  Training is throttled to every
+        # fourth dwell: the context statistics move slowly, so this keeps the
+        # learned model current while holding the per-decision cost flat
+        # (the 1 ms latency gate is a hard requirement).
+        if (self._last_behaviour is not None) and (t % 4 == 0):
+            try:
+                self.arbiter.update(self._arbiter_features(t),
+                                    self._last_behaviour, r)
+            except (ValueError, KeyError):   # pragma: no cover - guard
+                pass
+            self._last_behaviour = None
+        elif self._last_behaviour is not None:
+            self._last_behaviour = None
+        # Band-value learning excludes pursuit dwells: a pursuit dwell is a
+        # *timing-targeted* sample (chosen because a specific stream is
+        # predicted to be on the band), not an unbiased sample of the band's
+        # value.  Counting it would create a positive-feedback loop
+        # (pursue -> hit -> higher band value -> exploit that band -> starve
+        # discovery of other emitters), measured to reallocate most of the
+        # episode to one band.  Everything else - occupancy model, visit
+        # recency, hop model, burst logic - still learns from the dwell.
+        if not is_pursuit_dwell:
+            self.mu[band] += (r - self.mu[band]) / self.n[band]
+            self.mu *= 0.999
+            self.n[band] += 1
 
     def get_state(self) -> dict:
         """Strictly JSON-serialisable snapshot of learned locks and knowledge."""
