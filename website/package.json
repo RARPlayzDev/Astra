@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "probe": "esbuild scripts/pred_probe.ts --bundle --platform=node --outfile=scripts/_pred_probe.cjs --log-level=error && node scripts/_pred_probe.cjs",
     "preview": "vite preview"
   },
   "dependencies": {

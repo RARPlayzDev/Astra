@@ -179,6 +179,9 @@ export default function Operations({ resetKey, running, onStartMission }: Props)
     const smartAcc = k.pred_active_count && k.pred_active_count > 0
       ? `${((k.pred_active_accuracy ?? 0) * 100).toFixed(0)}% (${k.pred_active_count} predictions)`
       : "-";
+    const overallAcc = k.pred_accuracy != null
+      ? `${((k.pred_accuracy ?? 0) * 100).toFixed(0)}% (steady-state, all dwells)`
+      : "-";
     const rows: [string, string, boolean][] = [
       ["Threat coverage", `${((k.threat_coverage ?? 0) * 100).toFixed(0)}%`, true],
       ["Threats intercepted", `${k.threats_found} of ${k.n_threats}`, false],
@@ -188,6 +191,7 @@ export default function Operations({ resetKey, running, onStartMission }: Props)
       ["False alarms", String(k.false_alarms), false],
       ["Threat TTFF", k.threat_mean_ttff != null ? `${k.threat_mean_ttff} slots` : "-", true],
       ["Smart prediction accuracy", smartAcc, true],
+      ["Prediction accuracy (overall)", overallAcc, false],
       ["Periodic locks", String(k.locks ?? 0), false],
     ];
     return (

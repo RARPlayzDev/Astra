@@ -37,6 +37,8 @@ export class SequentialSweep implements Scheduler {
   reset(): void {}
   select(t: number): number { return t % this.nBands; }
   update(): void {}
+  /** An open-loop sweep has no emitter model: its only "prediction" would be
+   *  its own fixed schedule, so the honest baseline answer is OFF. */
   predict(): boolean { return false; }
 }
 
@@ -53,6 +55,7 @@ export class RandomScan implements Scheduler {
   reset(): void {}
   select(): number { return Math.floor(this.rng() * this.nBands); }
   update(): void {}
+  /** No emitter model: honest baseline answer is OFF (see SequentialSweep). */
   predict(): boolean { return false; }
 }
 
@@ -168,10 +171,15 @@ export class SmartScanScheduler implements Scheduler {
   private lastVisit!: number[];
   private hitTimes: number[][] = [];
   private _locks = new Map<number, Lock>();
+  private visitHits: number[][] = [];   // last visit outcomes per band
   private probeUntil = new Map<number, number>();   // band -> dwell-until slot
   private burstUntil = new Map<number, number>();
   private rng: () => number;
   private log: (msg: string) => void = () => {};
+  // Cross-episode memory (Learning Arena): consolidated value/visit priors
+  // that survive reset(), so repeated episodes warm-start the learner.
+  private memory: { mu: number[]; visits: number[] } | null = null;
+  episodesSeen = 0;
 
   constructor(nBands = 24, seed = 7, log?: (m: string) => void) {
     this.nBands = nBands;
@@ -189,14 +197,27 @@ export class SmartScanScheduler implements Scheduler {
     this.visits = new Array(nBands).fill(1);
     this.lastVisit = new Array(nBands).fill(-1e9);
     this.hitTimes = Array.from({ length: nBands }, () => []);
+    this.visitHits = Array.from({ length: nBands }, () => []);
     this._locks.clear(); this.probeUntil.clear(); this.burstUntil.clear();
+    // Warm start from cross-episode memory (Learning Arena).
+    if (this.memory && this.memory.mu.length === nBands) {
+      this.mu = [...this.memory.mu];
+      this.visits = [...this.memory.visits];
+    }
+  }
+
+  /** Consolidate this episode's learning into cross-episode memory. */
+  endEpisode(): void {
+    this.episodesSeen += 1;
+    this.memory = { mu: [...this.mu], visits: [...this.visits] };
   }
 
   get reconSteps() { return RECON_FACTOR * this.nBands / 12; }
   get locks(): number { return this.lockMap.size; }
   private get lockMap() { return this._locks; }
 
-  /** Parity with SmartScanScheduler.predict: phase-lock + yield fallback. */
+  /** Parity with SmartScanScheduler.predict: phase-lock, confirmed
+   *  persistent carrier, then yield fallback - in that order. */
   predict(t: number, band: number): boolean {
     // 1. Phase-locked periodic emitter
     const l = this._locks.get(band);
@@ -205,6 +226,13 @@ export class SmartScanScheduler implements Scheduler {
       const width = Math.max(4, l.period * 0.2);
       if (d >= 0 && d <= width) return true;
     }
+    // 2. Confirmed persistent carrier: a full window of 10 dwells with
+    //    >= 75% hit rate (always-on stationary emitters fail no other test).
+    const vh = this.visitHits[band] ?? [];
+    if (vh.length === 10 && vh.reduce((s, v) => s + v, 0) >= 8) return true;
+    // 3. Yield-confirmed: >= 3 visits with >= 60% hit rate.
+    if (vh.length >= 3 && vh.reduce((s, v) => s + v, 0) / vh.length >= 0.6)
+      return true;
     return false;
   }
 
@@ -284,6 +312,9 @@ export class SmartScanScheduler implements Scheduler {
     this.visits[band] += 1;
     this.lastVisit[band] = t;
     this.mu[band] += (r - this.mu[band]) / this.visits[band];
+    const vh = this.visitHits[band] ?? (this.visitHits[band] = []);
+    vh.push(res.hit && !res.falseAlarm ? 1 : 0);
+    if (vh.length > 10) vh.shift();
 
     const ht = this.hitTimes[band];
     const lock = this._locks.get(band);

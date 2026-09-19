@@ -40,11 +40,12 @@ interface Kpi {
   cov: number; found: number; threats: number; allRatio: number;
   reward: number; hitRate: number; fa: number;
   ttff: number | null; threatTtff: number | null;
-  predAcc: number; locks: number; team: number;
+  predAcc: number; locks: number; team: number; predN: number;
+  truthRate: number; predOn: number;
 }
 const emptyKpi = (): Kpi => ({ cov: 0, found: 0, threats: 0, allRatio: 0,
   reward: 0, hitRate: 0, fa: 0, ttff: null, threatTtff: null,
-  predAcc: 0, locks: 0, team: 1 });
+  predAcc: 0, predN: 0, locks: 0, team: 1, truthRate: 0, predOn: 0 });
 
 type OpponentKind = "openloop-sequential" | "openloop-random"
   | "bandit-ucb" | "rl-linear-q";
@@ -125,7 +126,8 @@ interface SimState {
   seenAll: { a: Set<number>; b: Set<number> };
   ttffAll: { a: number[]; b: number[] };
   ttffThreat: { a: number[]; b: number[] };
-  pred: { a: [number, number]; b: [number, number] }; // [correct,total]
+  pred: { a: [number, number, number, number]; b: [number, number, number, number] }; // [correct,total,truthOn,predOn]
+  sigBase: number[]; sigWin: number[];
   nThreats: number;
   collectors: { a: StreamCollector; b: StreamCollector };
 }
@@ -245,7 +247,9 @@ export default function Console() {
       seenThreats: { a: new Set(), b: new Set() },
       seenAll: { a: new Set(), b: new Set() },
       ttffAll: { a: [], b: [] }, ttffThreat: { a: [], b: [] },
-      pred: { a: [0, 0], b: [0, 0] },
+      pred: { a: [0, 0, 0, 0], b: [0, 0, 0, 0] },
+      sigBase: new Array(cfg.nBands).fill(0),
+      sigWin: new Array(cfg.nBands).fill(0),
       nThreats: env.nThreats(), collectors,
     };
     setSlot(0); setKA(emptyKpi()); setKB(emptyKpi()); setLogLines([]); setIdRows([]);
@@ -287,6 +291,21 @@ export default function Console() {
           if (!s.env.transmitting(e, t)) continue;
           occCol[s.env.agileBand(e, t)] = 1;
         }
+        // Environment watch: learn the baseline activity signature over the
+        // first 300 slots, then compare each 300-slot window and alert when a
+        // band becomes active or goes quiet (PS: environment shift detection).
+        for (let bd = 0; bd < occCol.length; bd++) if (occCol[bd]) s.sigWin[bd]++;
+        if (t === 300) s.sigBase = [...s.sigWin];
+        if (t > 600 && t % 300 === 0) {
+          for (let bd = 0; bd < occCol.length; bd++) {
+            const base = s.sigBase[bd], win = s.sigWin[bd];
+            if (base <= 2 && win >= 40)
+              setLogLines((L) => [`slot ${t}: ENV SHIFT - band ${bd} became active (${win}/300 slots, baseline ${base})`, ...L].slice(0, 120));
+            else if (base >= 40 && win <= 2)
+              setLogLines((L) => [`slot ${t}: ENV SHIFT - band ${bd} went quiet (${win}/300 slots, baseline ${base})`, ...L].slice(0, 120));
+          }
+          s.sigWin.fill(0);
+        }
 
         const runSide = (side: "a" | "b", team: TeamScheduler) => {
           const bands = team.selectJoint(t);
@@ -319,9 +338,18 @@ export default function Console() {
             [...s.seenAll[side]].filter((e) => !s.seenThreats[side].has(e)).length;
           void newly;
           if (anyHit && !anyFa) s.ttffAll[side].push(t);
-          const pred = team.first.predict(t, bands[0]);
-          s.pred[side][0] += Number(pred === truth);
-          s.pred[side][1] += 1;
+          // Prediction scoring must compare a prediction with the truth of
+          // the SAME band it was made for.  Scoring against the OR of all
+          // team receivers' bands (the old code) inflated "true" and made
+          // every scheduler look wrong; each receiver's prediction is now
+          // scored against its own band's ground truth.
+          for (let i = 0; i < results.length; i++) {
+            const p = team.first.predict(t, bands[i]);
+            s.pred[side][0] += Number(p === results[i].truthPresent);
+            s.pred[side][1] += 1;
+            if (results[i].truthPresent) s.pred[side][2] += 1;
+            if (p) s.pred[side][3] += 1;
+          }
           s.rewardSum[side] += rTotal;
           if (anyHit && !anyFa) s.hits[side] += 1;
           if (anyFa) s.fa[side] += 1;
@@ -346,6 +374,9 @@ export default function Console() {
           ? s.ttffThreat[side].reduce((x, y) => x + y, 0) / s.ttffThreat[side].length
           : null,
         predAcc: s.pred[side][1] ? s.pred[side][0] / s.pred[side][1] : 0,
+        predN: s.pred[side][1],
+        truthRate: s.pred[side][1] ? s.pred[side][2] / s.pred[side][1] : 0,
+        predOn: s.pred[side][1] ? s.pred[side][3] / s.pred[side][1] : 0,
         locks: (s.team.a.first as SmartScanScheduler).locks ?? 0,
         team: teamSize,
       });
@@ -391,6 +422,100 @@ export default function Console() {
   const start = () => { reset(); setRunning(true); };
   const stop = () => setRunning(false);
 
+  /* ---------------- Learning Arena + Model-vs-Model (headless) ------------ */
+  interface ShootRow { name: string; cov: number; ttff: number | null; reward: number; }
+  interface ArenaRow { ep: number; seed: number; cov: number; reward: number; locks: number; }
+  const [arenaRows, setArenaRows] = useState<ArenaRow[] | null>(null);
+  const [arenaBusy, setArenaBusy] = useState(false);
+  const [shootRows, setShootRows] = useState<ShootRow[] | null>(null);
+  const [shootBusy, setShootBusy] = useState(false);
+  const arenaSched = useRef<SmartScanScheduler | null>(null);
+  const arenaKey = useRef<string>("");
+
+  const runArena = (nEp: number) => {
+    setArenaBusy(true);
+    setTimeout(() => {
+      const cfgA = buildScenario();
+      const key = `${seed}:${cfgA.nBands}:${cfgA.snrMeanDb}`;
+      if (!arenaSched.current || arenaKey.current !== key) {
+        arenaSched.current = new SmartScanScheduler(cfgA.nBands, seed);
+        arenaKey.current = key;
+      }
+      const rows: ArenaRow[] = [];
+      for (let k = 0; k < nEp; k++) {
+        const epSeed = seed + k * 7919;   // fresh battlefield per episode
+        const env = new RFEnvironment(cfgA, epSeed);
+        const rx = new ESReceiver(env, epSeed * 7 + 11, 6);
+        const sched = arenaSched.current;
+        sched.reset(cfgA.nBands, cfgA.T);
+        const seen = new Set<number>(); const ttff: number[] = []; let reward = 0;
+        for (let t = 0; t < cfgA.T; t++) {
+          const b = sched.select(t);
+          const res = rx.dwell(b, t);
+          let r = res.falseAlarm ? -0.08 : !res.hit ? -0.05 : 0.15;
+          if (res.hit && !res.falseAlarm) {
+            const lead = env.emitters.find((e) => e.eid === res.detections[0]?.eid);
+            r = lead?.threat ? 1 : 0.15;
+          }
+          reward += r;
+          for (const d of res.detections) if (!seen.has(d.eid)) {
+            seen.add(d.eid);
+            if (env.emitters.find((x) => x.eid === d.eid)?.threat) ttff.push(t);
+          }
+          sched.update(t, b, res, r);
+        }
+        sched.endEpisode();          // consolidate memory -> warm start
+        rows.push({ ep: k + 1, seed: epSeed,
+          cov: ttff.length / Math.max(1, env.nThreats()),
+          reward: reward / cfgA.T, locks: sched.locks });
+      }
+      setArenaRows(rows); setArenaBusy(false);
+      setLogLines((L) => [`learning arena: ${nEp} episodes trained, memory carried across`, ...L].slice(0, 120));
+    }, 30);
+  };
+
+  const runShoot = () => {
+    setShootBusy(true);
+    setTimeout(() => {
+      const cfgA = buildScenario();
+      const env = new RFEnvironment(cfgA, seed);
+      const T = Math.min(cfgA.T, 2400);
+      const nT = env.nThreats();
+      const mk = (): [Scheduler, string][] => [
+        [new SmartScanScheduler(cfgA.nBands, seed), "SmartScan (ASTRA)"],
+        [new SequentialSweep(cfgA.nBands), "Sequential sweep"],
+        [new RandomScan(cfgA.nBands, seed), "Random scan"],
+        [new UCBScheduler(cfgA.nBands), "UCB bandit"],
+        [new LinearQLearning(cfgA.nBands, seed), "Linear Q-learning"],
+      ];
+      const rows: ShootRow[] = mk().map(([sched, name]) => {
+        sched.reset(cfgA.nBands, T);
+        const rx = new ESReceiver(env, seed * 7 + 11, 6);
+        const seen = new Set<number>(); const ttff: number[] = []; let reward = 0;
+        for (let t = 0; t < T; t++) {
+          const b = sched.select(t);
+          const res = rx.dwell(b, t);
+          let r = res.falseAlarm ? -0.08 : !res.hit ? -0.05 : 0.15;
+          if (res.hit && !res.falseAlarm) {
+            const lead = env.emitters.find((e) => e.eid === res.detections[0]?.eid);
+            r = lead?.threat ? 1 : 0.15;
+          }
+          reward += r;
+          for (const d of res.detections) if (!seen.has(d.eid)) {
+            seen.add(d.eid);
+            if (env.emitters.find((x) => x.eid === d.eid)?.threat) ttff.push(t);
+          }
+          sched.update(t, b, res, r);
+        }
+        return { name, cov: ttff.length / Math.max(1, nT),
+          ttff: ttff.length ? ttff.reduce((a, x) => a + x, 0) / ttff.length : null,
+          reward: reward / T };
+      });
+      setShootRows(rows); setShootBusy(false);
+    }, 30);
+  };
+
+
   const Kv = ({ k }: { k: Kpi }) => (
     <div className="kv">
       <div className="row"><span>Threat coverage</span>
@@ -406,8 +531,14 @@ export default function Console() {
         <span>{k.ttff != null ? `${k.ttff.toFixed(0)} slots` : "-"}</span></div>
       <div className="row"><span>Threat TTFF</span>
         <span>{k.threatTtff != null ? `${k.threatTtff.toFixed(0)} slots` : "-"}</span></div>
-      <div className="row"><span>Prediction accuracy</span>
-        <span>{(k.predAcc * 100).toFixed(0)}%</span></div>
+      <div className="row"><span>Prediction accuracy (band occupancy)</span>
+        <span>{(k.predAcc * 100).toFixed(0)}%
+          <span style={{ color: "#858585", marginLeft: 6, fontSize: 11 }}>
+            n={k.predN}</span></span></div>
+      <div className="row"><span style={{ fontSize: 11.5, color: "#858585" }}>context</span>
+        <span style={{ fontSize: 11.5, color: "#858585" }}>
+          band truly ON in {(k.truthRate * 100).toFixed(0)}% of its dwells -
+          predicted ON {(k.predOn * 100).toFixed(0)}%</span></div>
       {k.team > 1 && <div className="row"><span>Cooperative team</span>
         <span>{k.team} receivers</span></div>}
       <div className="row"><span>Phase locks held</span><span>{k.locks}</span></div>
@@ -625,6 +756,78 @@ export default function Console() {
           </div>
         </div>
 
+        <div className="panel" style={{ marginTop: 16 }}>
+          <h3>Learning arena - cross-episode training</h3>
+          <div className="body">
+            <p className="tbl-note">
+              Runs full missions back-to-back on <b>new battlefields</b> (fresh
+              seeds) while the SmartScan learner keeps its consolidated band-value
+              memory between episodes - the PS "train on hits and misses" loop,
+              visible as warm-start improvement in the early episodes.
+            </p>
+            <div className="controls-row" style={{ marginBottom: 12 }}>
+              <button className="tbtn primary" disabled={arenaBusy}
+                      onClick={() => runArena(5)}>
+                {arenaBusy ? "Training..." : "Train 5 episodes"}</button>
+              <button className="tbtn" disabled={arenaBusy}
+                      onClick={() => runArena(10)}>Train 10 episodes</button>
+              <button className="tbtn" disabled={arenaBusy}
+                      onClick={() => { arenaSched.current = null; arenaKey.current = ""; setArenaRows(null); }}>
+                Reset learner memory</button>
+            </div>
+            {arenaRows && (
+              <table className="res" style={{ minWidth: 460 }}>
+                <thead><tr><th>Episode</th><th>Battlefield</th>
+                  <th>Threat coverage</th><th>Reward / dwell</th><th>Phase locks</th></tr></thead>
+                <tbody>
+                  {arenaRows.map((r) => (
+                    <tr key={r.ep}>
+                      <td className="num">{r.ep}</td>
+                      <td className="num">seed {r.seed}</td>
+                      <td className="num">{(r.cov * 100).toFixed(0)}%</td>
+                      <td className="num">{r.reward.toFixed(3)}</td>
+                      <td className="num">{r.locks}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+            {!arenaRows && (
+              <p className="tbl-note">No training run yet - the comparison to
+              read is episode 1 (cold start) vs later episodes (warm start).</p>)}
+          </div>
+        </div>
+
+        <div className="panel" style={{ marginTop: 16 }}>
+          <h3>Model-vs-model - identical battlefield shootout</h3>
+          <div className="body">
+            <p className="tbl-note">
+              Runs every scheduling policy headlessly on the <b>exact same seed
+              and scene</b> as configured above - learned policies (SmartScan,
+              linear Q-learning) against classical baselines (sweep, random,
+              bandit). Same battlefield, same receiver, same reward.
+            </p>
+            <button className="tbtn primary" disabled={shootBusy} onClick={runShoot}>
+              {shootBusy ? "Running..." : "Run shootout"}</button>
+            {shootRows && (
+              <table className="res" style={{ minWidth: 460, marginTop: 12 }}>
+                <thead><tr><th>Policy</th><th>Threat coverage</th>
+                  <th>Mean threat first-fix</th><th>Reward / dwell</th></tr></thead>
+                <tbody>
+                  {shootRows.map((r) => (
+                    <tr key={r.name} className={r.name.startsWith("SmartScan") ? "hl" : ""}>
+                      <td>{r.name}</td>
+                      <td className="num">{(r.cov * 100).toFixed(0)}%</td>
+                      <td className="num">{r.ttff != null ? `${r.ttff.toFixed(0)} slots` : "-"}</td>
+                      <td className="num">{r.reward.toFixed(3)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+
         {geoData && (
           <div className="panel" style={{ marginTop: 16 }}>
             <h3>Geolocation — AOA Triangulation</h3>
@@ -672,6 +875,7 @@ export default function Console() {
                 const lvl = (l: string): [string, string] => {
                   if (l.includes("CONFIRMED")) { return ["LOCK", "pass"]; }
                   if (l.includes("deleted")) { return ["DROP", "fail"]; }
+                  if (l.includes("ENV SHIFT")) { return ["SHIFT", "pending"]; }
                   if (l.includes("rhythm") || l.includes("candidate")) { return ["PROBE", "pending"]; }
                   if (l.includes("mission complete")) { return ["DONE", "pass"]; }
                   if (l.includes("demo loaded")) { return ["INFO", "info"]; }
