@@ -608,3 +608,28 @@ canvas {
   line-height: 1.7; max-width: 700px;
 }
 .kpp-note b { color: var(--soft); }
+
+/* ---------------- console v3: tabbed command centre ---------------------- */
+.ctabs { display: flex; gap: 10px; margin: 18px 0 22px; flex-wrap: wrap; }
+.ctab {
+  flex: 1 1 220px; text-align: left; padding: 14px 18px; border-radius: 10px;
+  border: 1px solid var(--border); background: rgba(255,255,255,0.02);
+  cursor: pointer; display: flex; flex-direction: column; gap: 3px;
+  color: var(--muted); transition: border-color .15s, background .15s;
+}
+.ctab b { color: var(--soft); font-size: 16px; }
+.ctab span { font-size: 13px; line-height: 1.45; }
+.ctab:hover { border-color: var(--border-hover); }
+.ctab.on { border-color: var(--accent); background: rgba(207,164,83,0.06); }
+.ctab.on b { color: var(--accent); }
+.sandbox {
+  border: 1px dashed var(--border); border-radius: 10px;
+  padding: 12px 18px; font-size: 13.5px; color: var(--muted); line-height: 1.6;
+}
+.sandbox b { color: var(--soft); }
+.abar-wrap {
+  width: 110px; height: 8px; background: rgba(255,255,255,0.06);
+  border-radius: 4px; overflow: hidden; display: inline-block;
+  vertical-align: middle; margin-left: 8px;
+}
+.abar { height: 100%; background: var(--accent); border-radius: 4px; }

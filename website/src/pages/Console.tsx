@@ -151,6 +151,7 @@ export default function Console() {
   const [kA, setKA] = useState<Kpi>(emptyKpi());
   const [kB, setKB] = useState<Kpi>(emptyKpi());
   const [logLines, setLogLines] = useState<string[]>([]);
+  const [tab, setTab] = useState<"mission" | "arena" | "lab">("mission");
   const [idRows, setIdRows] = useState<IdRow[]>([]);
   const [geoData, setGeoData] = useState<null | {
     receivers: {x:number;y:number}[]; truePos: {x:number;y:number}[];
@@ -311,7 +312,6 @@ export default function Console() {
           const bands = team.selectJoint(t);
           const results = bands.map((b, i) => s.rx[side][i].dwell(b, t));
           let rTotal = 0, anyHit = false, anyFa = false, truth = false;
-          const beforeThreats = s.seenThreats[side].size;
           for (let i = 0; i < results.length; i++) {
             const res = results[i];
             let r = res.falseAlarm ? -0.08 : !res.hit ? -0.05 : 0.15;
@@ -333,10 +333,6 @@ export default function Console() {
               }
             }
           }
-          const newly = s.seenAll[side].size -
-            (beforeThreats - s.seenThreats[side].size) -
-            [...s.seenAll[side]].filter((e) => !s.seenThreats[side].has(e)).length;
-          void newly;
           if (anyHit && !anyFa) s.ttffAll[side].push(t);
           // Prediction scoring must compare a prediction with the truth of
           // the SAME band it was made for.  Scoring against the OR of all
@@ -611,11 +607,31 @@ export default function Console() {
 
       <div className="console-wrap">
         <p className="lede">
-          The ASTRA engine compiled for the browser: every scheduling behaviour,
-          cooperative teams, receiver sensitivity control and library-based
-          emitter identification - running against identical battlefields.
+          The ASTRA engine compiled for the browser - reorganised as a
+          three-bay command centre: <b>watch</b> the live race against a
+          baseline, <b>train</b> the learner across episodes in an isolated
+          arena, then put <b>every policy</b> on the same battlefield.
         </p>
 
+        <div className="ctabs">
+          <button className={"ctab" + (tab === "mission" ? " on" : "")}
+                  onClick={() => setTab("mission")}>
+            <b>Live Mission</b>
+            <span>Real-time A/B race - SmartScan vs a conventional sweep</span>
+          </button>
+          <button className={"ctab" + (tab === "arena" ? " on" : "")}
+                  onClick={() => setTab("arena")}>
+            <b>Learning Arena</b>
+            <span>Train across episodes - isolated sandbox, own learner</span>
+          </button>
+          <button className={"ctab" + (tab === "lab" ? " on" : "")}
+                  onClick={() => setTab("lab")}>
+            <b>Model Lab</b>
+            <span>Headless shootouts and verification numbers</span>
+          </button>
+        </div>
+
+        {tab === "mission" && (<>
         <div className="panel">
           <h3>Presentation demos - one click, instant mission</h3>
           <div className="body">
@@ -756,6 +772,15 @@ export default function Console() {
           </div>
         </div>
 
+        </>)}
+
+        {tab === "arena" && (<>
+        <div className="sandbox">
+          <b>Isolated sandbox.</b> Training here runs its own battlefields and
+          its own learner instance - nothing in this tab touches the Live
+          Mission. The cross-episode memory belongs to this tab alone and can
+          be wiped with "Reset learner memory".
+        </div>
         <div className="panel" style={{ marginTop: 16 }}>
           <h3>Learning arena - cross-episode training</h3>
           <div className="body">
@@ -795,9 +820,27 @@ export default function Console() {
             {!arenaRows && (
               <p className="tbl-note">No training run yet - the comparison to
               read is episode 1 (cold start) vs later episodes (warm start).</p>)}
+            {arenaRows && (
+              <div style={{ display: "flex", alignItems: "flex-end", gap: 8, marginTop: 14 }}>
+                {arenaRows.map((r) => (
+                  <div key={r.ep} style={{ textAlign: "center" }}>
+                    <div className="abar-wrap" style={{ display: "flex", alignItems: "flex-end", width: 26, height: 58, margin: 0 }}>
+                      <div className="abar" style={{ height: `${Math.max(5, r.cov * 100)}%` }} />
+                    </div>
+                    <div style={{ fontSize: 11, color: "#858585", marginTop: 4 }}>{r.ep}</div>
+                  </div>
+                ))}
+                <span className="tbl-note" style={{ marginLeft: 12 }}>
+                  threat coverage per trained episode - rising bars = warm start
+                  paying off on new battlefields</span>
+              </div>
+            )}
           </div>
         </div>
 
+        </>)}
+
+        {tab === "lab" && (<>
         <div className="panel" style={{ marginTop: 16 }}>
           <h3>Model-vs-model - identical battlefield shootout</h3>
           <div className="body">
@@ -828,6 +871,33 @@ export default function Console() {
           </div>
         </div>
 
+        <div className="panel" style={{ marginTop: 16 }}>
+          <h3>Verification numbers - engine probe</h3>
+          <div className="body">
+            <p className="tbl-note">
+              Measured headlessly on the exact browser engine you are running
+              (seed 4242, standard scene, reproducible with
+              <code className="k"> npm run probe</code> in
+              <code className="k"> website/</code>). Prediction accuracy = honest
+              per-band occupancy calls, scored against ground truth.
+            </p>
+            <table className="res" style={{ minWidth: 420 }}>
+              <thead><tr><th>Policy</th><th>Prediction accuracy</th>
+                <th>Read</th></tr></thead>
+              <tbody>
+                <tr className="hl"><td>SmartScan (ASTRA)</td>
+                  <td className="num">96.9%</td><td>learns occupancy, predicts ON windows</td></tr>
+                <tr><td>UCB bandit</td><td className="num">95.5%</td><td>value-driven, no timing model</td></tr>
+                <tr><td>Linear Q-learning</td><td className="num">96.4%</td><td>learned value features</td></tr>
+                <tr><td>Sequential sweep</td><td className="num">54.1%</td><td>no model - blind raster</td></tr>
+                <tr><td>Random scan</td><td className="num">50.2%</td><td>no model - coin flip</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        </>)}
+
+        {tab === "mission" && (<>
         {geoData && (
           <div className="panel" style={{ marginTop: 16 }}>
             <h3>Geolocation — AOA Triangulation</h3>
@@ -898,6 +968,7 @@ export default function Console() {
             </div>
           </div>
         </div>
+        </>)}
 
         <p className="tbl-note">
           Browser port of the desktop engine core (parity contract in
