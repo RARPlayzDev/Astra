@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Logo } from "../shared";
 import {
   DEFAULT_SCENARIO, ESReceiver, RFEnvironment,
@@ -113,6 +113,19 @@ const DEMOS: DemoSpec[] = [
     scenarioName: "dense",
   },
 ];
+
+/* First-run onboarding: visitors who have never seen the console get the intro
+ * cards, then the element-anchored spotlight tour. Replayable from the topbar. */
+const SEEN_KEY = "astra.console.v1";
+
+interface TourStep {
+  title: string;
+  text: string;
+  /** CSS selector for the element to spotlight (data-tour attribute). */
+  sel: string;
+  /** Bay that must be active for the target to exist. */
+  tab: "mission" | "arena" | "lab";
+}
 
 interface SimState {
   cfg: Scenario;
@@ -512,8 +525,8 @@ export default function Console() {
   };
 
 
-  const Kv = ({ k }: { k: Kpi }) => (
-    <div className="kv">
+  const Kv = ({ k, dt }: { k: Kpi; dt?: string }) => (
+    <div className="kv" data-tour={dt}>
       <div className="row"><span>Threat coverage</span>
         <span>{(k.cov * 100).toFixed(0)}%</span></div>
       <div className="row"><span>Threats intercepted</span>
@@ -541,16 +554,120 @@ export default function Console() {
     </div>
   );
 
-  const [tourStep, setTourStep] = useState(0);
   const [showQuick, setShowQuick] = useState(false);
+  const [tourIdx, setTourIdx] = useState(-1);
+  const [spot, setSpot] = useState<{ left: number; top: number; width: number;
+    height: number } | null>(null);
+  const [tipPos, setTipPos] = useState<{ left: number; top: number } | null>(null);
+  const tipRef = useRef<HTMLDivElement | null>(null);
 
-  const TOUR_STEPS = [
-    { title: "Presentation Demos", text: "Click one of these presets to instantly configure and start a scenario. Try the 'Flagship race' to see ASTRA vs a standard sweeper." },
-    { title: "Mission Configuration", text: "You can tweak the exact scenario variables manually: seed, sensitivity, opponent type, and even multi-receiver swarm sizes." },
-    { title: "The Waterfall Display", text: "The blue blocks are true transmissions. The light grey column is where the receiver is currently listening. A gold flash means a successful intercept!" },
-    { title: "Performance Metrics", text: "Live KPIs track the mission. Watch ASTRA's Threat Coverage stay high while its Reward per Dwell outpaces the baseline." },
-    { title: "Emitter Identification", text: "As streams of intercepts come in, they are matched against a library of known threats. This is the final step: Intercept -> Classify -> Identify." }
+  const TOUR_STEPS: TourStep[] = [
+    { title: "Presentation demos", tab: "mission", sel: '[data-tour="demos"]',
+      text: "One click configures and launches a full mission - seed, opponent, sensitivity and scene are preset. Start with '1 - Flagship race' for the headline A/B; the others cover periodic rhythms, the exploitation trap, low-SNR stress and a cooperative swarm." },
+    { title: "Start / Pause", tab: "mission", sel: '[data-tour="start"]',
+      text: "Start mission launches with the current configuration; Pause freezes the clock so you can read the panels. Seed, scene and the Advanced knobs apply on the next Start." },
+    { title: "Mission configuration", tab: "mission", sel: '[data-tour="config"]',
+      text: "Tune the battlefield by hand: reproducible seed, Receiver B's policy, 1-3 cooperative receivers, sensitivity offset, scene size and simulation rate. 'Advanced' reveals SNR, period-range and clutter controls." },
+    { title: "The waterfall", tab: "mission", sel: '[data-tour="waterfall"]',
+      text: "Ground truth on screen: blue cells are real transmissions, the light grey column is the band the receiver is listening to right now, and a gold cell is a successful intercept. Gold density on A versus B is the whole story." },
+    { title: "Live KPIs", tab: "mission", sel: '[data-tour="kpi"]',
+      text: "Threat coverage, intercept ratio, reward per dwell, time-to-first-fix, prediction accuracy and phase locks update every slot. ASTRA should hold higher coverage and a faster threat TTFF than the baseline beside it." },
+    { title: "Threat board", tab: "mission", sel: '[data-tour="threats"]',
+      text: "After three or more intercepts a stream is matched against the emitter library: class, threat level, confidence, and whether the identification MATCHed ground truth - intercept, classify, identify." },
+    { title: "Scheduler event log", tab: "mission", sel: '[data-tour="log"]',
+      text: "Every scheduler decision lands here: PROBE tests a rhythm hypothesis, LOCK / CONFIRMED means a periodic emitter is phase-locked, DROP retires a stale belief, SHIFT flags an environment change. The lock count is the learning made visible." },
+    { title: "Three bays", tab: "mission", sel: '[data-tour="tabs"]',
+      text: "The console is a command centre: watch the live race, train across episodes in isolation, then verify headlessly. Everything below the tabs belongs to the selected bay." },
+    { title: "Learning Arena", tab: "arena", sel: '[data-tour="arena"]',
+      text: "Cross-episode training in an isolated sandbox. Press 'Train 5 episodes' to run back-to-back missions on fresh battlefields while the learner keeps its memory - rising bars are the warm start paying off. 'Reset learner memory' wipes it." },
+    { title: "Model Lab", tab: "lab", sel: '[data-tour="lab"]',
+      text: "Headless verification: 'Run shootout' races all seven policies on the same seed, and the probe table scores prediction honestly - SmartScan 96.9% against 54.1% for the sweep, reproducible with 'npm run probe'." },
+    { title: "Help is always here", tab: "mission", sel: '[data-tour="help"]',
+      text: "'Quick Guide' reopens the four intro cards and 'Help / Tour' replays this tour at any time. You now know enough to demo ASTRA - head back to the site when you're done." },
   ];
+
+  const markSeen = () => {
+    try { localStorage.setItem(SEEN_KEY, "1"); } catch { /* private mode */ }
+  };
+  const startTour = () => { setShowQuick(false); setTourIdx(0); };
+  const endTour = () => {
+    setTourIdx(-1); setSpot(null); setTipPos(null); setTab("mission"); markSeen();
+  };
+  const tourNext = () => {
+    if (tourIdx + 1 < TOUR_STEPS.length) setTourIdx(tourIdx + 1); else endTour();
+  };
+  const tourBack = () => setTourIdx(Math.max(0, tourIdx - 1));
+
+  // First-time visitors get the intro cards before any spotlight appears.
+  useEffect(() => {
+    let seen = false;
+    try { seen = !!localStorage.getItem(SEEN_KEY); } catch { seen = false; }
+    if (!seen) setShowQuick(true);
+  }, []);
+
+  // Follow the tour: switch bay first, then locate and spotlight the target.
+  useEffect(() => {
+    if (tourIdx < 0 || tourIdx >= TOUR_STEPS.length) { setSpot(null); return; }
+    const step = TOUR_STEPS[tourIdx];
+    if (step.tab !== tab) { setTab(step.tab); return; }
+    let dead = false;
+    const measure = () => {
+      if (dead) return;
+      const el = document.querySelector<HTMLElement>(step.sel);
+      if (!el) { setSpot(null); return; }
+      el.scrollIntoView({ block: "center", behavior: "auto" });
+      const r = el.getBoundingClientRect();
+      setSpot({ left: r.left, top: r.top, width: r.width, height: r.height });
+    };
+    const t = window.setTimeout(measure, 80);
+    return () => { dead = true; window.clearTimeout(t); };
+  }, [tourIdx, tab]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Keep the spotlight glued to its target while the page moves or resizes.
+  useEffect(() => {
+    if (tourIdx < 0) return;
+    const onMove = () => {
+      const step = TOUR_STEPS[tourIdx];
+      if (!step) return;
+      const el = document.querySelector<HTMLElement>(step.sel);
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      setSpot({ left: r.left, top: r.top, width: r.width, height: r.height });
+    };
+    window.addEventListener("resize", onMove);
+    window.addEventListener("scroll", onMove, true);
+    return () => {
+      window.removeEventListener("resize", onMove);
+      window.removeEventListener("scroll", onMove, true);
+    };
+  }, [tourIdx]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Place the tooltip below the highlight, flipping above when short on space.
+  useLayoutEffect(() => {
+    if (!spot || tourIdx < 0) { setTipPos(null); return; }
+    const tw = tipRef.current?.offsetWidth ?? 340;
+    const th = tipRef.current?.offsetHeight ?? 180;
+    const left = Math.min(
+      Math.max(spot.left + spot.width / 2 - tw / 2, 10),
+      Math.max(10, window.innerWidth - tw - 10));
+    let top = spot.top + spot.height + 16;
+    if (top + th > window.innerHeight - 10) top = Math.max(10, spot.top - th - 16);
+    setTipPos({ left, top });
+  }, [spot, tourIdx]);
+
+  // Keyboard navigation while the tour runs.
+  useEffect(() => {
+    if (tourIdx < 0) return;
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      if (e.key === "Enter" && tag === "BUTTON") return; // focused button handles itself
+      if (e.key === "Escape") endTour();
+      else if (e.key === "ArrowRight" || e.key === "Enter") tourNext();
+      else if (e.key === "ArrowLeft") tourBack();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [tourIdx]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <>
@@ -560,9 +677,13 @@ export default function Console() {
           <a className="brand" href="/"><Logo size={30} /><b>ASTRA</b></a>
           <span style={{ color: "var(--muted)", fontSize: 14 }}>
             Prototype console - full-feature in-browser tester</span>
-          <div className="doc-actions" style={{ marginLeft: "auto" }}>
-            <button className="btn ghost" style={{ padding: "8px 16px", fontSize: 13.5 }} onClick={() => setShowQuick(true)}>Quick Guide</button>
-            <button className="btn primary" style={{ padding: "8px 16px", fontSize: 13.5 }} onClick={() => setTourStep(1)}>Help / Tour</button>
+          <div className="doc-actions" style={{ marginLeft: "auto" }} data-tour="help">
+            <button className="btn ghost" style={{ padding: "8px 16px", fontSize: 13.5 }}
+                    onClick={() => { if (tourIdx >= 0) endTour(); setShowQuick(true); }}>
+              Quick Guide</button>
+            <button className="btn primary" style={{ padding: "8px 16px", fontSize: 13.5 }}
+                    onClick={() => { setShowQuick(false); setTourIdx(0); }}>
+              Help / Tour</button>
             <a className="btn ghost" style={{ padding: "8px 16px", fontSize: 13.5 }}
                href="/">Back to site</a>
           </div>
@@ -570,40 +691,91 @@ export default function Console() {
       </div>
 
       {showQuick && (
-        <div className="modal-overlay" onClick={() => setShowQuick(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h2>ASTRA Quick Guide</h2>
-            <p><b>1. Goal:</b> Find hostile emitters that transmit rarely (like 2% of the time).</p>
-            <p><b>2. SmartScan:</b> ASTRA's engine learns when these emitters transmit, predicts their next window, and arrives early.</p>
-            <p><b>3. Console:</b> Choose a demo (e.g. Flagship race) to see ASTRA (Receiver A) against a conventional sweep (Receiver B).</p>
-            <p><b>4. Reading the UI:</b> Blue = ground truth, Grey = receiver listening, Gold = successful intercept.</p>
-            <button className="btn primary" onClick={() => setShowQuick(false)}>Got it</button>
+        <div className="modal-overlay"
+             onClick={() => { markSeen(); setShowQuick(false); }}>
+          <div className="modal-content intro" onClick={(e) => e.stopPropagation()}>
+            <h2>Welcome to the ASTRA console</h2>
+            <p className="intro-lede">
+              Four things to know before you start - then a guided tour that
+              points at every control and explains it.
+            </p>
+            <div className="intro-cards">
+              <div className="intro-card">
+                <h4>1 · What this console is</h4>
+                <p>The full ASTRA engine - battlefield generator, receiver
+                  physics, seven competing schedulers - compiled to run entirely
+                  in your browser. No install, no server, results are seed-exact.</p>
+              </div>
+              <div className="intro-card">
+                <h4>2 · Three bays</h4>
+                <p><b>Live Mission</b> races ASTRA against a baseline in real
+                  time. <b>Learning Arena</b> trains across episodes in an
+                  isolated sandbox. <b>Model Lab</b> runs headless shootouts and
+                  verification numbers.</p>
+              </div>
+              <div className="intro-card">
+                <h4>3 · Reading the waterfall</h4>
+                <p>
+                  <span className="sw" style={{ background: "rgba(111,158,199,.55)" }} />
+                  blue = a true transmission (ground truth){" "}
+                  <span className="sw" style={{ background: "rgba(255,255,255,.25)" }} />
+                  grey column = where the receiver is tuned right now{" "}
+                  <span className="sw" style={{ background: "#cfa453" }} />
+                  gold = successful intercept.
+                </p>
+              </div>
+              <div className="intro-card">
+                <h4>4 · How to use it</h4>
+                <p>Pick a one-click demo - start with <b>1 - Flagship race</b> -
+                  and watch both receivers race on the same battlefield. Fine-tune
+                  seed, opponent, sensitivity and rate below, or train the learner
+                  in the Arena.</p>
+              </div>
+            </div>
+            <div className="intro-actions">
+              <button className="btn ghost"
+                      onClick={() => { markSeen(); setShowQuick(false); }}>
+                Explore on my own</button>
+              <button className="btn primary" onClick={startTour}>
+                Take the guided tour</button>
+            </div>
           </div>
         </div>
       )}
 
-      {tourStep > 0 && (
-        <div className="modal-overlay">
-          <div className="modal-content tour-box">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <h3 style={{ margin: 0, color: "var(--bright)" }}>{TOUR_STEPS[tourStep - 1].title}</h3>
-              <span style={{ fontSize: 13, color: "var(--muted)" }}>Step {tourStep} of {TOUR_STEPS.length}</span>
-            </div>
-            <p style={{ margin: "0 0 20px 0", fontSize: 15.5, color: "var(--soft)" }}>
-              {TOUR_STEPS[tourStep - 1].text}
-            </p>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <button className="btn ghost" onClick={() => setTourStep(0)}>Close</button>
-              <button className="btn primary" onClick={() => {
-                if (tourStep < TOUR_STEPS.length) setTourStep(tourStep + 1);
-                else setTourStep(0);
-              }}>
-                {tourStep < TOUR_STEPS.length ? "Next" : "Finish Tour"}
-              </button>
-            </div>
+      {tourIdx >= 0 && TOUR_STEPS[tourIdx] && (<>
+        {spot && (<>
+          <div className="spot-pad" style={{ left: 0, top: 0, width: "100%",
+                height: Math.max(0, spot.top) }} />
+          <div className="spot-pad" style={{ left: 0, top: spot.top + spot.height,
+                width: "100%", bottom: 0 }} />
+          <div className="spot-pad" style={{ left: 0, top: spot.top,
+                width: Math.max(0, spot.left), height: spot.height }} />
+          <div className="spot-pad" style={{ left: spot.left + spot.width,
+                top: spot.top, right: 0, height: spot.height }} />
+          <div className="spot-hole" style={{
+                left: spot.left - 6, top: spot.top - 6,
+                width: spot.width + 12, height: spot.height + 12 }} />
+        </>)}
+        <div className="spot-tip" ref={tipRef}
+             style={tipPos ? { left: tipPos.left, top: tipPos.top }
+                           : { left: -9999, top: -9999 }}>
+          <div className="spot-head">
+            <b>{TOUR_STEPS[tourIdx].title}</b>
+            <span>{tourIdx + 1} / {TOUR_STEPS.length}</span>
+          </div>
+          <p>{TOUR_STEPS[tourIdx].text}</p>
+          <div className="spot-actions">
+            <button className="btn ghost" onClick={endTour}>Skip</button>
+            <span className="spot-hint">← → navigate · Esc exit</span>
+            {tourIdx > 0 && (
+              <button className="btn ghost" onClick={tourBack}>Back</button>)}
+            <button className="btn primary" onClick={tourNext}>
+              {tourIdx + 1 < TOUR_STEPS.length ? "Next" : "Finish"}
+            </button>
           </div>
         </div>
-      )}
+      </>)}
 
       <div className="console-wrap">
         <p className="lede">
@@ -613,7 +785,7 @@ export default function Console() {
           arena, then put <b>every policy</b> on the same battlefield.
         </p>
 
-        <div className="ctabs">
+        <div className="ctabs" data-tour="tabs">
           <button className={"ctab" + (tab === "mission" ? " on" : "")}
                   onClick={() => setTab("mission")}>
             <b>Live Mission</b>
@@ -632,7 +804,7 @@ export default function Console() {
         </div>
 
         {tab === "mission" && (<>
-        <div className="panel">
+        <div className="panel" data-tour="demos">
           <h3>Presentation demos - one click, instant mission</h3>
           <div className="body">
             <div className="demo-chips">
@@ -652,10 +824,10 @@ export default function Console() {
           </div>
         </div>
 
-        <div className="panel">
+        <div className="panel" data-tour="config">
           <h3>Mission configuration</h3>
           <div className="body controls-row" style={{ marginBottom: 0 }}>
-            <button className="tbtn primary" onClick={start}>Start mission</button>
+            <button className="tbtn primary" data-tour="start" onClick={start}>Start mission</button>
             <button className="tbtn stop" onClick={stop} disabled={!running}>Pause</button>
             <label>Seed
               <input type="number" value={seed}
@@ -729,8 +901,10 @@ export default function Console() {
               <h3>{title}</h3>
               <p className="role">{role}</p>
               <canvas ref={(el) => { cvs.current[side as "a" | "b"] = el; }}
-                      width={640} height={190} />
-              <Kv k={side === "a" ? kA : kB} />
+                      width={640} height={190}
+                      data-tour={side === "a" ? "waterfall" : undefined} />
+              <Kv k={side === "a" ? kA : kB}
+                  dt={side === "a" ? "kpi" : undefined} />
             </div>
           ))}
         </div>
@@ -740,7 +914,7 @@ export default function Console() {
           <span><i style={{ background: "#cfa453" }} />intercept</span>
         </div>
 
-        <div className="panel" style={{ marginTop: 16 }}>
+        <div className="panel" data-tour="threats" style={{ marginTop: 16 }}>
           <h3>Threat board - library identification (Receiver A)</h3>
           <div className="body tablewrap">
             {idRows.length === 0 && (
@@ -781,7 +955,7 @@ export default function Console() {
           Mission. The cross-episode memory belongs to this tab alone and can
           be wiped with "Reset learner memory".
         </div>
-        <div className="panel" style={{ marginTop: 16 }}>
+        <div className="panel" data-tour="arena" style={{ marginTop: 16 }}>
           <h3>Learning arena - cross-episode training</h3>
           <div className="body">
             <p className="tbl-note">
@@ -841,7 +1015,7 @@ export default function Console() {
         </>)}
 
         {tab === "lab" && (<>
-        <div className="panel" style={{ marginTop: 16 }}>
+        <div className="panel" data-tour="lab" style={{ marginTop: 16 }}>
           <h3>Model-vs-model - identical battlefield shootout</h3>
           <div className="body">
             <p className="tbl-note">
@@ -927,7 +1101,7 @@ export default function Console() {
           </div>
         )}
 
-        <div className="panel">
+        <div className="panel" data-tour="log">
           <h3>Scheduler event log</h3>
           <div className="body">
             <div className="c-log-bar">

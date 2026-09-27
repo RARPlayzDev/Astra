@@ -51,6 +51,8 @@ ewsmart.db
 installer/*.exe
 installer/*.msi
 website/public/*.exe
+website/dist/*.exe
+*.exe
 software/
 
 # ── Signing certificates & scripts (NEVER commit) ──────────────────────

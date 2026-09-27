@@ -17,7 +17,7 @@ const TECH_STACK = [
   { name: "Holm correction", sub: "Statistical rigor" },
   { name: "Cooperative AOA", sub: "Multi-receiver" },
   { name: "Seed reproducibility", sub: "Deterministic results" },
-  { name: "222 automated tests", sub: "CI quality gate" },
+  { name: "306 automated tests", sub: "CI quality gate" },
   { name: "SQLite", sub: "Local storage" },
   { name: "CI/CD", sub: "Automated builds" },
   { name: "Canvas API", sub: "Radar visualization" },
@@ -37,7 +37,7 @@ const FEATURES: [string, string, string][] = [
   ["●", "Emitter identification", "Streams fingerprinted against a JC Wise-class library with confidence scores and threat classification."],
   ["◆", "Multi-receiver geolocation", "Cooperative AOA triangulation; CEP improves from 3.2 km to 1.7 km with more receivers."],
   ["◐", "Live paired demonstration", "Two receivers fly identical battlefields side by side — strategy is the only variable."],
-  ["◎", "Reproducible by construction", "Seed-defined scenarios, strict JSON outputs, 222 automated tests, one-command builds."],
+  ["◎", "Reproducible by construction", "Seed-defined scenarios, strict JSON outputs, 306 automated tests, one-command builds."],
 ];
 
 function useReveal() {
@@ -207,7 +207,7 @@ export default function Home() {
                     download
                     style={{ color: "var(--accent)", textDecoration: "underline" }}
                   >
-                    (35 MB)
+                    (164 MB)
                   </a>
                 </li>
                 <li>Run the installer — choose destination folder and optional desktop icon.</li>
@@ -221,7 +221,7 @@ export default function Home() {
                 <h4>Requirements</h4>
                 <ul>
                   <li>Windows 10 or 11 (64-bit)</li>
-                  <li>~150 MB disk space</li>
+                  <li>~600 MB disk space</li>
                   <li>No internet required at runtime</li>
                   <li>WebView2 ships with Windows</li>
                 </ul>

@@ -633,3 +633,61 @@ canvas {
   vertical-align: middle; margin-left: 8px;
 }
 .abar { height: 100%; background: var(--accent); border-radius: 4px; }
+
+/* ---------------- console: first-run onboarding + spotlight tour ---------- */
+.modal-content.intro { max-width: 680px; }
+.modal-content.intro h2 { margin-bottom: 4px; }
+p.intro-lede { color: var(--muted); font-size: 14px; margin-top: 0; }
+.intro-cards {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  margin: 18px 0 22px;
+}
+.intro-card {
+  background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+  border-radius: 6px; padding: 14px 16px;
+  transition: border-color .15s, background .15s;
+}
+.intro-card:hover { border-color: var(--border-hover); background: rgba(255,255,255,0.045); }
+.intro-card h4 {
+  margin: 0 0 6px; font-size: 10.5px; letter-spacing: 1.4px;
+  text-transform: uppercase; color: var(--amber); font-family: monospace;
+}
+.intro-card p { margin: 0; font-size: 13.5px; line-height: 1.55; color: var(--soft); }
+.intro-card b { color: var(--ink); }
+.sw {
+  display: inline-block; width: 10px; height: 10px; border-radius: 2px;
+  vertical-align: -1px; margin: 0 4px 0 8px;
+  border: 1px solid rgba(255,255,255,0.22);
+}
+.sw:first-of-type { margin-left: 0; }
+.intro-actions { display: flex; justify-content: space-between; gap: 10px; }
+@media (max-width: 720px) { .intro-cards { grid-template-columns: 1fr; } }
+
+/* Spotlight tour: pads swallow background clicks, the hole lets the target
+ * through, the giant box-shadow dims everything outside the highlight. */
+.spot-pad { position: fixed; background: transparent; z-index: 1160; }
+.spot-hole {
+  position: fixed; z-index: 1100; pointer-events: none;
+  border: 2px solid var(--amber); border-radius: 8px;
+  box-shadow: 0 0 0 9999px rgba(0,0,0,0.76), 0 0 22px rgba(200,160,64,0.35);
+  transition: left .22s ease, top .22s ease, width .22s ease, height .22s ease;
+}
+.spot-tip {
+  position: fixed; z-index: 1250; width: min(360px, calc(100vw - 24px));
+  background: var(--panel); border: 1px solid var(--amber); border-radius: 8px;
+  padding: 14px 16px; box-shadow: 0 14px 44px rgba(0,0,0,0.65);
+}
+.spot-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  gap: 10px; margin-bottom: 6px;
+}
+.spot-head b { font-size: 14.5px; color: var(--ink); }
+.spot-head span {
+  font-size: 11.5px; color: var(--muted); font-family: monospace;
+  white-space: nowrap;
+}
+.spot-tip p { margin: 0 0 12px; font-size: 13.5px; line-height: 1.6; color: var(--soft); }
+.spot-actions { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+.spot-actions .btn { padding: 7px 14px; font-size: 13px; }
+.spot-hint { margin-right: auto; font-size: 11px; color: var(--muted); }
+@media (max-width: 720px) { .spot-hint { display: none; } }
