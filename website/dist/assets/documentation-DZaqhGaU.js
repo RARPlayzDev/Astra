@@ -1,7 +1,7 @@
-import{r as p,j as e,L as h,c as u}from"./styles-DnG2ckmw.js";const m=`<p>\uFEFF# ASTRA â€” Software Documentation</p>
-<p><strong>ASTRA â€” Adaptive Spectrum Threat Recognition &amp; Analysis</strong></p>
+import{r as c,j as e,L as k,S as _,D as R,T as P,c as E}from"./styles-BfYJWDR9.js";const S=`<p>\uFEFF# ASTRA — Software Documentation</p>
+<p><strong>ASTRA — Adaptive Spectrum Threat Recognition &amp; Analysis</strong></p>
 <p>Adaptive scan scheduling for Electronic Support receivers.</p>
-<p>Version 2.0.0 Â· SIH 2026 prototype Â· simulation-based research software, not operational equipment.</p>
+<p>Version 2.0.0 · SIH 2026 prototype · simulation-based research software, not operational equipment.</p>
 <hr />
 <h2 id="contents">Contents</h2>
 <ol>
@@ -35,14 +35,14 @@ import{r as p,j as e,L as h,c as u}from"./styles-DnG2ckmw.js";const m=`<p>\uFEFF
 <p>they can listen to only one slice of spectrum at a time while remaining</p>
 <p>responsible for a much wider range. Where a conventional receiver sweeps bands</p>
 <p>in a fixed pre-mission order, ASTRA decides <strong>where to listen next</strong> based on</p>
-<p>what has already been heard â€” surveying the spectrum, learning each emitter's</p>
+<p>what has already been heard — surveying the spectrum, learning each emitter's</p>
 <p>behaviour, predicting when periodic emitters will transmit again, and</p>
 <p>positioning the receiver on those windows before they open.</p>
 <h3 id="1-2-what-problem-it-addresses">1.2 What problem it addresses</h3>
 <p>Interception is a two-dimensional search: the receiver must be on the right</p>
 <p>frequency at the right time. Fixed scans waste dwell time on empty or</p>
 <p>unimportant bands and are slow to return to new or threatening emitters.</p>
-<p>Naive adaptivity swings to the opposite failure â€” camping on one busy band and</p>
+<p>Naive adaptivity swings to the opposite failure — camping on one busy band and</p>
 <p>missing most threats. ASTRA resolves this tension explicitly, achieving both</p>
 <p>high reward and high coverage where reference systems achieve only one.</p>
 <h3 id="1-3-what-it-is-not">1.3 What it is not</h3>
@@ -56,7 +56,7 @@ import{r as p,j as e,L as h,c as u}from"./styles-DnG2ckmw.js";const m=`<p>\uFEFF
 <tr><th>Item</th><th>Requirement</th></tr>
 <tr><td>Operating system</td><td>Windows 10/11 (Linux/macOS run from source)</td></tr>
 <tr><td>For <code>ASTRA.exe</code></td><td>None beyond the OS; WebView runtime (Edge) ships with Windows</td></tr>
-<tr><td>From source</td><td>Python â‰¥ 3.10 with pip; Node.js â‰¥ 18 only if rebuilding the UI</td></tr>
+<tr><td>From source</td><td>Python ≥ 3.10 with pip; Node.js ≥ 18 only if rebuilding the UI</td></tr>
 </table>
 <h3 id="2-2-installer-recommended">2.2 Installer (recommended)</h3>
 <ol>
@@ -67,7 +67,7 @@ import{r as p,j as e,L as h,c as u}from"./styles-DnG2ckmw.js";const m=`<p>\uFEFF
 <ol>
 <li>Closing the application window does not stop the service by itself; use</li>
 </ol>
-<p><strong>File â†’ Exit</strong> inside ASTRA, or close the console window.</p>
+<p><strong>File → Exit</strong> inside ASTRA, or close the console window.</p>
 <h3 id="2-3-from-source">2.3 From source</h3>
 <pre><code>git clone &lt;repository> ; cd p1
 python -m pip install -r requirements.txt fastapi uvicorn markdown
@@ -81,12 +81,12 @@ python desktop.py</code></pre>
 <h2 id="3-quick-start">3. Quick start</h2>
 <ol>
 <li>Launch ASTRA (Section 2).</li>
-<li>Press <strong>Start Mission</strong> on the toolbar (or File â†’ Start paired mission).</li>
+<li>Press <strong>Start Mission</strong> on the toolbar (or File → Start paired mission).</li>
 <li>Watch the Operations perspective: two receivers fly identical battlefields;</li>
 </ol>
 <p>blue-grey cells are true transmissions, amber marks intercepts.</p>
 <ol>
-<li>Open <strong>Tools â†’ Diagnostics</strong> at any time to verify the installation.</li>
+<li>Open <strong>Tools → Diagnostics</strong> at any time to verify the installation.</li>
 <li>Press <strong>User Guide</strong> on the toolbar whenever you need this document.</li>
 </ol>
 <hr />
@@ -107,11 +107,11 @@ python desktop.py</code></pre>
 <h3 id="menu-bar">Menu bar</h3>
 <table>
 <tr><th>Menu</th><th>Entries</th><th>Purpose</th></tr>
-<tr><td>File</td><td>New mission window Â· Open scenarioâ€¦ Â· Export results (JSON) Â· Exit</td><td>Reset the arena, load a battlefield definition, save current benchmarks, shut down</td></tr>
-<tr><td>View</td><td>Home Â· Operations Â· Analysis Â· Data &amp; Sources Â· Full screen</td><td>Perspective switching</td></tr>
-<tr><td>Run</td><td>Start / Stop paired mission Â· Rate presets</td><td>Mission control and simulation rate</td></tr>
-<tr><td>Tools</td><td>Diagnosticsâ€¦ Â· Open data folder</td><td>Self-test of the installation</td></tr>
-<tr><td>Help</td><td>User guide Â· About ASTRA</td><td>This document; version information</td></tr>
+<tr><td>File</td><td>New mission window · Open scenario… · Export results (JSON) · Exit</td><td>Reset the arena, load a battlefield definition, save current benchmarks, shut down</td></tr>
+<tr><td>View</td><td>Home · Operations · Analysis · Data &amp; Sources · Full screen</td><td>Perspective switching</td></tr>
+<tr><td>Run</td><td>Start / Stop paired mission · Rate presets</td><td>Mission control and simulation rate</td></tr>
+<tr><td>Tools</td><td>Diagnostics… · Open data folder</td><td>Self-test of the installation</td></tr>
+<tr><td>Help</td><td>User guide · About ASTRA</td><td>This document; version information</td></tr>
 </table>
 <h3 id="toolbar">Toolbar</h3>
 <p>Run controls (start/stop), simulation-rate selector, quick access to</p>
@@ -123,13 +123,13 @@ python desktop.py</code></pre>
 <h2 id="5-operations-perspective">5. Operations perspective</h2>
 <p>Two panels fly simultaneously:</p>
 <ul>
-<li><strong>Receiver A â€” SmartScan (adaptive).</strong> Surveys the spectrum, estimates emitter</li>
+<li><strong>Receiver A — SmartScan (adaptive).</strong> Surveys the spectrum, estimates emitter</li>
 </ul>
 <p>rhythms, predicts transmission windows and arrives before they open.</p>
 <ul>
-<li><strong>Receiver B â€” sequential sweep (conventional).</strong> Visits every band in fixed</li>
+<li><strong>Receiver B — sequential sweep (conventional).</strong> Visits every band in fixed</li>
 </ul>
-<p>order, ignoring content â€” standard practice without intelligence.</p>
+<p>order, ignoring content — standard practice without intelligence.</p>
 <p>Both receivers experience <strong>byte-identical battlefields</strong> (same emitters, same</p>
 <p>noise draws), so any difference in outcome is attributable to scanning strategy</p>
 <p>alone.</p>
@@ -145,17 +145,17 @@ python desktop.py</code></pre>
 <p>false alarms. When an episode completes a result line summarises the A/B</p>
 <p>outcome, and the next episode begins automatically on a fresh scenario.</p>
 <p>Controls: toolbar <strong>Rate</strong> selects simulation speed (slots per second); rate</p>
-<p>affects wall-clock pacing only, never outcomes. <strong>File â†’ Open scenarioâ€¦</strong></p>
+<p>affects wall-clock pacing only, never outcomes. <strong>File → Open scenario…</strong></p>
 <p>starts a mission on a stored battlefield definition.</p>
 <hr />
 <h2 id="6-analysis-perspective">6. Analysis perspective</h2>
 <p>All values are generated by the bundled experiment suite from stored scenario</p>
 <p>seeds; nothing is hand-entered.</p>
 <p><strong>KPP gate table.</strong> Each scheduler is first judged against hard Key Performance</p>
-<p>Parameters (threat coverage â‰¥ 0.90, prediction accuracy â‰¥ 0.50, false-alarm</p>
-<p>rate â‰¤ 5Ã—10â»â´ per slot). Only systems passing every KPP are considered</p>
+<p>Parameters (threat coverage ≥ 0.90, prediction accuracy ≥ 0.50, false-alarm</p>
+<p>rate ≤ 5×10⁻⁴ per slot). Only systems passing every KPP are considered</p>
 <p>mission-capable and ranked by the Mission Effectiveness Score (MES).</p>
-<p><strong>Monte Carlo table.</strong> Mean Â± 95% confidence intervals across 50 held-out (canonical protocol: 24 bands × 3000 slots, base_seed 9000)</p>
+<p><strong>Monte Carlo table.</strong> Mean ± 95% confidence intervals across 50 held-out (canonical protocol: 24 bands × 3000 slots, base_seed 9000)</p>
 <p>episodes for reward, threat coverage, prediction accuracy, intercept rate,</p>
 <p>false-alarm rate, time-to-first-intercept and intercept-time prediction error.</p>
 <p>Paired permutation tests on the gated score separate SmartScan from every</p>
@@ -164,7 +164,7 @@ python desktop.py</code></pre>
 <p>scheduler comparison, training vs held-out greedy evaluation curves, ablation</p>
 <p>study, ROC across sensitivity thresholds, geolocation accuracy versus receiver</p>
 <p>count.</p>
-<p>File â†’ Export results (JSON) writes the full machine-readable payload behind</p>
+<p>File → Export results (JSON) writes the full machine-readable payload behind</p>
 <p>these tables to disk.</p>
 <hr />
 <h2 id="7-data-sources-perspective">7. Data &amp; Sources perspective</h2>
@@ -175,7 +175,7 @@ python desktop.py</code></pre>
 <p>hardware is wired in.</p>
 <table>
 <tr><th>Type</th><th>Parameters</th><th>Typical use</th></tr>
-<tr><td>UDP feed</td><td>port (1024â€“65535), bind address</td><td>SDR sweeps, radar processors, <code>tools/pdw_generator.py</code>, <code>tools/sdr_bridge.py</code></td></tr>
+<tr><td>UDP feed</td><td>port (1024–65535), bind address</td><td>SDR sweeps, radar processors, <code>tools/pdw_generator.py</code>, <code>tools/sdr_bridge.py</code></td></tr>
 <tr><td>Log file tail</td><td>path to growing JSONL/CSV</td><td>Third-party equipment writing PDW logs</td></tr>
 <tr><td>Internal simulated scene</td><td>band count, seed</td><td>Testing with no hardware at all</td></tr>
 </table>
@@ -191,13 +191,13 @@ python desktop.py</code></pre>
 <hr />
 <h2 id="8-radar-and-sensor-integration">8. Radar and sensor integration</h2>
 <h3 id="8-1-integration-contract">8.1 Integration contract</h3>
-<p>ASTRA consumes standard ESM measurements â€” <strong>pulse descriptor words</strong>:</p>
+<p>ASTRA consumes standard ESM measurements — <strong>pulse descriptor words</strong>:</p>
 <pre><code>{"toa_us": 1000.0, "freq_mhz": 9450.0, "pw_us": 1.5, "pa_db": 12.0, "aoa_deg": 90.0}</code></pre>
 <table>
 <tr><th>Field</th><th>Meaning</th><th>Required</th></tr>
 <tr><td><code>toa_us</code></td><td>time of arrival, microseconds</td><td>yes</td></tr>
 <tr><td><code>freq_mhz</code></td><td>centre frequency, MHz</td><td>yes</td></tr>
-<tr><td><code>pw_us</code></td><td>pulse width, Âµs</td><td>optional (default 1.0)</td></tr>
+<tr><td><code>pw_us</code></td><td>pulse width, µs</td><td>optional (default 1.0)</td></tr>
 <tr><td><code>pa_db</code></td><td>amplitude, dB</td><td>optional</td></tr>
 <tr><td><code>aoa_deg</code></td><td>angle of arrival, degrees</td><td>optional</td></tr>
 </table>
@@ -224,7 +224,7 @@ python desktop.py</code></pre>
 <p>same port).</p>
 <h3 id="8-3-adapting-exotic-front-ends">8.3 Adapting exotic front-ends</h3>
 <p>If your equipment produces another format, write a ~30-line adapter that maps</p>
-<p>it onto the five-field PDW schema and forwards datagrams â€” see</p>
+<p>it onto the five-field PDW schema and forwards datagrams — see</p>
 <p><code>tools/sdr_bridge.py</code> as the template. Channelised or FFT-based receivers can</p>
 <p>emit one PDW per detected peak per dwell.</p>
 <h3 id="8-4-notes-and-limits">8.4 Notes and limits</h3>
@@ -250,19 +250,19 @@ python desktop.py</code></pre>
 <tr><td><code>seed</code></td><td>0</td><td>reproducibility seed</td></tr>
 <tr><td><code>n_stationary</code> / <code>n_agile</code> / <code>n_periodic</code> / <code>n_spatial</code> / <code>n_clutter</code></td><td>6/4/4/3/8</td><td>emitter mix</td></tr>
 <tr><td><code>snr_mean_db</code>, <code>snr_std_db</code></td><td>12 / 4</td><td>signal strength distribution</td></tr>
-<tr><td><code>freq_min_mhz</code>, <code>freq_max_mhz</code></td><td>2000â€“18000</td><td>tuning range</td></tr>
+<tr><td><code>freq_min_mhz</code>, <code>freq_max_mhz</code></td><td>2000–18000</td><td>tuning range</td></tr>
 <tr><td><code>period_range</code>, <code>on_len_range</code>, <code>dwell_range</code>, <code>hop_set_range</code></td><td>class priors</td><td>behavioural ranges</td></tr>
 </table>
-<p>Scenario + seed â‡’ exactly reproducible battlefield.</p>
+<p>Scenario + seed ⇒ exactly reproducible battlefield.</p>
 <hr />
 <h2 id="10-datasets-and-calibration">10. Datasets and calibration</h2>
 <p>ASTRA honours the referenced datasets:</p>
 <ul>
-<li><strong>JC Wise, Radar Emitter Database (2024)</strong> â€” basis of the identification</li>
+<li><strong>JC Wise, Radar Emitter Database (2024)</strong> — basis of the identification</li>
 </ul>
 <p>library profiles used to tag intercepted streams.</p>
 <ul>
-<li><strong>Alan Turing Institute synthetic radar dataset (HuggingFace)</strong> â€” imported by</li>
+<li><strong>Alan Turing Institute synthetic radar dataset (HuggingFace)</strong> — imported by</li>
 </ul>
 <p>Dataset Studio (Streamlit dashboard) online when reachable, with a</p>
 <p>schema-identical offline fallback so everything works air-gapped.</p>
@@ -290,9 +290,9 @@ python desktop.py</code></pre>
 <h2 id="12-evaluation-methodology">12. Evaluation methodology</h2>
 <p>Following defence test &amp; evaluation practice:</p>
 <ol>
-<li><strong>KPPs (hard gates).</strong> Threat coverage â‰¥ 0.90 Â· prediction accuracy â‰¥ 0.50 Â·</li>
+<li><strong>KPPs (hard gates).</strong> Threat coverage ≥ 0.90 · prediction accuracy ≥ 0.50 ·</li>
 </ol>
-<p>false alarms â‰¤ 5Ã—10â»â´/slot. Failing any gate â‡’ <em>not mission-capable</em>.</p>
+<p>false alarms ≤ 5×10⁻⁴/slot. Failing any gate ⇒ <em>not mission-capable</em>.</p>
 <ol>
 <li><strong>MES ranking.</strong> Among capable systems, mean of six normalised</li>
 </ol>
@@ -310,7 +310,7 @@ python desktop.py</code></pre>
 <pre><code>python -m ewsmart.experiments --suite full</code></pre>
 <hr />
 <h2 id="13-diagnostics-and-troubleshooting">13. Diagnostics and troubleshooting</h2>
-<p><strong>Tools â†’ Diagnostics</strong> verifies the installation: module imports, environment</p>
+<p><strong>Tools → Diagnostics</strong> verifies the installation: module imports, environment</p>
 <p>boot, benchmark presence, figure inventory, model-artifact integrity, frontend</p>
 <p>bundle, manual availability and a UDP loopback test.</p>
 <table>
@@ -326,12 +326,12 @@ python desktop.py</code></pre>
 <h2 id="14-testing-without-a-radar">14. Testing without a radar</h2>
 <p>Full instructions in <a href="../HOW_TO_TEST.md"><code>HOW_TO_TEST.md</code></a>. Summary ladder:</p>
 <ol>
-<li><strong>Automated tests</strong> â€” 50 backend + 7 interface tests, each runnable standalone.</li>
-<li><strong>In-app diagnostics</strong> â€” Tools â†’ Diagnostics.</li>
-<li><strong>Internal simulated scene source</strong> â€” attach in Data &amp; Sources; counts PDWs with zero hardware.</li>
-<li><strong>UDP generator</strong> â€” <code>tools/pdw_generator.py</code> streams realistic emitter traffic to a chosen port.</li>
-<li><strong>CSV replay bridge</strong> â€” <code>tools/sdr_bridge.py</code> replays recorded sweeps.</li>
-<li><strong>Paired missions</strong> â€” statistical A/B evidence at any simulation rate.</li>
+<li><strong>Automated tests</strong> — 50 backend + 7 interface tests, each runnable standalone.</li>
+<li><strong>In-app diagnostics</strong> — Tools → Diagnostics.</li>
+<li><strong>Internal simulated scene source</strong> — attach in Data &amp; Sources; counts PDWs with zero hardware.</li>
+<li><strong>UDP generator</strong> — <code>tools/pdw_generator.py</code> streams realistic emitter traffic to a chosen port.</li>
+<li><strong>CSV replay bridge</strong> — <code>tools/sdr_bridge.py</code> replays recorded sweeps.</li>
+<li><strong>Paired missions</strong> — statistical A/B evidence at any simulation rate.</li>
 </ol>
 <p>Recommended edge cases: malformed datagrams (ignored gracefully), burst floods,</p>
 <p>empty feeds (source stays healthy, zero counts), port conflicts (inline error),</p>
@@ -362,7 +362,7 @@ docs/                 this document</code></pre>
 <tr><td>GET <code>/api/meta</code></td><td>name, version, availability flags</td></tr>
 <tr><td>GET <code>/api/health</code></td><td>liveness probe</td></tr>
 <tr><td>GET <code>/api/summary</code></td><td>full benchmark payload</td></tr>
-<tr><td>GET <code>/api/figures</code> Â· <code>/api/figures/{name}.png</code></td><td>figure inventory and images</td></tr>
+<tr><td>GET <code>/api/figures</code> · <code>/api/figures/{name}.png</code></td><td>figure inventory and images</td></tr>
 <tr><td>GET <code>/api/scenarios</code></td><td>scenario library</td></tr>
 <tr><td>POST <code>/api/live/start?speed&amp;scenario</code></td><td>start paired mission (optionally from a named scenario)</td></tr>
 <tr><td>POST <code>/api/live/stop</code></td><td>stop mission</td></tr>
@@ -372,7 +372,7 @@ docs/                 this document</code></pre>
 <tr><td>GET <code>/api/models</code></td><td>model artifacts + integrity</td></tr>
 <tr><td>GET <code>/api/diagnostics</code></td><td>self-test checklist</td></tr>
 <tr><td>GET <code>/manual</code></td><td>rendered user guide</td></tr>
-<tr><td>POST <code>/api/shutdown</code></td><td>graceful shutdown (used by File â†’ Exit)</td></tr>
+<tr><td>POST <code>/api/shutdown</code></td><td>graceful shutdown (used by File → Exit)</td></tr>
 </table>
 <hr />
 <h2 id="17-command-line-tools">17. Command-line tools</h2>
@@ -387,19 +387,19 @@ docs/                 this document</code></pre>
 </table>
 <hr />
 <h2 id="18-file-formats">18. File formats</h2>
-<p><strong>Scenario JSON</strong> â€” fields per Section 9.</p>
-<p><strong>PDW datagram</strong> â€” Section 8.1.</p>
-<p><strong>Model artifact (.npz)</strong> â€” <code>meta</code> = JSON string \`{format:"ewsmart-npz-v1",</p>
+<p><strong>Scenario JSON</strong> — fields per Section 9.</p>
+<p><strong>PDW datagram</strong> — Section 8.1.</p>
+<p><strong>Model artifact (.npz)</strong> — <code>meta</code> = JSON string \`{format:"ewsmart-npz-v1",</p>
 <p>class, n_bands, ...}<code> plus plain arrays; loaded with </code>allow_pickle=False\`.</p>
-<p><strong>results/suite_results.json</strong> â€” sections: <code>monte_carlo</code>, <code>significance</code>,</p>
+<p><strong>results/suite_results.json</strong> — sections: <code>monte_carlo</code>, <code>significance</code>,</p>
 <p><code>mission_effectiveness</code>, <code>significance_gated_mes</code>, <code>learning</code>,</p>
 <p><code>identification</code>, <code>roc</code>, <code>sensitivity</code>, <code>ablation</code>, <code>multireceiver</code>,</p>
 <p><code>geolocation</code>.</p>
 <hr />
 <h2 id="19-frequently-asked-questions">19. Frequently asked questions</h2>
-<p><strong>Does closing the app window stop the service?</strong> Use File â†’ Exit for a clean</p>
+<p><strong>Does closing the app window stop the service?</strong> Use File → Exit for a clean</p>
 <p>shutdown; the console window also stops the service when closed.</p>
-<p><strong>Can several windows share one service?</strong> Yes â€” open additional browser tabs</p>
+<p><strong>Can several windows share one service?</strong> Yes — open additional browser tabs</p>
 <p>to the printed URL; all views stay in sync because state lives server-side.</p>
 <p><strong>Where do numbers come from?</strong> Experiments over stored seeds; re-run the suite</p>
 <p>to reproduce byte-for-byte.</p>
@@ -411,7 +411,7 @@ docs/                 this document</code></pre>
 <h2 id="20-glossary">20. Glossary</h2>
 <table>
 <tr><th>Term</th><th>Meaning</th></tr>
-<tr><td>ES / ESM</td><td>Electronic Support â€” passive search, intercept, analysis of emissions</td></tr>
+<tr><td>ES / ESM</td><td>Electronic Support — passive search, intercept, analysis of emissions</td></tr>
 <tr><td>PDW</td><td>Pulse Descriptor Word (TOA, frequency, width, amplitude, AOA)</td></tr>
 <tr><td>Dwell</td><td>One listening interval on one band</td></tr>
 <tr><td>Slot</td><td>Discrete time step of the simulation (default 1 ms)</td></tr>
@@ -541,4 +541,4 @@ docs/                 this document</code></pre>
 <p>(<code>website/src/content/docsHtml.ts</code>), copies it to</p>
 <p><code>website/public/docs/manual.md</code> for the "Download (.md)" button, and emits the</p>
 <p>section index the site's table of contents is built from. The desktop</p>
-<p>application serves the same file at <code>/manual</code>; nothing is maintained twice.</p>`,n=[{id:"1-introduction",title:"Introduction",heading:"1. Introduction"},{id:"2-installation",title:"Installation",heading:"2. Installation"},{id:"3-quick-start",title:"Quick Start",heading:"3. Quick start"},{id:"4-interface-tour",title:"Interface Tour",heading:"4. Interface tour"},{id:"5-operations-perspective",title:"Operations",heading:"5. Operations perspective"},{id:"6-analysis-perspective",title:"Analysis",heading:"6. Analysis perspective"},{id:"7-data--sources-perspective",title:"Data & Sources",heading:"7. Data &amp; Sources perspective"},{id:"8-radar-and-sensor-integration",title:"Sensor Integration",heading:"8. Radar and sensor integration"},{id:"9-scenarios",title:"Scenarios",heading:"9. Scenarios"},{id:"10-datasets-and-calibration",title:"Datasets & Calibration",heading:"10. Datasets and calibration"},{id:"11-scheduling-policies",title:"Scheduling Policies",heading:"11. Scheduling policies"},{id:"12-evaluation-methodology",title:"Evaluation",heading:"12. Evaluation methodology"},{id:"13-diagnostics-and-troubleshooting",title:"Diagnostics",heading:"13. Diagnostics and troubleshooting"},{id:"14-testing-without-a-radar",title:"Testing",heading:"14. Testing without a radar"},{id:"15-architecture-reference",title:"Architecture",heading:"15. Architecture reference"},{id:"16-local-api-reference",title:"API Reference",heading:"16. Local API reference"},{id:"17-command-line-tools",title:"CLI Tools",heading:"17. Command-line tools"},{id:"18-file-formats",title:"File Formats",heading:"18. File formats"},{id:"19-frequently-asked-questions",title:"FAQ",heading:"19. Frequently asked questions"},{id:"20-glossary",title:"Glossary",heading:"20. Glossary"},{id:"21-simulation-fidelity-reference",title:"Simulation Fidelity",heading:"21. Simulation fidelity reference"}];function g(t,i){const s=[`<h2>${i.heading}</h2>`,`<h2>${i.heading.replace(/&amp;/g,"&")}</h2>`];let r=-1;for(const a of s)if(r=t.indexOf(a),r!==-1)break;if(r===-1){const a=i.heading.replace(/&amp;/g,"&").replace(/^\d+\.\s*/,""),c=/<h2>([^<]+)<\/h2>/g;let o;for(;(o=c.exec(t))!==null;)if(o[1].includes(a)||o[1]===i.heading){r=o.index;break}}if(r===-1)return"<p>Section content not available.</p>";const d=t.indexOf("<h2>",r+10),l=d!==-1?d:t.length;return t.slice(r,l).replace(/<hr\s*\/?>/g,"").trim()}function f(){const[t,i]=p.useState(0),s=p.useRef(null);p.useEffect(()=>{s.current&&(s.current.scrollTop=0)},[t]);const r=n[t],d=g(m,r),l=t>0?n[t-1]:null,a=t<n.length-1?n[t+1]:null;return e.jsxs("div",{style:{display:"flex",flexDirection:"column",height:"100%",background:"#1e1e1e"},children:[e.jsxs("div",{style:{display:"flex",alignItems:"center",gap:16,background:"#252526",borderBottom:"1px solid #3c3c3c",padding:"10px 24px",flexShrink:0},children:[e.jsxs("a",{href:"/",style:{display:"flex",alignItems:"center",gap:8,textDecoration:"none"},children:[e.jsx(h,{size:22}),e.jsx("span",{style:{fontFamily:"monospace",fontWeight:700,color:"#ccc",letterSpacing:2,fontSize:13},children:"ASTRA"})]}),e.jsx("span",{style:{color:"#858585",fontSize:13},children:"Documentation — v2.0.0"}),e.jsxs("div",{style:{marginLeft:"auto",display:"flex",gap:10},children:[e.jsx("a",{href:"/docs/manual.md",download:!0,style:{padding:"6px 14px",fontSize:12,border:"1px solid #3c3c3c",borderRadius:3,color:"#ccc",textDecoration:"none",background:"#2d2d30"},children:"Download (.md)"}),e.jsx("a",{href:"/",style:{padding:"6px 14px",fontSize:12,background:"#264f78",borderRadius:3,color:"#fff",textDecoration:"none"},children:"Back to site"})]})]}),e.jsxs("div",{style:{display:"flex",flex:1,overflow:"hidden"},children:[e.jsxs("nav",{style:{width:220,flexShrink:0,background:"#252526",borderRight:"1px solid #3c3c3c",overflowY:"auto",padding:"12px 0"},children:[e.jsx("div",{style:{fontSize:10,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",color:"#858585",padding:"4px 16px 10px"},children:"Table of Contents"}),n.map((c,o)=>e.jsx("button",{onClick:()=>i(o),style:{display:"block",width:"100%",textAlign:"left",background:t===o?"#264f78":"transparent",border:"none",color:t===o?"#fff":"#999",padding:"7px 16px",fontSize:13,cursor:"pointer",fontFamily:"inherit",borderLeft:t===o?"2px solid #5aa0e9":"2px solid transparent"},children:c.title},c.id))]}),e.jsxs("div",{ref:s,style:{flex:1,overflowY:"auto",padding:"28px 44px 60px",maxWidth:800},children:[e.jsx("div",{className:"doc-content",dangerouslySetInnerHTML:{__html:d}}),e.jsxs("div",{style:{display:"flex",justifyContent:"space-between",marginTop:48,paddingTop:20,borderTop:"1px solid #3c3c3c"},children:[l?e.jsxs("button",{onClick:()=>i(t-1),style:{background:"none",border:"1px solid #3c3c3c",borderRadius:4,padding:"8px 18px",color:"#999",cursor:"pointer",fontSize:13},children:["← ",l.title]}):e.jsx("div",{}),a?e.jsxs("button",{onClick:()=>i(t+1),style:{background:"#264f78",border:"none",borderRadius:4,padding:"8px 18px",color:"#fff",cursor:"pointer",fontSize:13},children:[a.title," →"]}):e.jsx("div",{})]})]})]})]})}u(document.getElementById("root")).render(e.jsx(p.StrictMode,{children:e.jsx(f,{})}));
+<p>application serves the same file at <code>/manual</code>; nothing is maintained twice.</p>`;function D(t){const o=[],n=/<h2[^>]*\bid="([^"]+)"[^>]*>([\s\S]*?)<\/h2>/g;let s;for(;(s=n.exec(t))!==null;){const l=s[1];if(l==="contents")continue;const p=s[2].replace(/<[^>]*>/g,"").replace(/&amp;/g,"&").trim(),h=(p.match(/^(\d+)\./)??[])[1]??"",m=p.replace(/^\d+\.\s*/,"");o.push({id:l,num:h,title:m})}return o}function x(t,o){const n=t.indexOf("<h2",o+4),s=n===-1?t.length:n;return t.slice(o,s).replace(/<hr\s*\/?>/g,"").trim()}function N(t,o){const n=t.indexOf(`<h2 id="${o}"`);if(n===-1){const s=t.indexOf(`id="${o}"`);if(s===-1)return"<p>Section not found — regenerate docs with <code>python -m tools.export_docs</code>.</p>";const l=t.lastIndexOf("<h2",s);return x(t,l===-1?s:l)}return x(t,n)}function O(){const t=c.useMemo(()=>D(S),[]),[o,n]=c.useState(0),[s,l]=c.useState(""),[p,h]=c.useState(!1),m=c.useRef(null),b=c.useMemo(()=>{const r=s.trim().toLowerCase();return r?t.map((a,i)=>({s:a,i})).filter(({s:a})=>a.title.toLowerCase().includes(r)||a.num.includes(r)):t.map((a,i)=>({s:a,i}))},[t,s]);c.useEffect(()=>{const r=decodeURIComponent(window.location.hash.replace(/^#/,""));if(!r)return;const a=t.findIndex(i=>i.id===r);a>=0&&n(a)},[t]),c.useEffect(()=>{window.scrollTo(0,0);const r=t[o];r&&(history.replaceState(null,"","#"+r.id),document.title=`${r.num?r.num+". ":""}${r.title} — ASTRA Docs`);const a=m.current;a&&a.querySelectorAll("pre").forEach(i=>{if(i.querySelector(".code-copy"))return;const d=document.createElement("button");d.className="code-copy",d.type="button",d.textContent="copy",d.addEventListener("click",()=>{var w,v;const T=((w=i.querySelector("code"))==null?void 0:w.textContent)??i.textContent??"";(v=navigator.clipboard)==null||v.writeText(T).then(()=>{d.textContent="copied ✓",setTimeout(()=>d.textContent="copy",1400)}).catch(()=>d.textContent="Ctrl+C")}),i.appendChild(d)})},[o,t]),c.useEffect(()=>{const r=a=>{var d;const i=(d=a.target)==null?void 0:d.tagName;i==="INPUT"||i==="TEXTAREA"||(a.key==="ArrowRight"&&o<t.length-1&&n(o+1),a.key==="ArrowLeft"&&o>0&&n(o-1))};return window.addEventListener("keydown",r),()=>window.removeEventListener("keydown",r)},[o,t.length]);const y=t[o],A=y?N(S,y.id):"",u=t[o-1],g=t[o+1],f=r=>{n(r),h(!1)};return e.jsxs("div",{className:"docs-page",children:[e.jsx("header",{className:"doc-topbar",children:e.jsxs("div",{className:"doc-topbar-inner",children:[e.jsx("a",{href:"/","aria-label":"ASTRA home",children:e.jsx(k,{size:24})}),e.jsx("a",{href:"/",className:"brand-txt",children:"ASTRA"}),e.jsxs("span",{className:"crumb",children:["/ ",e.jsx("b",{children:"Documentation"})]}),e.jsx("span",{className:"doc-ver",children:_}),e.jsxs("div",{className:"doc-actions",children:[e.jsx("button",{className:"doc-mobile-toc",type:"button",onClick:()=>h(!p),children:"☰ Contents"}),e.jsx("a",{className:"btn ghost",href:"/docs/manual.md",download:!0,children:"Download .md"}),e.jsx("a",{className:"btn ghost",href:R,download:!0,children:"Get the app"}),e.jsx(P,{}),e.jsx("a",{className:"btn primary",href:"/",children:"Back to site"})]})]})}),e.jsxs("div",{className:"doc-body",children:[e.jsxs("aside",{className:"doc-sidebar"+(p?" open":""),children:[e.jsx("h3",{children:"Table of Contents"}),e.jsx("div",{className:"dsearch",children:e.jsx("input",{type:"search",placeholder:"Filter sections…",value:s,onChange:r=>l(r.target.value),"aria-label":"Filter documentation sections"})}),e.jsxs("nav",{children:[b.map(({s:r,i:a})=>e.jsxs("button",{className:a===o?"on":"",onClick:()=>f(a),type:"button",children:[e.jsx("span",{className:"n",children:r.num||"·"}),e.jsx("span",{children:r.title})]},r.id)),b.length===0&&e.jsxs("div",{className:"no-res",children:["No section matches “",s,"”."]})]})]}),e.jsxs("main",{className:"docpage",children:[e.jsx("div",{className:"doc-content",ref:m,dangerouslySetInnerHTML:{__html:A}}),e.jsxs("div",{className:"doc-pager",children:[u?e.jsxs("button",{onClick:()=>f(o-1),type:"button",children:[e.jsx("span",{className:"dir",children:"← Previous"}),u.num,". ",u.title]}):e.jsx("span",{}),g?e.jsxs("button",{className:"next",onClick:()=>f(o+1),type:"button",children:[e.jsx("span",{className:"dir",children:"Next →"}),g.num,". ",g.title]}):e.jsx("span",{})]})]})]})]})}E(document.getElementById("root")).render(e.jsx(c.StrictMode,{children:e.jsx(O,{})}));

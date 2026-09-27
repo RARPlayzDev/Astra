@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Logo } from "../shared";
+import { Logo, ThemeToggle } from "../shared";
 import {
   DEFAULT_SCENARIO, ESReceiver, RFEnvironment,
   type Scenario,
@@ -542,10 +542,10 @@ export default function Console() {
         <span>{k.threatTtff != null ? `${k.threatTtff.toFixed(0)} slots` : "-"}</span></div>
       <div className="row"><span>Prediction accuracy (band occupancy)</span>
         <span>{(k.predAcc * 100).toFixed(0)}%
-          <span style={{ color: "#858585", marginLeft: 6, fontSize: 11 }}>
+          <span style={{ color: "var(--muted)", marginLeft: 6, fontSize: 11 }}>
             n={k.predN}</span></span></div>
-      <div className="row"><span style={{ fontSize: 11.5, color: "#858585" }}>context</span>
-        <span style={{ fontSize: 11.5, color: "#858585" }}>
+      <div className="row"><span style={{ fontSize: 11.5, color: "var(--muted)" }}>context</span>
+        <span style={{ fontSize: 11.5, color: "var(--muted)" }}>
           band truly ON in {(k.truthRate * 100).toFixed(0)}% of its dwells -
           predicted ON {(k.predOn * 100).toFixed(0)}%</span></div>
       {k.team > 1 && <div className="row"><span>Cooperative team</span>
@@ -684,6 +684,7 @@ export default function Console() {
             <button className="btn primary" style={{ padding: "8px 16px", fontSize: 13.5 }}
                     onClick={() => { setShowQuick(false); setTourIdx(0); }}>
               Help / Tour</button>
+            <ThemeToggle />
             <a className="btn ghost" style={{ padding: "8px 16px", fontSize: 13.5 }}
                href="/">Back to site</a>
           </div>
@@ -1001,7 +1002,7 @@ export default function Console() {
                     <div className="abar-wrap" style={{ display: "flex", alignItems: "flex-end", width: 26, height: 58, margin: 0 }}>
                       <div className="abar" style={{ height: `${Math.max(5, r.cov * 100)}%` }} />
                     </div>
-                    <div style={{ fontSize: 11, color: "#858585", marginTop: 4 }}>{r.ep}</div>
+                    <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>{r.ep}</div>
                   </div>
                 ))}
                 <span className="tbl-note" style={{ marginLeft: 12 }}>

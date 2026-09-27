@@ -1,167 +1,200 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { DOCS_HTML } from "../content/docsHtml";
-import { Logo } from "../shared";
+import { DOWNLOAD_URL, Logo, SITE_VERSION, ThemeToggle } from "../shared";
 
-type Section = { id: string; title: string; heading: string };
+type Section = { id: string; num: string; title: string };
 
-const SECTIONS: Section[] = [
-  { id: "1-introduction", title: "Introduction", heading: "1. Introduction" },
-  { id: "2-installation", title: "Installation", heading: "2. Installation" },
-  { id: "3-quick-start", title: "Quick Start", heading: "3. Quick start" },
-  { id: "4-interface-tour", title: "Interface Tour", heading: "4. Interface tour" },
-  { id: "5-operations-perspective", title: "Operations", heading: "5. Operations perspective" },
-  { id: "6-analysis-perspective", title: "Analysis", heading: "6. Analysis perspective" },
-  { id: "7-data--sources-perspective", title: "Data & Sources", heading: "7. Data &amp; Sources perspective" },
-  { id: "8-radar-and-sensor-integration", title: "Sensor Integration", heading: "8. Radar and sensor integration" },
-  { id: "9-scenarios", title: "Scenarios", heading: "9. Scenarios" },
-  { id: "10-datasets-and-calibration", title: "Datasets & Calibration", heading: "10. Datasets and calibration" },
-  { id: "11-scheduling-policies", title: "Scheduling Policies", heading: "11. Scheduling policies" },
-  { id: "12-evaluation-methodology", title: "Evaluation", heading: "12. Evaluation methodology" },
-  { id: "13-diagnostics-and-troubleshooting", title: "Diagnostics", heading: "13. Diagnostics and troubleshooting" },
-  { id: "14-testing-without-a-radar", title: "Testing", heading: "14. Testing without a radar" },
-  { id: "15-architecture-reference", title: "Architecture", heading: "15. Architecture reference" },
-  { id: "16-local-api-reference", title: "API Reference", heading: "16. Local API reference" },
-  { id: "17-command-line-tools", title: "CLI Tools", heading: "17. Command-line tools" },
-  { id: "18-file-formats", title: "File Formats", heading: "18. File formats" },
-  { id: "19-frequently-asked-questions", title: "FAQ", heading: "19. Frequently asked questions" },
-  { id: "20-glossary", title: "Glossary", heading: "20. Glossary" },
-  { id: "21-simulation-fidelity-reference", title: "Simulation Fidelity", heading: "21. Simulation fidelity reference" },
-];
-
-/** Find a section by matching h2 heading text */
-function extractSection(html: string, section: Section): string {
-  // Try matching by heading text content
-  const patterns = [
-    `<h2>${section.heading}</h2>`,
-    `<h2>${section.heading.replace(/&amp;/g, "&")}</h2>`,
-  ];
-  let idx = -1;
-  for (const p of patterns) {
-    idx = html.indexOf(p);
-    if (idx !== -1) break;
+/**
+ * Derive the table of contents from the generated HTML itself — no
+ * hand-maintained list, so it can never drift from the manual again.
+ * (The old page matched literal `<h2>…</h2>` headings, which never existed —
+ * the exporter emits `<h2 id="…">`, so every section showed
+ * "Section content not available.")
+ */
+function deriveSections(html: string): Section[] {
+  const out: Section[] = [];
+  const re = /<h2[^>]*\bid="([^"]+)"[^>]*>([\s\S]*?)<\/h2>/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(html)) !== null) {
+    const id = m[1];
+    if (id === "contents") continue;          // the meta TOC is not a section
+    const raw = m[2].replace(/<[^>]*>/g, "").replace(/&amp;/g, "&").trim();
+    const num = (raw.match(/^(\d+)\./) ?? [])[1] ?? "";
+    const title = raw.replace(/^\d+\.\s*/, "");
+    out.push({ id, num, title });
   }
-  if (idx === -1) {
-    // Fallback: find the heading by partial text match
-    const plainHeading = section.heading.replace(/&amp;/g, "&").replace(/^\d+\.\s*/, "");
-    const h2Regex = /<h2>([^<]+)<\/h2>/g;
-    let m;
-    while ((m = h2Regex.exec(html)) !== null) {
-      if (m[1].includes(plainHeading) || m[1] === section.heading) {
-        idx = m.index;
-        break;
-      }
-    }
-  }
-  if (idx === -1) return "<p>Section content not available.</p>";
+  return out;
+}
 
-  // Find the next <h2 that starts a new section
-  const nextH2 = html.indexOf("<h2>", idx + 10);
-  const end = nextH2 !== -1 ? nextH2 : html.length;
-  return html.slice(idx, end).replace(/<hr\s*\/?>/g, "").trim();
+/** Slice one section out of the full HTML: from its <h2> to the next <h2>. */
+function sliceFrom(html: string, start: number): string {
+  const next = html.indexOf("<h2", start + 4);
+  const end = next === -1 ? html.length : next;
+  return html.slice(start, end).replace(/<hr\s*\/?>/g, "").trim();
+}
+
+function extractSection(html: string, id: string): string {
+  const start = html.indexOf(`<h2 id="${id}"`);
+  if (start === -1) {
+    const loose = html.indexOf(`id="${id}"`);
+    if (loose === -1) return "<p>Section not found — regenerate docs with <code>python -m tools.export_docs</code>.</p>";
+    const h2 = html.lastIndexOf("<h2", loose);
+    return sliceFrom(html, h2 === -1 ? loose : h2);
+  }
+  return sliceFrom(html, start);
 }
 
 export default function Documentation() {
+  const sections = useMemo(() => deriveSections(DOCS_HTML), []);
   const [active, setActive] = useState(0);
+  const [query, setQuery] = useState("");
+  const [tocOpen, setTocOpen] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (contentRef.current) contentRef.current.scrollTop = 0;
-  }, [active]);
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return sections.map((s, i) => ({ s, i }));
+    return sections
+      .map((s, i) => ({ s, i }))
+      .filter(({ s }) => s.title.toLowerCase().includes(q) || s.num.includes(q));
+  }, [sections, query]);
 
-  const section = SECTIONS[active];
-  const sectionHtml = extractSection(DOCS_HTML, section);
-  const prev = active > 0 ? SECTIONS[active - 1] : null;
-  const next = active < SECTIONS.length - 1 ? SECTIONS[active + 1] : null;
+  // deep link: /documentation.html#12-evaluation-methodology
+  useEffect(() => {
+    const hash = decodeURIComponent(window.location.hash.replace(/^#/, ""));
+    if (!hash) return;
+    const idx = sections.findIndex((s) => s.id === hash);
+    if (idx >= 0) setActive(idx);
+  }, [sections]);
+
+  // reset scroll + keep URL hash in sync + install code-copy buttons
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    const section = sections[active];
+    if (section) {
+      history.replaceState(null, "", "#" + section.id);
+      document.title = `${section.num ? section.num + ". " : ""}${section.title} — ASTRA Docs`;
+    }
+    const root = contentRef.current;
+    if (!root) return;
+    root.querySelectorAll("pre").forEach((pre) => {
+      if (pre.querySelector(".code-copy")) return;
+      const btn = document.createElement("button");
+      btn.className = "code-copy";
+      btn.type = "button";
+      btn.textContent = "copy";
+      btn.addEventListener("click", () => {
+        const code = pre.querySelector("code")?.textContent ?? pre.textContent ?? "";
+        navigator.clipboard?.writeText(code).then(() => {
+          btn.textContent = "copied ✓";
+          setTimeout(() => (btn.textContent = "copy"), 1400);
+        }).catch(() => (btn.textContent = "Ctrl+C"));
+      });
+      (pre as HTMLElement).appendChild(btn);
+    });
+  }, [active, sections]);
+
+  // keyboard paging
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      if (e.key === "ArrowRight" && active < sections.length - 1) setActive(active + 1);
+      if (e.key === "ArrowLeft" && active > 0) setActive(active - 1);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [active, sections.length]);
+
+  const section = sections[active];
+  const sectionHtml = section ? extractSection(DOCS_HTML, section.id) : "";
+  const prev = sections[active - 1];
+  const next = sections[active + 1];
+
+  const go = (i: number) => {
+    setActive(i);
+    setTocOpen(false);
+  };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", background: "#1e1e1e" }}>
-      {/* Top bar */}
-      <div style={{
-        display: "flex", alignItems: "center", gap: 16,
-        background: "#252526", borderBottom: "1px solid #3c3c3c",
-        padding: "10px 24px", flexShrink: 0,
-      }}>
-        <a href="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
-          <Logo size={22} />
-          <span style={{ fontFamily: "monospace", fontWeight: 700, color: "#ccc", letterSpacing: 2, fontSize: 13 }}>ASTRA</span>
-        </a>
-        <span style={{ color: "#858585", fontSize: 13 }}>Documentation &mdash; v2.0.0</span>
-        <div style={{ marginLeft: "auto", display: "flex", gap: 10 }}>
-          <a href="/docs/manual.md" download style={{
-            padding: "6px 14px", fontSize: 12, border: "1px solid #3c3c3c",
-            borderRadius: 3, color: "#ccc", textDecoration: "none", background: "#2d2d30",
-          }}>Download (.md)</a>
-          <a href="/" style={{
-            padding: "6px 14px", fontSize: 12, background: "#264f78",
-            borderRadius: 3, color: "#fff", textDecoration: "none",
-          }}>Back to site</a>
-        </div>
-      </div>
-
-      {/* Body */}
-      <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
-        {/* Sidebar */}
-        <nav style={{
-          width: 220, flexShrink: 0, background: "#252526",
-          borderRight: "1px solid #3c3c3c", overflowY: "auto", padding: "12px 0",
-        }}>
-          <div style={{
-            fontSize: 10, fontWeight: 700, letterSpacing: 1.5,
-            textTransform: "uppercase", color: "#858585",
-            padding: "4px 16px 10px",
-          }}>
-            Table of Contents
-          </div>
-          {SECTIONS.map((s, i) => (
+    <div className="docs-page">
+      {/* top bar */}
+      <header className="doc-topbar">
+        <div className="doc-topbar-inner">
+          <a href="/" aria-label="ASTRA home"><Logo size={24} /></a>
+          <a href="/" className="brand-txt">ASTRA</a>
+          <span className="crumb">/ <b>Documentation</b></span>
+          <span className="doc-ver">{SITE_VERSION}</span>
+          <div className="doc-actions">
             <button
-              key={s.id}
-              onClick={() => setActive(i)}
-              style={{
-                display: "block", width: "100%", textAlign: "left",
-                background: active === i ? "#264f78" : "transparent",
-                border: "none", color: active === i ? "#fff" : "#999",
-                padding: "7px 16px", fontSize: 13, cursor: "pointer",
-                fontFamily: "inherit",
-                borderLeft: active === i ? "2px solid #5aa0e9" : "2px solid transparent",
-              }}
+              className="doc-mobile-toc"
+              type="button"
+              onClick={() => setTocOpen(!tocOpen)}
             >
-              {s.title}
+              ☰ Contents
             </button>
-          ))}
-        </nav>
+            <a className="btn ghost" href="/docs/manual.md" download>Download .md</a>
+            <a className="btn ghost" href={DOWNLOAD_URL} download>Get the app</a>
+            <ThemeToggle />
+            <a className="btn primary" href="/">Back to site</a>
+          </div>
+        </div>
+      </header>
 
-        {/* Content */}
-        <div ref={contentRef} style={{
-          flex: 1, overflowY: "auto", padding: "28px 44px 60px", maxWidth: 800,
-        }}>
+      <div className="doc-body">
+        {/* sidebar */}
+        <aside className={"doc-sidebar" + (tocOpen ? " open" : "")}>
+          <h3>Table of Contents</h3>
+          <div className="dsearch">
+            <input
+              type="search"
+              placeholder="Filter sections…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              aria-label="Filter documentation sections"
+            />
+          </div>
+          <nav>
+            {filtered.map(({ s, i }) => (
+              <button
+                key={s.id}
+                className={i === active ? "on" : ""}
+                onClick={() => go(i)}
+                type="button"
+              >
+                <span className="n">{s.num || "·"}</span>
+                <span>{s.title}</span>
+              </button>
+            ))}
+            {filtered.length === 0 && (
+              <div className="no-res">No section matches “{query}”.</div>
+            )}
+          </nav>
+        </aside>
+
+        {/* content */}
+        <main className="docpage">
           <div
             className="doc-content"
+            ref={contentRef}
             dangerouslySetInnerHTML={{ __html: sectionHtml }}
           />
 
-          {/* Prev / Next */}
-          <div style={{
-            display: "flex", justifyContent: "space-between",
-            marginTop: 48, paddingTop: 20, borderTop: "1px solid #3c3c3c",
-          }}>
+          <div className="doc-pager">
             {prev ? (
-              <button onClick={() => setActive(active - 1)} style={{
-                background: "none", border: "1px solid #3c3c3c", borderRadius: 4,
-                padding: "8px 18px", color: "#999", cursor: "pointer", fontSize: 13,
-              }}>
-                &larr; {prev.title}
+              <button onClick={() => go(active - 1)} type="button">
+                <span className="dir">← Previous</span>
+                {prev.num}. {prev.title}
               </button>
-            ) : <div />}
+            ) : <span />}
             {next ? (
-              <button onClick={() => setActive(active + 1)} style={{
-                background: "#264f78", border: "none", borderRadius: 4,
-                padding: "8px 18px", color: "#fff", cursor: "pointer", fontSize: 13,
-              }}>
-                {next.title} &rarr;
+              <button className="next" onClick={() => go(active + 1)} type="button">
+                <span className="dir">Next →</span>
+                {next.num}. {next.title}
               </button>
-            ) : <div />}
+            ) : <span />}
           </div>
-        </div>
+        </main>
       </div>
     </div>
   );

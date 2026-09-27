@@ -1,8 +1,8 @@
-﻿# ASTRA â€” Software Documentation
+﻿# ASTRA — Software Documentation
 
-**ASTRA â€” Adaptive Spectrum Threat Recognition & Analysis**
+**ASTRA — Adaptive Spectrum Threat Recognition & Analysis**
 Adaptive scan scheduling for Electronic Support receivers.
-Version 2.0.0 Â· SIH 2026 prototype Â· simulation-based research software, not operational equipment.
+Version 2.0.0 · SIH 2026 prototype · simulation-based research software, not operational equipment.
 
 ---
 
@@ -41,7 +41,7 @@ Electronic Support (ES) receiver. Such receivers are sensitive but narrowband:
 they can listen to only one slice of spectrum at a time while remaining
 responsible for a much wider range. Where a conventional receiver sweeps bands
 in a fixed pre-mission order, ASTRA decides **where to listen next** based on
-what has already been heard â€” surveying the spectrum, learning each emitter's
+what has already been heard — surveying the spectrum, learning each emitter's
 behaviour, predicting when periodic emitters will transmit again, and
 positioning the receiver on those windows before they open.
 
@@ -50,7 +50,7 @@ positioning the receiver on those windows before they open.
 Interception is a two-dimensional search: the receiver must be on the right
 frequency at the right time. Fixed scans waste dwell time on empty or
 unimportant bands and are slow to return to new or threatening emitters.
-Naive adaptivity swings to the opposite failure â€” camping on one busy band and
+Naive adaptivity swings to the opposite failure — camping on one busy band and
 missing most threats. ASTRA resolves this tension explicitly, achieving both
 high reward and high coverage where reference systems achieve only one.
 
@@ -70,7 +70,7 @@ transmit, jam, or connect to any classified system.
 |---|---|
 | Operating system | Windows 10/11 (Linux/macOS run from source) |
 | For `ASTRA.exe` | None beyond the OS; WebView runtime (Edge) ships with Windows |
-| From source | Python â‰¥ 3.10 with pip; Node.js â‰¥ 18 only if rebuilding the UI |
+| From source | Python ≥ 3.10 with pip; Node.js ≥ 18 only if rebuilding the UI |
 
 ### 2.2 Installer (recommended)
 
@@ -78,7 +78,7 @@ transmit, jam, or connect to any classified system.
 2. Double-click **`ASTRA.exe`**. A console window shows service startup, then
    the application window opens.
 3. Closing the application window does not stop the service by itself; use
-   **File â†’ Exit** inside ASTRA, or close the console window.
+   **File → Exit** inside ASTRA, or close the console window.
 
 ### 2.3 From source
 
@@ -100,10 +100,10 @@ frame differs.
 ## 3. Quick start
 
 1. Launch ASTRA (Section 2).
-2. Press **Start Mission** on the toolbar (or File â†’ Start paired mission).
+2. Press **Start Mission** on the toolbar (or File → Start paired mission).
 3. Watch the Operations perspective: two receivers fly identical battlefields;
    blue-grey cells are true transmissions, amber marks intercepts.
-4. Open **Tools â†’ Diagnostics** at any time to verify the installation.
+4. Open **Tools → Diagnostics** at any time to verify the installation.
 5. Press **User Guide** on the toolbar whenever you need this document.
 
 ---
@@ -131,11 +131,11 @@ The main window follows a classic desktop-application layout:
 
 | Menu | Entries | Purpose |
 |---|---|---|
-| File | New mission window Â· Open scenarioâ€¦ Â· Export results (JSON) Â· Exit | Reset the arena, load a battlefield definition, save current benchmarks, shut down |
-| View | Home Â· Operations Â· Analysis Â· Data & Sources Â· Full screen | Perspective switching |
-| Run | Start / Stop paired mission Â· Rate presets | Mission control and simulation rate |
-| Tools | Diagnosticsâ€¦ Â· Open data folder | Self-test of the installation |
-| Help | User guide Â· About ASTRA | This document; version information |
+| File | New mission window · Open scenario… · Export results (JSON) · Exit | Reset the arena, load a battlefield definition, save current benchmarks, shut down |
+| View | Home · Operations · Analysis · Data & Sources · Full screen | Perspective switching |
+| Run | Start / Stop paired mission · Rate presets | Mission control and simulation rate |
+| Tools | Diagnostics… · Open data folder | Self-test of the installation |
+| Help | User guide · About ASTRA | This document; version information |
 
 ### Toolbar
 
@@ -153,10 +153,10 @@ and a link to the user guide.
 
 Two panels fly simultaneously:
 
-* **Receiver A â€” SmartScan (adaptive).** Surveys the spectrum, estimates emitter
+* **Receiver A — SmartScan (adaptive).** Surveys the spectrum, estimates emitter
   rhythms, predicts transmission windows and arrives before they open.
-* **Receiver B â€” sequential sweep (conventional).** Visits every band in fixed
-  order, ignoring content â€” standard practice without intelligence.
+* **Receiver B — sequential sweep (conventional).** Visits every band in fixed
+  order, ignoring content — standard practice without intelligence.
 
 Both receivers experience **byte-identical battlefields** (same emitters, same
 noise draws), so any difference in outcome is attributable to scanning strategy
@@ -176,7 +176,7 @@ false alarms. When an episode completes a result line summarises the A/B
 outcome, and the next episode begins automatically on a fresh scenario.
 
 Controls: toolbar **Rate** selects simulation speed (slots per second); rate
-affects wall-clock pacing only, never outcomes. **File â†’ Open scenarioâ€¦**
+affects wall-clock pacing only, never outcomes. **File → Open scenario…**
 starts a mission on a stored battlefield definition.
 
 ---
@@ -187,11 +187,11 @@ All values are generated by the bundled experiment suite from stored scenario
 seeds; nothing is hand-entered.
 
 **KPP gate table.** Each scheduler is first judged against hard Key Performance
-Parameters (threat coverage â‰¥ 0.90, prediction accuracy â‰¥ 0.50, false-alarm
-rate â‰¤ 5Ã—10â»â´ per slot). Only systems passing every KPP are considered
+Parameters (threat coverage ≥ 0.90, prediction accuracy ≥ 0.50, false-alarm
+rate ≤ 5×10⁻⁴ per slot). Only systems passing every KPP are considered
 mission-capable and ranked by the Mission Effectiveness Score (MES).
 
-**Monte Carlo table.** Mean Â± 95% confidence intervals across 50 held-out (canonical protocol: 24 bands × 3000 slots, base_seed 9000)
+**Monte Carlo table.** Mean ± 95% confidence intervals across 50 held-out (canonical protocol: 24 bands × 3000 slots, base_seed 9000)
 episodes for reward, threat coverage, prediction accuracy, intercept rate,
 false-alarm rate, time-to-first-intercept and intercept-time prediction error.
 Paired permutation tests on the gated score separate SmartScan from every
@@ -202,7 +202,7 @@ scheduler comparison, training vs held-out greedy evaluation curves, ablation
 study, ROC across sensitivity thresholds, geolocation accuracy versus receiver
 count.
 
-File â†’ Export results (JSON) writes the full machine-readable payload behind
+File → Export results (JSON) writes the full machine-readable payload behind
 these tables to disk.
 
 ---
@@ -219,7 +219,7 @@ hardware is wired in.
 
 | Type | Parameters | Typical use |
 |---|---|---|
-| UDP feed | port (1024â€“65535), bind address | SDR sweeps, radar processors, `tools/pdw_generator.py`, `tools/sdr_bridge.py` |
+| UDP feed | port (1024–65535), bind address | SDR sweeps, radar processors, `tools/pdw_generator.py`, `tools/sdr_bridge.py` |
 | Log file tail | path to growing JSONL/CSV | Third-party equipment writing PDW logs |
 | Internal simulated scene | band count, seed | Testing with no hardware at all |
 
@@ -243,7 +243,7 @@ a corrupt file is flagged here rather than executed.
 
 ### 8.1 Integration contract
 
-ASTRA consumes standard ESM measurements â€” **pulse descriptor words**:
+ASTRA consumes standard ESM measurements — **pulse descriptor words**:
 
 ```json
 {"toa_us": 1000.0, "freq_mhz": 9450.0, "pw_us": 1.5, "pa_db": 12.0, "aoa_deg": 90.0}
@@ -253,7 +253,7 @@ ASTRA consumes standard ESM measurements â€” **pulse descriptor words**:
 |---|---|---|
 | `toa_us` | time of arrival, microseconds | yes |
 | `freq_mhz` | centre frequency, MHz | yes |
-| `pw_us` | pulse width, Âµs | optional (default 1.0) |
+| `pw_us` | pulse width, µs | optional (default 1.0) |
 | `pa_db` | amplitude, dB | optional |
 | `aoa_deg` | angle of arrival, degrees | optional |
 
@@ -279,7 +279,7 @@ Three supported paths, in increasing fidelity:
 ### 8.3 Adapting exotic front-ends
 
 If your equipment produces another format, write a ~30-line adapter that maps
-it onto the five-field PDW schema and forwards datagrams â€” see
+it onto the five-field PDW schema and forwards datagrams — see
 `tools/sdr_bridge.py` as the template. Channelised or FFT-based receivers can
 emit one PDW per detected peak per dwell.
 
@@ -305,10 +305,10 @@ A scenario is a JSON file in `/scenarios`. Key fields (all optional):
 | `seed` | 0 | reproducibility seed |
 | `n_stationary` / `n_agile` / `n_periodic` / `n_spatial` / `n_clutter` | 6/4/4/3/8 | emitter mix |
 | `snr_mean_db`, `snr_std_db` | 12 / 4 | signal strength distribution |
-| `freq_min_mhz`, `freq_max_mhz` | 2000â€“18000 | tuning range |
+| `freq_min_mhz`, `freq_max_mhz` | 2000–18000 | tuning range |
 | `period_range`, `on_len_range`, `dwell_range`, `hop_set_range` | class priors | behavioural ranges |
 
-Scenario + seed â‡’ exactly reproducible battlefield.
+Scenario + seed ⇒ exactly reproducible battlefield.
 
 ---
 
@@ -316,9 +316,9 @@ Scenario + seed â‡’ exactly reproducible battlefield.
 
 ASTRA honours the referenced datasets:
 
-* **JC Wise, Radar Emitter Database (2024)** â€” basis of the identification
+* **JC Wise, Radar Emitter Database (2024)** — basis of the identification
   library profiles used to tag intercepted streams.
-* **Alan Turing Institute synthetic radar dataset (HuggingFace)** â€” imported by
+* **Alan Turing Institute synthetic radar dataset (HuggingFace)** — imported by
   Dataset Studio (Streamlit dashboard) online when reachable, with a
   schema-identical offline fallback so everything works air-gapped.
 
@@ -353,8 +353,8 @@ and are deleted automatically after repeated failed predictions.
 
 Following defence test & evaluation practice:
 
-1. **KPPs (hard gates).** Threat coverage â‰¥ 0.90 Â· prediction accuracy â‰¥ 0.50 Â·
-   false alarms â‰¤ 5Ã—10â»â´/slot. Failing any gate â‡’ *not mission-capable*.
+1. **KPPs (hard gates).** Threat coverage ≥ 0.90 · prediction accuracy ≥ 0.50 ·
+   false alarms ≤ 5×10⁻⁴/slot. Failing any gate ⇒ *not mission-capable*.
 2. **MES ranking.** Among capable systems, mean of six normalised
    problem-statement figures of merit (Pd, Pfa performance, intercept rate,
    reward, prediction accuracy, intercept-time error).
@@ -376,7 +376,7 @@ python -m ewsmart.experiments --suite full
 
 ## 13. Diagnostics and troubleshooting
 
-**Tools â†’ Diagnostics** verifies the installation: module imports, environment
+**Tools → Diagnostics** verifies the installation: module imports, environment
 boot, benchmark presence, figure inventory, model-artifact integrity, frontend
 bundle, manual availability and a UDP loopback test.
 
@@ -395,12 +395,12 @@ bundle, manual availability and a UDP loopback test.
 
 Full instructions in [`HOW_TO_TEST.md`](../HOW_TO_TEST.md). Summary ladder:
 
-1. **Automated tests** â€” 50 backend + 7 interface tests, each runnable standalone.
-2. **In-app diagnostics** â€” Tools â†’ Diagnostics.
-3. **Internal simulated scene source** â€” attach in Data & Sources; counts PDWs with zero hardware.
-4. **UDP generator** â€” `tools/pdw_generator.py` streams realistic emitter traffic to a chosen port.
-5. **CSV replay bridge** â€” `tools/sdr_bridge.py` replays recorded sweeps.
-6. **Paired missions** â€” statistical A/B evidence at any simulation rate.
+1. **Automated tests** — 50 backend + 7 interface tests, each runnable standalone.
+2. **In-app diagnostics** — Tools → Diagnostics.
+3. **Internal simulated scene source** — attach in Data & Sources; counts PDWs with zero hardware.
+4. **UDP generator** — `tools/pdw_generator.py` streams realistic emitter traffic to a chosen port.
+5. **CSV replay bridge** — `tools/sdr_bridge.py` replays recorded sweeps.
+6. **Paired missions** — statistical A/B evidence at any simulation rate.
 
 Recommended edge cases: malformed datagrams (ignored gracefully), burst floods,
 empty feeds (source stays healthy, zero counts), port conflicts (inline error),
@@ -440,7 +440,7 @@ All endpoints are local-first (`127.0.0.1`). Interactive OpenAPI UI: `/api-docs`
 | GET `/api/meta` | name, version, availability flags |
 | GET `/api/health` | liveness probe |
 | GET `/api/summary` | full benchmark payload |
-| GET `/api/figures` Â· `/api/figures/{name}.png` | figure inventory and images |
+| GET `/api/figures` · `/api/figures/{name}.png` | figure inventory and images |
 | GET `/api/scenarios` | scenario library |
 | POST `/api/live/start?speed&scenario` | start paired mission (optionally from a named scenario) |
 | POST `/api/live/stop` | stop mission |
@@ -450,7 +450,7 @@ All endpoints are local-first (`127.0.0.1`). Interactive OpenAPI UI: `/api-docs`
 | GET `/api/models` | model artifacts + integrity |
 | GET `/api/diagnostics` | self-test checklist |
 | GET `/manual` | rendered user guide |
-| POST `/api/shutdown` | graceful shutdown (used by File â†’ Exit) |
+| POST `/api/shutdown` | graceful shutdown (used by File → Exit) |
 
 ---
 
@@ -469,14 +469,14 @@ All endpoints are local-first (`127.0.0.1`). Interactive OpenAPI UI: `/api-docs`
 
 ## 18. File formats
 
-**Scenario JSON** â€” fields per Section 9.
+**Scenario JSON** — fields per Section 9.
 
-**PDW datagram** â€” Section 8.1.
+**PDW datagram** — Section 8.1.
 
-**Model artifact (.npz)** â€” `meta` = JSON string `{format:"ewsmart-npz-v1",
+**Model artifact (.npz)** — `meta` = JSON string `{format:"ewsmart-npz-v1",
 class, n_bands, ...}` plus plain arrays; loaded with `allow_pickle=False`.
 
-**results/suite_results.json** â€” sections: `monte_carlo`, `significance`,
+**results/suite_results.json** — sections: `monte_carlo`, `significance`,
 `mission_effectiveness`, `significance_gated_mes`, `learning`,
 `identification`, `roc`, `sensitivity`, `ablation`, `multireceiver`,
 `geolocation`.
@@ -485,10 +485,10 @@ class, n_bands, ...}` plus plain arrays; loaded with `allow_pickle=False`.
 
 ## 19. Frequently asked questions
 
-**Does closing the app window stop the service?** Use File â†’ Exit for a clean
+**Does closing the app window stop the service?** Use File → Exit for a clean
 shutdown; the console window also stops the service when closed.
 
-**Can several windows share one service?** Yes â€” open additional browser tabs
+**Can several windows share one service?** Yes — open additional browser tabs
 to the printed URL; all views stay in sync because state lives server-side.
 
 **Where do numbers come from?** Experiments over stored seeds; re-run the suite
@@ -506,7 +506,7 @@ make the strategy the only variable.
 
 | Term | Meaning |
 |---|---|
-| ES / ESM | Electronic Support â€” passive search, intercept, analysis of emissions |
+| ES / ESM | Electronic Support — passive search, intercept, analysis of emissions |
 | PDW | Pulse Descriptor Word (TOA, frequency, width, amplitude, AOA) |
 | Dwell | One listening interval on one band |
 | Slot | Discrete time step of the simulation (default 1 ms) |

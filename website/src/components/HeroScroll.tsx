@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import RadarScope from "../components/RadarScope";
+import { DOWNLOAD_URL } from "../shared";
 
 export default function HeroScroll() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -57,6 +58,8 @@ export default function HeroScroll() {
   return (
     <div ref={containerRef} className="hero-scroll-container">
       <div ref={stickyRef} className="hero-scroll-sticky">
+        <div className="hero-aurora" aria-hidden />
+        <div className="hero-grid-overlay" aria-hidden />
         <div className="hero-layout">
           <div ref={textRef} className="hero-text">
             <div className="hero-badge">SIH 2026 · ELECTRONIC WARFARE</div>
@@ -71,10 +74,11 @@ export default function HeroScroll() {
               they appear.
             </p>
             <div className="hero-buttons">
-              <a className="btn-download" href="https://github.com/RARPlayzDev/Astra/releases/download/v2.0.0/ASTRA-Setup-2.0.0.exe" download>
+              <a className="btn-download" href={DOWNLOAD_URL} download>
                 Download for Windows
               </a>
               <a className="btn-outline" href="/console.html">Try Console</a>
+              <a className="btn-outline" href="/results.html">See Results</a>
               <a className="btn-outline" href="/documentation.html">Read the Docs</a>
             </div>
             <div className="hero-metrics">

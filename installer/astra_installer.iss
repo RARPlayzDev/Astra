@@ -2,11 +2,11 @@
 ; Build order:
 ;   1) powershell -File tools\build_exe.ps1        -> dist\ASTRA\
 ;   2) & "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe" installer\astra_installer.iss
-; Output: installer\ASTRA-Setup-2.0.0.exe
+; Output: installer\ASTRA-Setup-3.0.0.exe
 
 #define MyAppName "ASTRA"
 #define MyAppLong "Adaptive Spectrum Threat Recognition & Analysis"
-#define MyAppVersion "2.0.0"
+#define MyAppVersion "3.0.0"
 #define MyAppPublisher "ASTRA Project Team"
 #define MyAppURL "https://astra-ew.vercel.app"
 #define MyAppExeName "ASTRA.exe"

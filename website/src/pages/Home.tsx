@@ -1,6 +1,15 @@
 import { useEffect } from "react";
-import { Footer, GateAndMc, Nav, useResults } from "../shared";
+import { DOWNLOAD_URL, Footer, GateAndMc, Nav, SITE_VERSION as SITE_VER, useResults } from "../shared";
 import HeroScroll from "../components/HeroScroll";
+
+const STATS: [string, string, string, string][] = [
+  ["306", "", "Automated tests", "pytest suite, all passing in CI"],
+  ["96.9", "%", "Prediction accuracy", "SmartScan vs 54.1% sequential sweep"],
+  ["90–95.8", "%", "Threat coverage", "across seeds under the KPP gate"],
+  ["1.8", "×", "Faster first fix", "time-to-intercept vs sequential"],
+  ["200", "", "Monte Carlo episodes", "paired permutation, Holm-corrected"],
+  ["13/13", "", "PS checks live", "problem-statement coverage audit"],
+];
 
 const TECH_STACK = [
   { name: "Python", sub: "Core engine" },
@@ -80,6 +89,30 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ═══ STATS BAND ═══ */}
+      <section className="section" id="numbers" style={{ paddingTop: "clamp(56px, 8vw, 96px)", paddingBottom: "clamp(56px, 8vw, 96px)" }}>
+        <div className="wrap">
+          <div className="reveal">
+            <div className="section-label">By the numbers</div>
+            <h2 className="section-title">Every claim on this page is reproducible</h2>
+            <p className="section-desc">
+              Nothing here is a mock-up. Each figure is produced by the bundled
+              experiment suite from stored seeds — run the commands yourself and
+              you will get the same numbers.
+            </p>
+          </div>
+          <div className="stats-band reveal">
+            {STATS.map(([v, unit, lbl, sub]) => (
+              <div className="stat" key={lbl}>
+                <div className="stat-val">{v}{unit && <span className="unit">{unit}</span>}</div>
+                <div className="stat-lbl">{lbl}</div>
+                <div className="stat-sub">{sub}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ═══ PROBLEM ═══ */}
       <section className="section" id="problem">
         <div className="wrap">
@@ -92,7 +125,10 @@ export default function Home() {
               An ES receiver is sensitive but narrowband: it listens to one
               slice of spectrum at a time while being responsible for a far
               wider range. Interception is a two-dimensional search — right
-              frequency, right time.
+              frequency, right time.{" "}
+              <span className="footer-drdo" style={{ verticalAlign: "middle" }}>
+                Submitted against a <b>DRDO</b> problem statement · Electronic Warfare
+              </span>
             </p>
           </div>
           <div className="cards-grid">
@@ -162,6 +198,9 @@ export default function Home() {
               Hard Key Performance Parameters first — threat coverage ≥ 90%,
               prediction better than chance, false alarms bounded. 200-episode
               Monte Carlo, paired permutation tests, Holm-corrected.
+              <a href="/results.html" style={{ marginLeft: 10, fontWeight: 600 }}>
+                Full results page →
+              </a>
             </p>
           </div>
           <div className="reveal">
@@ -197,17 +236,13 @@ export default function Home() {
             ))}
           </div>
           <div id="download" className="download-section reveal">
-            <h3>Get ASTRA</h3>
+            <h3>Get ASTRA {SITE_VER}</h3>
             <div className="dl-grid">
               <ol className="dl-steps">
                 <li>
-                  Download <b>ASTRA-Setup-2.0.0.exe</b>{" "}
-                  <a
-                    href="/ASTRA-Setup-2.0.0.exe"
-                    download
-                    style={{ color: "var(--accent)", textDecoration: "underline" }}
-                  >
-                    (164 MB)
+                  Download <b>ASTRA-Setup-3.0.0.exe</b>{" "}
+                  <a href={DOWNLOAD_URL} download style={{ color: "var(--accent)", textDecoration: "underline" }}>
+                    from GitHub Releases (~164 MB)
                   </a>
                 </li>
                 <li>Run the installer — choose destination folder and optional desktop icon.</li>
@@ -215,6 +250,10 @@ export default function Home() {
                 <li>
                   Press <i>Start Mission</i>, then open{" "}
                   <i>Tools → Diagnostics</i> to verify all self-tests pass.
+                </li>
+                <li>
+                  First run of the web console shows the guided tour — take it,
+                  it maps every control in 60 seconds.
                 </li>
               </ol>
               <div className="dl-reqs">
@@ -224,9 +263,131 @@ export default function Home() {
                   <li>~600 MB disk space</li>
                   <li>No internet required at runtime</li>
                   <li>WebView2 ships with Windows</li>
+                  <li>SHA256 checksum published in release notes</li>
                 </ul>
+                <div style={{ marginTop: 18, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                  <a className="btn primary" href={DOWNLOAD_URL} download>Download installer</a>
+                  <a className="btn ghost" href="/console.html">Try in browser</a>
+                </div>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ REPRODUCE ═══ */}
+      <section className="section" id="reproduce">
+        <div className="wrap">
+          <div className="reveal">
+            <div className="section-label">Evidence</div>
+            <h2 className="section-title">Reproduce every number in three commands</h2>
+            <p className="section-desc">
+              The full stack ships in the repo: tests, benchmark suite, prediction
+              probe and the website itself. Same seeds, same outputs — on any machine.
+            </p>
+          </div>
+          <div className="term reveal">
+            <div className="term-head">
+              <i /><i /><i /><span>powershell — astra repo</span>
+            </div>
+            <pre>
+{`» python -m pytest tests -q           `}<span className="g">306 passed in 4m16s</span>{`
+» cd website; npm run probe           `}<span className="y">SmartScan 96.9% · sequential 54.1%</span>{`
+» python -m tools.export_docs         `}<span className="b">manual → website docs (single source)</span>{`
+» npm run build && npm run dev        `}<span className="d"># edit the site locally</span>
+            </pre>
+          </div>
+          <div className="res-method reveal">
+            <div className="method-step">
+              <div className="mi">01 · SEED</div>
+              <h5>Deterministic by construction</h5>
+              <p>Scenarios are defined by seed — rerunning a benchmark reproduces bit-identical JSON outputs.</p>
+            </div>
+            <div className="method-step">
+              <div className="mi">02 · GATE</div>
+              <h5>KPPs before score</h5>
+              <p>Schedulers must pass every Key Performance Parameter simultaneously before any ranking counts.</p>
+            </div>
+            <div className="method-step">
+              <div className="mi">03 · STATISTICS</div>
+              <h5>Significance, not vibes</h5>
+              <p>200-episode Monte Carlo, paired permutation tests, Holm correction across seven comparators.</p>
+            </div>
+            <div className="method-step">
+              <div className="mi">04 · AUDIT</div>
+              <h5>Negative results kept</h5>
+              <p>The DQN that lost under sparse reward stays in the report — with the reason it lost.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ FAQ ═══ */}
+      <section className="section" id="faq">
+        <div className="wrap">
+          <div className="reveal">
+            <div className="section-label">FAQ</div>
+            <h2 className="section-title">Questions judges actually ask</h2>
+          </div>
+          <div className="faq reveal">
+            <details open>
+              <summary>What exactly does ASTRA do?</summary>
+              <div className="faq-a">
+                It decides <b>when and where</b> an Electronic Support receiver tunes.
+                It learns each emitter's rhythm online, predicts the next transmission
+                window, and positions the receiver ahead of it — turning intercept from
+                luck into schedule, without any prior intelligence.
+              </div>
+            </details>
+            <details>
+              <summary>How do we know it actually works?</summary>
+              <div className="faq-a">
+                Three layers: <b>306 automated tests</b>, a <b>200-episode Monte Carlo</b>
+                benchmark with paired permutation tests and Holm correction, and a
+                <b> KPP gate</b> borrowed from defence acceptance style — coverage ≥ 90%,
+                prediction better than chance, false alarms bounded. All numbers come
+                from those runs; see the <a href="/results.html">results page</a>.
+              </div>
+            </details>
+            <details>
+              <summary>What makes it different from a bandit or RL scheduler?</summary>
+              <div className="faq-a">
+                A pure bandit maximises reward and camps on one busy band — highest raw
+                score while detecting only ~54% of threats. ASTRA protects coverage
+                structurally and exploits learned periodicity, so it wins on reward{" "}
+                <b>and</b> coverage. It is also the only scheduler that passes every KPP
+                simultaneously. The deep Q-network we benchmarked lost under sparse,
+                non-stationary reward — that negative result is documented, not hidden.
+              </div>
+            </details>
+            <details>
+              <summary>Does it need a radar or live signals?</summary>
+              <div className="faq-a">
+                No. Everything runs against a deterministic, high-fidelity simulation
+                (24 bands, 2–18 GHz, emitters transmitting ~2% of the time). The
+                hardware on-ramp exists — a fixed-point C++ policy kernel and a UDP PDW
+                stream interface — but the prototype validates in software so results
+                are exactly reproducible.
+              </div>
+            </details>
+            <details>
+              <summary>Is the desktop app the same as the web console?</summary>
+              <div className="faq-a">
+                Yes. The Windows installer wraps the same React console in a WebView2
+                shell with the Python engine running locally — offline, no server, plus{" "}
+                <i>Tools → Diagnostics</i> self-tests. The{" "}
+                <a href="/console.html">browser console</a> is the zero-install way to
+                demo it.
+              </div>
+            </details>
+            <details>
+              <summary>Is this operational equipment?</summary>
+              <div className="faq-a">
+                No — ASTRA is a <b>simulation-based research prototype</b> built for
+                Smart India Hackathon 2026 against a DRDO problem statement. It is not
+                certified for operational use.
+              </div>
+            </details>
           </div>
         </div>
       </section>

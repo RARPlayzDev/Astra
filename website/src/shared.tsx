@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type MeanCI = Record<string, number | null>;
 type Results = {
@@ -25,6 +25,12 @@ const TITLES: Record<string, string> = {
   "openloop-sequential": "Sequential sweep",
 };
 
+/** Single source of truth for every download button on the site. */
+export const DOWNLOAD_URL =
+  "https://github.com/RARPlayzDev/Astra/releases/download/v3.0.0/ASTRA-Setup-3.0.0.exe";
+export const SITE_VERSION = "v3.0.0";
+export const REPO_URL = "https://github.com/RARPlayzDev/Astra";
+
 export function useResults(): Results | null {
   const [r, setR] = useState<Results | null>(null);
   useEffect(() => {
@@ -33,27 +39,95 @@ export function useResults(): Results | null {
   return r;
 }
 
+/* ── theme (dark default / light) ─────────────────────────────── */
+type Theme = "dark" | "light";
+
+export function currentTheme(): Theme {
+  return (document.documentElement.dataset.theme === "light" ? "light" : "dark");
+}
+
+export function setTheme(t: Theme) {
+  document.documentElement.dataset.theme = t;
+  try { localStorage.setItem("astra.theme", t); } catch { /* private mode */ }
+}
+
+export function useTheme(): [Theme, () => void] {
+  const [theme, setThemeState] = useState<Theme>(() => currentTheme());
+  const toggle = useCallback(() => {
+    const next: Theme = currentTheme() === "dark" ? "light" : "dark";
+    setTheme(next);
+    setThemeState(next);
+  }, []);
+  return [theme, toggle];
+}
+
+export function ThemeToggle({ className = "" }: { className?: string }) {
+  const [, toggle] = useTheme();
+  return (
+    <button
+      className={"theme-toggle " + className}
+      onClick={toggle}
+      aria-label="Toggle light / dark theme"
+      title="Toggle theme"
+      type="button"
+    >
+      <svg className="ic-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+      </svg>
+      <svg className="ic-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <circle cx="12" cy="12" r="4.2" />
+        <path d="M12 2v2.5M12 19.5V22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M2 12h2.5M19.5 12H22M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8" />
+      </svg>
+    </button>
+  );
+}
+
 export function Logo({ size = 28 }: { size?: number }) {
   return <img src="/astra_logo.svg" alt="ASTRA logo" width={size} height={size} />;
 }
 
 export function Nav() {
+  const [open, setOpen] = useState(false);
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    const onScroll = () => {
+      const h = document.documentElement;
+      const max = h.scrollHeight - h.clientHeight;
+      setProgress(max > 0 ? (h.scrollTop / max) * 100 : 0);
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   return (
     <nav className="nav">
       <div className="nav-inner">
         <a className="brand" href="/"><Logo /><span className="brand-name">ASTRA</span></a>
-        <div className="nav-links">
-          <a href="#problem">Problem</a>
-          <a href="#how">How it works</a>
-          <a href="#results">Results</a>
+        <div className={"nav-links" + (open ? " open" : "")}>
+          <a href="#problem" onClick={() => setOpen(false)}>Problem</a>
+          <a href="#how" onClick={() => setOpen(false)}>How it works</a>
+          <a href="/results.html">Results</a>
           <a href="/console.html">Console</a>
           <a href="/documentation.html">Docs</a>
-          <a className="nav-download" href="https://github.com/RARPlayzDev/Astra/releases/download/v2.0.0/ASTRA-Setup-2.0.0.exe" download>Download</a>
+          <a className="nav-download" href={DOWNLOAD_URL} download>Download</a>
         </div>
+        <ThemeToggle />
+        <button
+          className={"nav-burger" + (open ? " open" : "")}
+          onClick={() => setOpen(!open)}
+          aria-label="Toggle menu"
+          type="button"
+        ><span /></button>
       </div>
+      <div className="nav-progress" style={{ width: progress + "%" }} />
     </nav>
   );
 }
+
 
 export function Footer() {
   return (
@@ -63,30 +137,36 @@ export function Footer() {
           <Logo size={26} />
           <span className="brand-name" style={{ fontSize: 15, letterSpacing: 4 }}>ASTRA</span>
         </div>
-        <p>Adaptive Spectrum Threat Recognition &amp; Analysis.</p>
+        <p>Adaptive Spectrum Threat Recognition &amp; Analysis — an adaptive scan scheduler for Electronic Support receivers.</p>
         <p>A prototype developed for Smart India Hackathon 2026. Simulation-based research software, not operational equipment.</p>
+        <span className="footer-drdo">
+          Problem statement issued by <b>DRDO</b> · Electronic Warfare
+        </span>
       </div>
       <div className="footer-col">
         <h4>Product</h4>
         <a href="/console.html">Console</a>
         <a href="/documentation.html">Documentation</a>
-        <a href="https://github.com/RARPlayzDev/Astra/releases/download/v2.0.0/ASTRA-Setup-2.0.0.exe" download>Download</a>
-        <a href="#results">Results</a>
+        <a href="/results.html">Results</a>
+        <a href={DOWNLOAD_URL} download>Download {SITE_VERSION}</a>
       </div>
       <div className="footer-col">
         <h4>Research</h4>
-        <a href="#how">Methodology</a>
-        <a href="#capabilities">Capabilities</a>
-        <a href="#">Experiment Suite</a>
+        <a href="/#how">Methodology</a>
+        <a href="/#capabilities">Capabilities</a>
+        <a href="/results.html#figures">Figures</a>
+        <a href="/results.html#reproduce">Reproduce</a>
       </div>
       <div className="footer-col">
-        <h4>Team</h4>
-        <a href="#">About Us</a>
-        <a href="#">SIH 2026</a>
-        <a href="#">Contact</a>
+        <h4>Source</h4>
+        <a href={REPO_URL} target="_blank" rel="noreferrer">GitHub repository</a>
+        <a href={REPO_URL + "/releases"} target="_blank" rel="noreferrer">Releases</a>
+        <a href={REPO_URL + "/actions"} target="_blank" rel="noreferrer">CI / builds</a>
+        <a href="/documentation.html#19-frequently-asked-questions">FAQ</a>
       </div>
       <div className="footer-bottom" style={{ gridColumn: "1 / -1" }}>
         <p>&copy; 2026 ASTRA Project Team. All benchmark figures are generated by the bundled experiment suite from stored seeds and are fully reproducible.</p>
+        <p className="mono">{SITE_VERSION} · 306 automated tests · seed-exact results</p>
       </div>
     </div>
   );

@@ -12,6 +12,7 @@ export default defineConfig({
         index: resolve(__dirname, "index.html"),
         documentation: resolve(__dirname, "documentation.html"),
         console: resolve(__dirname, "console.html"),
+        results: resolve(__dirname, "results.html"),
       },
     },
   },

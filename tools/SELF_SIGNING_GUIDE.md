@@ -189,8 +189,8 @@ $pfxPassword = "YourSecurePassword123!"
     /tr http://timestamp.digicert.com `
     /td sha256 `
     /fd sha256 `
-    /d "ASTRA Installer v2.0.0" `
-    "D:\Kaarthi\Dev Space\SIH2026\p1\installer\ASTRA-Setup-2.0.0.exe"
+    /d "ASTRA Installer v3.0.0" `
+    "D:\Kaarthi\Dev Space\SIH2026\p1\installer\ASTRA-Setup-3.0.0.exe"
 ```
 
 ### Step 3.3 — Sign the QT Desktop EXE (if you use desktop_qt.py)
@@ -406,7 +406,7 @@ powershell -File tools\build_exe.ps1
 & "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe" installer\astra_installer.iss
 ```
 
-Output: `installer\ASTRA-Setup-2.0.0.exe`
+Output: `installer\ASTRA-Setup-3.0.0.exe`
 
 ### Step 7.2 — Sign the Installer
 
@@ -417,14 +417,14 @@ Output: `installer\ASTRA-Setup-2.0.0.exe`
     /tr http://timestamp.digicert.com `
     /td sha256 `
     /fd sha256 `
-    /d "ASTRA Setup v2.0.0" `
-    "installer\ASTRA-Setup-2.0.0.exe"
+    /d "ASTRA Setup v3.0.0" `
+    "installer\ASTRA-Setup-3.0.0.exe"
 ```
 
 ### Step 7.3 — Verify
 
 ```powershell
-Get-AuthenticodeSignature "installer\ASTRA-Setup-2.0.0.exe" | Format-List Status
+Get-AuthenticodeSignature "installer\ASTRA-Setup-3.0.0.exe" | Format-List Status
 # Should show: Status : Valid
 ```
 

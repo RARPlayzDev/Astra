@@ -57,7 +57,7 @@ Palette — taken from the site so graphics feel native to ASTRA:
 
 | Use | Hex |
 |---|---|
-| Background / caption plates | `#0d1420` at 85 % opacity |
+| Background / caption plates | `#05070b` at 85 % opacity |
 | Primary accent (numbers, rings) | `#cfa453` gold |
 | Secondary (labels, B-side) | `#6f9ec7` steel-blue |
 | Body text | `#dfe6ee` |

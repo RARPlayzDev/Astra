@@ -1,11 +1,11 @@
-﻿# Testing ASTRA â€” without a radar
+# Testing ASTRA — without a radar
 
 This project is built to be tested end-to-end with **zero hardware**. Work
 through the ladder below; each level removes one more assumption.
 
 ---
 
-## Level 1 â€” automated test battery (fast, no window)
+## Level 1 — automated test battery (fast, no window)
 
 Each file runs standalone from the project root:
 
@@ -19,26 +19,26 @@ python -X utf8 tests\test_software.py       # ASTRA app layer: sources, diagnost
 python -X utf8 tests\test_api.py            # API endpoints + live arena advance
 ```
 
-All must print `... passed`. If any fails, that is a real regression â€” stop and
+All must print `... passed`. If any fails, that is a real regression — stop and
 fix before continuing.
 
-## Level 2 â€” in-app diagnostics
+## Level 2 — in-app diagnostics
 
-Launch the app â†’ **Tools â†’ Diagnostics**. Eight self-tests cover imports,
+Launch the app → **Tools → Diagnostics**. Eight self-tests cover imports,
 simulation boot, benchmark data, figures, model-artifact integrity, frontend
 bundle, manual availability and a UDP loopback send/receive. Everything green =
 installation is sound.
 
-## Level 3 â€” simulated sensor source
+## Level 3 — simulated sensor source
 
-**Data & Sources â†’ Sensor sources â†’ Internal simulated scene â†’ Attach.**
-The row should show a growing PDW count at roughly 20â€“60 PDWs/s. Detach should
+**Data & Sources → Sensor sources → Internal simulated scene → Attach.**
+The row should show a growing PDW count at roughly 20–60 PDWs/s. Detach should
 remove it cleanly. This exercises the whole ingestion path with zero setup.
 
-## Level 4 â€” UDP feed over the real network stack
+## Level 4 — UDP feed over the real network stack
 
-Terminal 1 â€” start ASTRA (`ASTRA.exe` or `python desktop.py`).
-Terminal 2 â€” generate radar traffic:
+Terminal 1 — start ASTRA (`ASTRA.exe` or `python desktop.py`).
+Terminal 2 — generate radar traffic:
 
 ```powershell
 python tools\pdw_generator.py --port 5555 --rate 400
@@ -59,7 +59,7 @@ Variants worth trying:
 | Malformed data | `Write-Text "junk" > udp` via netcat-style tool | datagrams ignored, no crash |
 | Port conflict | attach same port twice | second attach shows inline error |
 
-## Level 5 â€” CSV replay bridge
+## Level 5 — CSV replay bridge
 
 Record or write a sweep as CSV (`toa_us,freq_mhz,pw_us,pa_db,aoa_deg` header)
 and bridge it:
@@ -70,23 +70,23 @@ python tools\sdr_bridge.py --mode csv --csv sweep.csv --out-port 5555
 
 Attach UDP on 5555. This is exactly how a real SDR processor would integrate.
 
-## Level 6 â€” paired missions under load
+## Level 6 — paired missions under load
 
 Run **Start Mission** while a generator streams on another port. Try every
-rate preset; let episodes complete; use File â†’ Open scenarioâ€¦ with different
-battlefields; cycle Start/Stop rapidly 10Ã—; open two browser windows on the
+rate preset; let episodes complete; use File → Open scenario… with different
+battlefields; cycle Start/Stop rapidly 10×; open two browser windows on the
 service simultaneously and confirm both stay in sync.
 
 ### Edge-case checklist (tick all)
 
-- [ ] Start Mission twice quickly â€” arena restarts cleanly, status bar shows RUNNING
-- [ ] Stop while running â€” status returns READY, counters freeze
-- [ ] Open scenario with tiny battlefield (edit a scenario to `n_bands: 4, T: 200`) â€” renders without errors
-- [ ] Export results JSON â€” file downloads and parses
-- [ ] Diagnostics after stopping mission â€” still all green
-- [ ] File â†’ Exit â€” service shuts down; console exits
-- [ ] Relaunch â€” previous state not required; app comes up clean
-- [ ] Analysis tab with results file temporarily renamed â€” shows friendly "No results found", no crash
+- [ ] Start Mission twice quickly — arena restarts cleanly, status bar shows RUNNING
+- [ ] Stop while running — status returns READY, counters freeze
+- [ ] Open scenario with tiny battlefield (edit a scenario to `n_bands: 4, T: 200`) — renders without errors
+- [ ] Export results JSON — file downloads and parses
+- [ ] Diagnostics after stopping mission — still all green
+- [ ] File → Exit — service shuts down; console exits
+- [ ] Relaunch — previous state not required; app comes up clean
+- [ ] Analysis tab with results file temporarily renamed — shows friendly "No results found", no crash
 
 ---
 
@@ -94,7 +94,7 @@ service simultaneously and confirm both stay in sync.
 
 `powershell
 powershell -File tools\build_exe.ps1        # -> dist\ASTRA\ASTRA.exe (folder bundle)
-# compile installer\ASTRA-Setup-2.0.0.exe with Inno Setup 6 (winget install JRSoftware.InnoSetup)
+# compile installer\ASTRA-Setup-3.0.0.exe with Inno Setup 6 (winget install JRSoftware.InnoSetup)
 & "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe" installer\astra_installer.iss
 ```
 
@@ -105,7 +105,7 @@ run Diagnostics (expect 8/8), then uninstall from Add/Remove Programs to confirm
 powershell -File tools\build_exe.ps1     # produces dist\ASTRA\ASTRA.exe
 ```
 
-Smoke-test the exe: launch it â†’ Diagnostics all green â†’ run Level 4 against it.
+Smoke-test the exe: launch it → Diagnostics all green → run Level 4 against it.
 
 For an installed look (Start-menu shortcut, uninstaller), install
 [Inno Setup](https://jrsoftware.org/isinfo.php) and compile
