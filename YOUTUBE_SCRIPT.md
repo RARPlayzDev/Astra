@@ -25,6 +25,13 @@ pace (~870 spoken words total). Read it exactly as written and the timing holds.
    powershell -File tools\build_exe.ps1
    & "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe" installer\astra_installer.iss
    ```
+
+   Then **publish the site** — the video shows live URLs, so they must answer 200:
+   ```powershell
+   powershell -File deploy.ps1        # build → Vercel production → HTTP-checks 4 routes
+   ```
+   If `astra-ew.vercel.app` answers `404 DEPLOYMENT_NOT_FOUND`, the Vercel project
+   was removed; re-link it first (`npx vercel login`, then `npx vercel link`).
 2. **Browser:** new guest window, 100 % zoom, bookmarks bar hidden, extensions off,
    window maximised, record at 1920×1080. Default **dark theme** for the shoot
    (the site remembers `localStorage["astra.theme"]`).

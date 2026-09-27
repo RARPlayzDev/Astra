@@ -358,12 +358,23 @@ python -m pytest tests -q
 
 ```powershell
 python tools/export_site_data.py       # Bake results/figures/manual into website/
-cd website
-npm install && npm run build           # Static output in website/dist
-npx vercel deploy --prod               # Or import repo in Vercel dashboard
+cd website; npm run build              # Static output in website/dist
+cd ..; npx vercel deploy --prod        # Or just: powershell -File deploy.ps1
 ```
 
-Set **Root Directory** = `website` in Vercel dashboard. `vercel.json` enables clean URLs.
+The repository-root `vercel.json` publishes the pre-built `website/dist` with no
+build step on Vercel, which is why the bundle is committed:
+
+- **Root Directory** must stay at the repository root so the root `vercel.json`
+  is read (`outputDirectory: website/dist`). Do not point it at `website`.
+- `website/vercel.json` only adds clean URLs for a standalone/root-domain deploy.
+- `deploy.ps1` (repo root) rebuilds, deploys to production and then HTTP-checks
+  the live routes.
+
+**Troubleshooting:** if `https://astra-ew.vercel.app/` answers
+`404 DEPLOYMENT_NOT_FOUND`, the Vercel project or its deployment was removed —
+nothing is wrong with the code. Run `npx vercel login`, `npx vercel link`
+(project `astra-ew`), then `powershell -File deploy.ps1` to republish.
 
 ---
 
