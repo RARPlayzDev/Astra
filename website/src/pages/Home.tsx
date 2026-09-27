@@ -1,6 +1,22 @@
 import { useEffect } from "react";
 import { DOWNLOAD_URL, Footer, GateAndMc, Nav, SITE_VERSION as SITE_VER, useResults } from "../shared";
 import HeroScroll from "../components/HeroScroll";
+import { CountUp, CursorFollower, Preloader, SectionDots } from "../components/Fx";
+
+/** Chapter rail for the long-form home page. */
+const CHAPTERS: [string, string][] = [
+  ["numbers", "By the numbers"],
+  ["problem", "The problem"],
+  ["walkthrough", "Mission walkthrough"],
+  ["how", "How it works"],
+  ["architecture", "Architecture"],
+  ["results", "Results"],
+  ["compare", "Head-to-head"],
+  ["capabilities", "Capabilities"],
+  ["reproduce", "Reproduce"],
+  ["roadmap", "Roadmap"],
+  ["faq", "FAQ"],
+];
 
 const STATS: [string, string, string, string][] = [
   ["306", "", "Automated tests", "pytest suite, all passing in CI"],
@@ -32,12 +48,12 @@ const TECH_STACK = [
   { name: "Canvas API", sub: "Radar visualization" },
 ];
 
-const STEPS: [string, string][] = [
-  ["Survey", "A fast reconnaissance sweep bootstraps statistics across every band — no prior intelligence required."],
-  ["Learn", "Detection streams fingerprinted by SNR and angle-of-arrival. Periodicities estimated with Rayleigh significance testing."],
-  ["Predict", "Validated locks predict each emitter's next transmission window before it opens."],
-  ["Position", "The receiver arrives early and dwells through the predicted window — interception becomes schedule, not luck."],
-  ["Rotate", "Remaining time allocated by discounted value with recency guarantees, so no band starves."],
+const STEPS: [string, string, string][] = [
+  ["Survey", "A fast reconnaissance sweep bootstraps statistics across every band — no prior intelligence required.", "24 BANDS · 2–18 GHZ · ZERO PRIOR"],
+  ["Learn", "Detection streams fingerprinted by SNR and angle-of-arrival. Periodicities estimated with Rayleigh significance testing.", "SNR · AOA · RAYLEIGH"],
+  ["Predict", "Validated locks predict each emitter's next transmission window before it opens.", "96.9% NEXT-WINDOW"],
+  ["Position", "The receiver arrives early and dwells through the predicted window — interception becomes schedule, not luck.", "1.8× FASTER FIRST FIX"],
+  ["Rotate", "Remaining time allocated by discounted value with recency guarantees, so no band starves.", "NO STARVATION GUARANTEE"],
 ];
 
 const FEATURES: [string, string, string][] = [
@@ -47,6 +63,83 @@ const FEATURES: [string, string, string][] = [
   ["◆", "Multi-receiver geolocation", "Cooperative AOA triangulation; CEP improves from 3.2 km to 1.7 km with more receivers."],
   ["◐", "Live paired demonstration", "Two receivers fly identical battlefields side by side — strategy is the only variable."],
   ["◎", "Reproducible by construction", "Seed-defined scenarios, strict JSON outputs, 306 automated tests, one-command builds."],
+  ["⬢", "Fixed-point policy kernel", "A C++ header kernel mirrors the Python policy in fixed point — the on-ramp from simulation to receiver firmware."],
+  ["⇄", "UDP PDW ingest", "Pulse-descriptor-word stream interface, so the same engine can consume live receiver output instead of a simulation."],
+];
+
+/** Mission walkthrough — one cycle of the loop, told as phases. */
+const PHASES: [string, string, string, string][] = [
+  ["Phase 01 · Cold start", "No prior intelligence",
+    "The receiver begins knowing nothing. A reconnaissance sweep samples all 24 bands (2–18 GHz) evenly — every dwell is counted, nothing is assumed, and there is no pre-mission pattern for an adversary to exploit.",
+    "24 BANDS · 2–18 GHZ · ZERO PRIOR"],
+  ["Phase 02 · Fingerprint", "Separating rhythm from noise",
+    "Each detection stream is fingerprinted by SNR and angle-of-arrival. Periodicities are tested for Rayleigh significance, so a rhythm is only believed once the statistics justify it — and stale beliefs expire.",
+    "RAYLEIGH SIGNIFICANCE TEST"],
+  ["Phase 03 · Lock", "Search becomes appointment",
+    "Validated locks convert periodic emitters from a search problem into a schedule. Once locked, more than 91% of that emitter's cycles are intercepted per mission.",
+    ">91% OF CYCLES INTERCEPTED"],
+  ["Phase 04 · Predict", "Arrive before the emitter does",
+    "Locked rhythms forecast the next transmission window. On the held-out agile-hop probe the policy predicts 96.9% of next windows against 54.1% for a sequential sweep.",
+    "96.9% NEXT-WINDOW (PROBE · SEED 4242)"],
+  ["Phase 05 · Defend", "Coverage is structural, not luck",
+    "A coverage guard keeps threat interception at or above the 90% KPP floor — 90–95.8% across seeds — while discounted-value rotation spends the remainder of the timeline on what the policy has actually learned.",
+    "90–95.8% COVERAGE · GATE HELD"],
+];
+
+/** Architecture — ingest → perceive → decide → act & audit. */
+const LAYERS: [string, string, string[]][] = [
+  ["Layer 01", "Ingest", [
+    "Simulated battlefield — 24 bands, 2–18 GHz, emitters transmitting ~2% of the time.",
+    "UDP PDW stream — pulse-descriptor-word interface for live receiver input.",
+    "Seed-defined scenarios, so every rerun is bit-identical.",
+  ]],
+  ["Layer 02", "Perceive", [
+    "Pulse fingerprinting by SNR and angle-of-arrival.",
+    "Rayleigh period estimation with significance testing.",
+    "Library matching for emitter identification and threat classification.",
+  ]],
+  ["Layer 03", "Decide", [
+    "Five behaviours multiplexed by learned confidence.",
+    "Discounted-value scheduling with recency guarantees.",
+    "Coverage guard: no band starves, no threat is silently dropped.",
+  ]],
+  ["Layer 04", "Act & audit", [
+    "Dwell plan issued to the tuner every cycle.",
+    "Fixed-point C++ policy kernel for deployment targets.",
+    "KPP gate · mission-effectiveness score · 200-episode Monte Carlo audit.",
+  ]],
+];
+
+/** Head-to-head — verbatim from results/benchmark.json (50-episode means). */
+const CMP: [string, string, string, string, "ok" | "no"][] = [
+  ["Sequential sweep", "0.186", "77.5%", "46.1%", "no"],
+  ["Random scan", "0.188", "97.5%", "46.0%", "no"],
+  ["Priority sweep", "0.186", "76.5%", "46.1%", "no"],
+  ["UCB bandit", "0.900", "52.7%", "99.5%", "no"],
+  ["Linear Q-learning", "0.449", "88.0%", "18.4%", "no"],
+  ["Deep Q-network", "0.200", "88.7%", "42.6%", "no"],
+  ["ASTRA SmartScan", "0.471", "92.0%", "54.5%", "ok"],
+];
+
+const ROAD: [string, string, string, string[]][] = [
+  ["done", "Shipped", "Built, tested and reproducible today.", [
+    "Simulation engine with a 306-test suite",
+    "Adaptive web console with guided onboarding",
+    "Windows desktop app — v3.0.0 installer",
+    "Fixed-point C++ policy kernel",
+    "UDP PDW stream interface",
+    "Auto-generated docs and figure pipeline",
+  ]],
+  ["next", "Next", "The immediate engineering queue.", [
+    "Hardware-in-the-loop trials over the UDP PDW stream",
+    "Receiver-specific dwell constraints and tuner profiles",
+    "Wider emitter library for threat classification",
+  ]],
+  ["vision", "Vision", "Where the architecture is designed to go.", [
+    "Integration with DRDO Electronic Support suites",
+    "Cooperative multi-node geolocation at operational scale",
+    "On-device policy inference on embedded receivers",
+  ]],
 ];
 
 function useReveal() {
@@ -73,6 +166,9 @@ export default function Home() {
   return (
     <>
       <Nav />
+      <Preloader />
+      <CursorFollower />
+      <SectionDots items={CHAPTERS} />
       <HeroScroll />
 
       {/* ═══ TECH STACK MARQUEE ═══ */}
@@ -104,7 +200,12 @@ export default function Home() {
           <div className="stats-band reveal">
             {STATS.map(([v, unit, lbl, sub]) => (
               <div className="stat" key={lbl}>
-                <div className="stat-val">{v}{unit && <span className="unit">{unit}</span>}</div>
+                <div className="stat-val">
+                  {/^\d+(\.\d+)?$/.test(v)
+                    ? <CountUp to={parseFloat(v)} decimals={v.includes(".") ? 1 : 0} />
+                    : v}
+                  {unit && <span className="unit">{unit}</span>}
+                </div>
                 <div className="stat-lbl">{lbl}</div>
                 <div className="stat-sub">{sub}</div>
               </div>
@@ -140,15 +241,21 @@ export default function Home() {
                 wasted on clutter, new threats found late, periodic rhythms
                 never exploited. 78% threat coverage, lowest reward.
               </p>
+              <div className="card-stat">
+                MEASURED — <b>0.775</b> coverage · <b>0.186</b> reward · fails the KPP gate
+              </div>
             </div>
             <div className="card border-red reveal from-right">
               <div className="card-tag red">Naive Adaptivity</div>
               <h4>The exploitation trap</h4>
               <p>
                 A pure bandit camps on the busiest band — highest raw score,
-                while detecting only 54% of threats. Reward and coverage pull
+                while detecting only 52.7% of threats. Reward and coverage pull
                 in opposite directions.
               </p>
+              <div className="card-stat">
+                MEASURED — <b>0.900</b> reward, highest of seven schedulers · <b>0.527</b> coverage
+              </div>
             </div>
             <div className="card border-green card-full reveal scale-in">
               <div className="card-tag green">ASTRA's Answer</div>
@@ -159,12 +266,41 @@ export default function Home() {
                 protects coverage structurally. High reward <b>and</b> near-total
                 threat coverage — the only mission-capable scheduler in its field.
               </p>
+              <div className="card-stat">
+                MEASURED — <b>0.920</b> mean coverage · <b>0.471</b> reward · the only scheduler to pass every KPP
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* ═══ HOW IT WORKS ═══ */}
+      {/* ═══ MISSION WALKTHROUGH ═══ */}
+      <section className="section" id="walkthrough">
+        <div className="wrap">
+          <div className="reveal">
+            <div className="section-label">Mission Walkthrough</div>
+            <h2 className="section-title">One cycle of the loop, told as phases</h2>
+            <p className="section-desc">
+              This is the mission narrative behind the numbers: what the receiver
+              actually does from the first blind sweep to a maintained lock, and
+              which measurement stands behind each phase.
+            </p>
+          </div>
+          <div className="tl reveal">
+            <div className="tl-rail" />
+            {PHASES.map(([tag, title, body, metric], i) => (
+              <div className="tl-item reveal" key={tag} style={{ transitionDelay: `${i * 0.08}s` }}>
+                <div className="tl-tag">{tag}</div>
+                <h4>{title}</h4>
+                <p>{body}</p>
+                <span className="tl-metric">{metric}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section className="section" id="how">
         <div className="wrap">
           <div className="reveal">
@@ -177,11 +313,12 @@ export default function Home() {
             </p>
           </div>
           <div className="pipeline">
-            {STEPS.map(([t, d], i) => (
+            {STEPS.map(([t, d, chip], i) => (
               <div className="pipe-step reveal" key={t} style={{ transitionDelay: `${i * 0.08}s` }}>
                 <div className="pipe-num">{i + 1}</div>
                 <h4>{t}</h4>
                 <p>{d}</p>
+                <span className="pipe-chip">{chip}</span>
               </div>
             ))}
           </div>
@@ -189,6 +326,32 @@ export default function Home() {
       </section>
 
       {/* ═══ RESULTS ═══ */}
+      {/* ═══ ARCHITECTURE ═══ */}
+      <section className="section" id="architecture">
+        <div className="wrap">
+          <div className="reveal">
+            <div className="section-label">Architecture</div>
+            <h2 className="section-title">Four layers, one decision per cycle</h2>
+            <p className="section-desc">
+              The same pipeline runs in simulation, in the browser console and in
+              the desktop app — with a fixed-point kernel path for real receiver
+              hardware.
+            </p>
+          </div>
+          <div className="arch reveal">
+            {LAYERS.map(([n, title, items]) => (
+              <div className="arch-col" key={n}>
+                <div className="arch-n">{n}</div>
+                <h4>{title}</h4>
+                <ul>
+                  {items.map((it) => <li key={it}>{it}</li>)}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section className="section" id="results">
         <div className="wrap">
           <div className="reveal">
@@ -220,6 +383,59 @@ export default function Home() {
       </section>
 
       {/* ═══ CAPABILITIES ═══ */}
+      {/* ═══ HEAD-TO-HEAD ═══ */}
+      <section className="section" id="compare">
+        <div className="wrap">
+          <div className="reveal">
+            <div className="section-label">Head-to-head</div>
+            <h2 className="section-title">Seven schedulers, one acceptance gate</h2>
+            <p className="section-desc">
+              The full benchmark table, verbatim from the artifact. Reward alone
+              is a trap — the top-scoring scheduler is the one that misses nearly
+              half the threats.
+            </p>
+          </div>
+          <div className="cmp-wrap reveal">
+            <table className="cmp">
+              <thead>
+                <tr>
+                  <th>Scheduler</th>
+                  <th>Avg reward</th>
+                  <th>Threat coverage</th>
+                  <th>Next-hop prediction</th>
+                  <th>Mission capable</th>
+                </tr>
+              </thead>
+              <tbody>
+                {CMP.map(([name, rew, cov, pred, verdict]) => {
+                  const us = verdict === "ok";
+                  return (
+                    <tr key={name} className={us ? "win" : ""}>
+                      <td className={us ? "us" : ""}>{name}</td>
+                      <td className={us ? "us" : ""}>{rew}</td>
+                      <td className={us ? "us" : ""}>{cov}</td>
+                      <td className={us ? "us" : ""}>{pred}</td>
+                      <td className={us ? "us" : ""}>
+                        <span className={`verdict ${verdict}`}>{us ? "✓ PASS" : "✗ FAIL"}</span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <p className="cmp-note reveal d2">
+            <b>Read the prediction column carefully.</b> It is the next-hop
+            prediction benchmark from the Monte Carlo artifact (KPP floor 0.5).
+            The UCB bandit leads on reward and prediction because it camps on one
+            busy band — and its threat coverage collapses to 0.527, so it fails
+            the gate. Coverage and reward are reported separately from the
+            agile-hop probe, where SmartScan predicts <b>96.9%</b> of windows
+            against 54.1% for a sequential sweep.
+          </p>
+        </div>
+      </section>
+
       <section className="section" id="capabilities">
         <div className="wrap">
           <div className="reveal">
@@ -323,6 +539,32 @@ export default function Home() {
       </section>
 
       {/* ═══ FAQ ═══ */}
+      {/* ═══ ROADMAP ═══ */}
+      <section className="section" id="roadmap">
+        <div className="wrap">
+          <div className="reveal">
+            <div className="section-label">Roadmap</div>
+            <h2 className="section-title">Honest about what is built, and what is next</h2>
+            <p className="section-desc">
+              No roadmap theatre. Everything in the first column runs today, the
+              second is the live engineering queue, the third is where this
+              architecture is designed to go.
+            </p>
+          </div>
+          <div className="road reveal">
+            {ROAD.map(([cls, title, sub, items]) => (
+              <div className={"road-col " + cls} key={cls}>
+                <h4>{title}</h4>
+                <p className="road-sub">{sub}</p>
+                <ul>
+                  {items.map((it) => <li key={it}>{it}</li>)}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section className="section" id="faq">
         <div className="wrap">
           <div className="reveal">
@@ -353,7 +595,7 @@ export default function Home() {
               <summary>What makes it different from a bandit or RL scheduler?</summary>
               <div className="faq-a">
                 A pure bandit maximises reward and camps on one busy band — highest raw
-                score while detecting only ~54% of threats. ASTRA protects coverage
+                score while detecting only 52.7% of threats. ASTRA protects coverage
                 structurally and exploits learned periodicity, so it wins on reward{" "}
                 <b>and</b> coverage. It is also the only scheduler that passes every KPP
                 simultaneously. The deep Q-network we benchmarked lost under sparse,
@@ -388,6 +630,29 @@ export default function Home() {
                 certified for operational use.
               </div>
             </details>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ CTA BAND ═══ */}
+      <section className="c-band">
+        <div className="wrap">
+          <div className="reveal">
+            <div className="c-band-kicker">
+              ASTRA {SITE_VER} · Windows installer · browser console · full source
+            </div>
+            <h2>Run the loop yourself — it takes one command.</h2>
+            <p>
+              Install the desktop build for the offline engine, or open the
+              console in a browser tab and watch the policy adapt band by band.
+              Every figure on this page is one command away from being reproduced
+              on your machine.
+            </p>
+          </div>
+          <div className="c-band-actions reveal d2">
+            <a className="btn solid lg" href={DOWNLOAD_URL} download>Download ASTRA {SITE_VER}</a>
+            <a className="btn lg" href="/console.html">Open the console</a>
+            <a className="btn lg" href="/documentation.html">Read the manual</a>
           </div>
         </div>
       </section>

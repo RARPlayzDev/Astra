@@ -1,5 +1,16 @@
 import { useEffect, useState } from "react";
 import { Footer, GateAndMc, Nav, useResults } from "../shared";
+import { CountUp, SectionDots } from "../components/Fx";
+
+/** Chapter rail for the results report. */
+const CHAPTERS: [string, string][] = [
+  ["kpp", "The gate"],
+  ["monte-carlo", "Monte Carlo"],
+  ["significance", "Significance"],
+  ["supporting", "Supporting evidence"],
+  ["figures", "Figures"],
+  ["reproduce", "Reproduce"],
+];
 
 /* shapes we read from /data/results.json beyond what shared.tsx needs */
 type MC = Record<string, Record<string, number | null>>;
@@ -114,6 +125,7 @@ export default function Results() {
   return (
     <>
       <Nav />
+      <SectionDots items={CHAPTERS} />
 
       {/* ═══ HERO ═══ */}
       <section className="res-hero">
@@ -134,7 +146,9 @@ export default function Results() {
               <div className="s">Only mission-capable scheduler under the KPP gate.</div>
             </div>
             <div className="res-kpi">
-              <div className="v">{PROBE[0][1].toFixed(1)}%</div>
+              <div className="v">
+                <CountUp to={PROBE[0][1]} decimals={1} />%
+              </div>
               <div className="l">Next-window prediction</div>
               <div className="s">Probe, seed 4242 — vs 54.1% sequential sweep.</div>
             </div>
@@ -149,7 +163,7 @@ export default function Results() {
               <div className="s">{sig.length || "—"} gated-MES comparisons, all significant.</div>
             </div>
             <div className="res-kpi">
-              <div className="v">306</div>
+              <div className="v"><CountUp to={306} /></div>
               <div className="l">Automated tests</div>
               <div className="s">Unit + integration + scenario replay.</div>
             </div>

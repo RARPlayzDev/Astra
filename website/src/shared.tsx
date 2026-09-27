@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { PageWipe } from "./components/Fx";
 
 type MeanCI = Record<string, number | null>;
 type Results = {
@@ -105,8 +106,9 @@ export function Nav() {
   }, []);
 
   return (
-    <nav className="nav">
-      <div className="nav-inner">
+    <>
+      <nav className="nav">
+        <div className="nav-inner">
         <a className="brand" href="/"><Logo /><span className="brand-name">ASTRA</span></a>
         <div className={"nav-links" + (open ? " open" : "")}>
           <a href="#problem" onClick={() => setOpen(false)}>Problem</a>
@@ -125,7 +127,9 @@ export function Nav() {
         ><span /></button>
       </div>
       <div className="nav-progress" style={{ width: progress + "%" }} />
-    </nav>
+      </nav>
+      <PageWipe />
+    </>
   );
 }
 

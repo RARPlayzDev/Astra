@@ -1,4 +1,5 @@
 import { DOWNLOAD_URL } from "../shared";
+import { Scramble } from "./Fx";
 import SpectrumStrip from "./SpectrumStrip";
 
 const SPEC: [string, string][] = [
@@ -20,7 +21,7 @@ export default function HeroScroll() {
       <div className="wrap hero-inner">
         <div className="hero-kicker">
           <span className="k-dot" />
-          SMART INDIA HACKATHON 2026 · DRDO PROBLEM STATEMENT · ELECTRONIC WARFARE
+          <Scramble text="SMART INDIA HACKATHON 2026 · DRDO PROBLEM STATEMENT · ELECTRONIC WARFARE" />
         </div>
 
         <div className="hero-main">
