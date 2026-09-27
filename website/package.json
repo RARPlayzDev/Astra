@@ -8,6 +8,7 @@
     "build": "vite build",
     "probe": "esbuild scripts/pred_probe.ts --bundle --platform=node --outfile=scripts/_pred_probe.cjs --log-level=error && node scripts/_pred_probe.cjs",
     "docs:check": "esbuild scripts/docs_check.ts --bundle --platform=node --outfile=scripts/_docs_check.cjs --log-level=error && node scripts/_docs_check.cjs",
+    "smoke": "esbuild scripts/smoke.ts --bundle --platform=node --outfile=scripts/_smoke.cjs --log-level=error && node scripts/_smoke.cjs",
     "preview": "vite preview"
   },
   "dependencies": {

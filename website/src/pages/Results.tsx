@@ -117,7 +117,6 @@ export default function Results() {
 
       {/* ═══ HERO ═══ */}
       <section className="res-hero">
-        <div className="hero-aurora" aria-hidden />
         <div className="wrap">
           <div className="section-label">Verified Results</div>
           <h1 className="section-title" style={{ fontSize: "clamp(2.2rem, 5vw, 3.6rem)" }}>

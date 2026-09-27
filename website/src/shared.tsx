@@ -43,6 +43,7 @@ export function useResults(): Results | null {
 type Theme = "dark" | "light";
 
 export function currentTheme(): Theme {
+  if (typeof document === "undefined") return "dark";
   return (document.documentElement.dataset.theme === "light" ? "light" : "dark");
 }
 
