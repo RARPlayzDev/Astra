@@ -562,29 +562,26 @@ export default function Console() {
   const [tipPos, setTipPos] = useState<{ left: number; top: number } | null>(null);
   const tipRef = useRef<HTMLDivElement | null>(null);
 
+  /**
+   * Seven stops, not eleven - each one still says what the control is and how
+   * to use it, but closely-related controls share a stop so the tour does not
+   * turn into a click-through marathon.
+   */
   const TOUR_STEPS: TourStep[] = [
-    { title: "Presentation demos", tab: "mission", sel: '[data-tour="demos"]',
-      text: "One click configures and launches a full mission - seed, opponent, sensitivity and scene are preset. Start with '1 - Flagship race' for the headline A/B; the others cover periodic rhythms, the exploitation trap, low-SNR stress and a cooperative swarm." },
-    { title: "Start / Pause", tab: "mission", sel: '[data-tour="start"]',
-      text: "Start mission launches with the current configuration; Pause freezes the clock so you can read the panels. Seed, scene and the Advanced knobs apply on the next Start." },
-    { title: "Mission configuration", tab: "mission", sel: '[data-tour="config"]',
+    { title: "1 of 7 - Launch a demo", tab: "mission", sel: '[data-tour="demos"]',
+      text: "One click configures and launches a full mission - seed, opponent, sensitivity and scene are preset. Start with '1 - Flagship race' for the headline A/B, then press Start mission. Pause freezes the clock so you can read the panels; seed, scene and Advanced knobs apply on the next Start." },
+    { title: "2 of 7 - Mission configuration", tab: "mission", sel: '[data-tour="config"]',
       text: "Tune the battlefield by hand: reproducible seed, Receiver B's policy, 1-3 cooperative receivers, sensitivity offset, scene size and simulation rate. 'Advanced' reveals SNR, period-range and clutter controls." },
-    { title: "The waterfall", tab: "mission", sel: '[data-tour="waterfall"]',
+    { title: "3 of 7 - The waterfall", tab: "mission", sel: '[data-tour="waterfall"]',
       text: "Ground truth on screen: blue cells are real transmissions, the light grey column is the band the receiver is listening to right now, and a gold cell is a successful intercept. Gold density on A versus B is the whole story." },
-    { title: "Live KPIs", tab: "mission", sel: '[data-tour="kpi"]',
-      text: "Threat coverage, intercept ratio, reward per dwell, time-to-first-fix, prediction accuracy and phase locks update every slot. ASTRA should hold higher coverage and a faster threat TTFF than the baseline beside it." },
-    { title: "Threat board", tab: "mission", sel: '[data-tour="threats"]',
-      text: "After three or more intercepts a stream is matched against the emitter library: class, threat level, confidence, and whether the identification MATCHed ground truth - intercept, classify, identify." },
-    { title: "Scheduler event log", tab: "mission", sel: '[data-tour="log"]',
+    { title: "4 of 7 - Live KPIs and the threat board", tab: "mission", sel: '[data-tour="kpi"]',
+      text: "Threat coverage, intercept ratio, reward per dwell, time-to-first-fix, prediction accuracy and phase locks update every slot - ASTRA should hold higher coverage and a faster threat TTFF than the baseline beside it. Underneath, the threat board matches a stream against the emitter library after three intercepts: class, threat level, confidence, and whether the call MATCHed ground truth." },
+    { title: "5 of 7 - Scheduler event log", tab: "mission", sel: '[data-tour="log"]',
       text: "Every scheduler decision lands here: PROBE tests a rhythm hypothesis, LOCK / CONFIRMED means a periodic emitter is phase-locked, DROP retires a stale belief, SHIFT flags an environment change. The lock count is the learning made visible." },
-    { title: "Three bays", tab: "mission", sel: '[data-tour="tabs"]',
-      text: "The console is a command centre: watch the live race, train across episodes in isolation, then verify headlessly. Everything below the tabs belongs to the selected bay." },
-    { title: "Learning Arena", tab: "arena", sel: '[data-tour="arena"]',
-      text: "Cross-episode training in an isolated sandbox. Press 'Train 5 episodes' to run back-to-back missions on fresh battlefields while the learner keeps its memory - rising bars are the warm start paying off. 'Reset learner memory' wipes it." },
-    { title: "Model Lab", tab: "lab", sel: '[data-tour="lab"]',
-      text: "Headless verification: 'Run shootout' races all seven policies on the same seed, and the probe table scores prediction honestly - SmartScan 96.9% against 54.1% for the sweep, reproducible with 'npm run probe'." },
-    { title: "Help is always here", tab: "mission", sel: '[data-tour="help"]',
-      text: "'Quick Guide' reopens the four intro cards and 'Help / Tour' replays this tour at any time. You now know enough to demo ASTRA - head back to the site when you're done." },
+    { title: "6 of 7 - The three bays", tab: "mission", sel: '[data-tour="tabs"]',
+      text: "The console is a command centre. Mission is the live race. Learning Arena trains across episodes in an isolated sandbox - 'Train 5 episodes' runs back-to-back missions on fresh battlefields while the learner keeps its memory. Model Lab verifies headlessly: 'Run shootout' races all seven policies on one seed and the probe table scores prediction honestly at 96.9% versus 54.1% for the sweep. Everything below the tabs belongs to the selected bay." },
+    { title: "7 of 7 - Replay any of this", tab: "mission", sel: '[data-tour="help"]',
+      text: "'Quick Guide' reopens the intro cards and 'Help / Tour' replays this tour at any time. You now know enough to demo ASTRA - head back to the site when you're done." },
   ];
 
   const markSeen = () => {
@@ -700,8 +697,8 @@ export default function Console() {
           <div className="modal-content intro" onClick={(e) => e.stopPropagation()}>
             <h2>Welcome to the ASTRA console</h2>
             <p className="intro-lede">
-              Four things to know before you start - then a guided tour that
-              points at every control and explains it.
+              Five things to know before you start - then a seven-stop tour
+              that points at each control and explains it.
             </p>
             <div className="intro-cards">
               <div className="intro-card">
@@ -734,6 +731,13 @@ export default function Console() {
                   and watch both receivers race on the same battlefield. Fine-tune
                   seed, opponent, sensitivity and rate below, or train the learner
                   in the Arena.</p>
+              </div>
+              <div className="intro-card">
+                <h4>5 · This runs offline too</h4>
+                <p>The same engine ships as a Windows desktop application -
+                  diagnostics, PDW/UDP ingest, SQLite logging and the full manual.
+                  The <b>Docs</b> tab of the site and the app's Help menu serve the
+                  identical manual, generated from one source.</p>
               </div>
             </div>
             <div className="intro-actions">

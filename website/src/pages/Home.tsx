@@ -2,9 +2,11 @@ import { useEffect } from "react";
 import { DOWNLOAD_URL, Footer, GateAndMc, Nav, SITE_VERSION as SITE_VER, useResults } from "../shared";
 import HeroScroll from "../components/HeroScroll";
 import { CountUp, CursorFollower, Preloader, SectionDots } from "../components/Fx";
+import SweepScope from "../components/SweepScope";
 
 /** Chapter rail for the long-form home page. */
 const CHAPTERS: [string, string][] = [
+  ["instrument", "The receiver"],
   ["numbers", "By the numbers"],
   ["problem", "The problem"],
   ["walkthrough", "Mission walkthrough"],
@@ -13,6 +15,7 @@ const CHAPTERS: [string, string][] = [
   ["results", "Results"],
   ["compare", "Head-to-head"],
   ["capabilities", "Capabilities"],
+  ["desktop", "Desktop app"],
   ["reproduce", "Reproduce"],
   ["roadmap", "Roadmap"],
   ["faq", "FAQ"],
@@ -182,6 +185,44 @@ export default function Home() {
               <span className="tech-item-sub">{t.sub}</span>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* ═══ LIVE SWEEP INSTRUMENT ═══ */}
+      <section className="section" id="instrument" style={{ paddingTop: "clamp(56px, 8vw, 96px)", paddingBottom: "clamp(56px, 8vw, 96px)" }}>
+        <div className="wrap">
+          <div className="sweep-grid">
+            <SweepScope height={400} />
+            <div className="reveal">
+              <div className="section-label">The receiver, live</div>
+              <h2 className="section-title">One look tells you where to point the antenna</h2>
+              <p className="section-desc">
+                This is what a single ES receiver does all day: sweep 24 bands,
+                wait for transmitters to speak, and remember who speaks on a
+                rhythm. Gold blips are periodic emitters the learner can lock;
+                blue ones are agile and keep changing frequency — those are the
+                harder prey. Every lock mark is a candidate the follow-up scan
+                will look at more closely.
+              </p>
+              <p className="section-desc">
+                The same logic runs in the web console and in the desktop app;
+                the picture above is decorative, but the schedule it imitates is
+                the real one: dwell budgets, revisit intervals and lock
+                bookkeeping straight out of <code>engine/models.py</code>.
+              </p>
+              <div className="sweep-legend">
+                <span><i style={{ background: "#cfa453" }} /> Periodic — lockable</span>
+                <span><i style={{ background: "#6f9ec7" }} /> Frequency agile</span>
+                <span><i style={{ background: "rgba(207,164,83,.5)" }} /> Phase-locked mark</span>
+              </div>
+              <div className="sweep-stats">
+                <div className="sweep-stat"><b>24</b><span>Bands swept</span></div>
+                <div className="sweep-stat"><b>0.475</b><span>Sharpness cutoff</span></div>
+                <div className="sweep-stat"><b>96.9%</b><span>SmartScan accuracy</span></div>
+                <div className="sweep-stat"><b>1.8×</b><span>Faster first fix</span></div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -487,6 +528,44 @@ export default function Home() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══ DESKTOP APPLICATION ═══ */}
+      <section className="section" id="desktop" style={{ paddingTop: "clamp(48px, 7vw, 84px)" }}>
+        <div className="wrap">
+          <div className="reveal">
+            <div className="section-label">Desktop application</div>
+            <h2 className="section-title">The whole system as an offline Windows app</h2>
+            <p className="section-desc">
+              Everything on this site — simulation, prediction, Arena, results —
+              also ships as a single installer. The desktop app is the field
+              build: it starts a local server, opens the same console UI in a
+              WebView2 window, and adds the hardware side the browser cannot do.
+              Nothing phones home; the app runs air-gapped by design.
+            </p>
+          </div>
+          <div className="features-grid">
+            {[
+              ["⊞", "Mission control", "Start Mission spins up the local server and the console loads inside the desktop window — identical tabs, identical tour, identical one-click demos."],
+              ["⚕", "Diagnostics & self-test", "Tools → Diagnostics verifies survey data, builder mode, embedded scenario library, prediction report generator and full survey reports in one pass."],
+              ["⇩", "PDW and UDP ingest", "Real pulse descriptor words arrive over UDP for offline analysis — the hardware pipeline that a browser tab can never own."],
+              ["☰", "SQLite event log", "Runs, locks and alerts are written to a local SQLite file, so a mission stays auditable after the laptop shuts down."],
+              ["⚙", "Config you can ship", "astra_config.json and scenario YAMLs live next to the exe — change dwell budgets or band plans without touching the code."],
+              ["☂", "One manual, three places", "The PDF you generate from Report → Create astra documentation (F6) is the same source that feeds the Docs tab on this site and Help → Manual in the app."],
+            ].map(([ic, t, d], i) => (
+              <div className="feat reveal" key={t} style={{ transitionDelay: `${i * 0.06}s` }}>
+                <div className="feat-icon">{ic}</div>
+                <h4>{t}</h4>
+                <p>{d}</p>
+              </div>
+            ))}
+          </div>
+          <div className="reveal" style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 26 }}>
+            <a className="btn primary" href={DOWNLOAD_URL} download>Download ASTRA-Setup-3.0.0.exe</a>
+            <a className="btn ghost" href="/documentation.html">Read the manual</a>
+            <a className="btn ghost" href="/console.html">Or try it in the browser</a>
           </div>
         </div>
       </section>

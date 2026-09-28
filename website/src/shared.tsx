@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { PageWipe } from "./components/Fx";
+import BAKED_RESULTS from "./data/resultsData";
 
 type MeanCI = Record<string, number | null>;
 type Results = {
@@ -32,10 +33,27 @@ export const DOWNLOAD_URL =
 export const SITE_VERSION = "v3.0.0";
 export const REPO_URL = "https://github.com/RARPlayzDev/Astra";
 
+/**
+ * Baked at build time by tools/export_site_data.py, so every metric is present
+ * on first paint. The fetch below is only a silent refresh: if the deployment
+ * serves a newer /data/results.json it wins, and if the request fails (file://,
+ * a sub-path host, an offline demo) the baked numbers simply stay.
+ */
+const BAKED = BAKED_RESULTS as Results;
+
 export function useResults(): Results | null {
-  const [r, setR] = useState<Results | null>(null);
+  const [r, setR] = useState<Results | null>(BAKED);
   useEffect(() => {
-    fetch("/data/results.json").then((x) => x.json()).then(setR).catch(() => undefined);
+    let alive = true;
+    fetch("/data/results.json")
+      .then((x) => (x.ok ? x.json() : null))
+      .then((j) => {
+        if (alive && j && typeof j === "object" && j.monte_carlo_means) {
+          setR(j as Results);
+        }
+      })
+      .catch(() => undefined);
+    return () => { alive = false; };
   }, []);
   return r;
 }

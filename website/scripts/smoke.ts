@@ -33,6 +33,9 @@ const REQUIRED: Record<string, string[]> = {
     "road-col vision",
     "sec-dots",
     "Questions judges actually ask",
+    // the KPP gate on Home must also render from the baked data
+    "CAPABLE",
+    "DISQUALIFIED",
   ],
   Documentation: ["Download .md", "Architecture reference", "doc-h1"],
   Console: ["ASTRA", "doc-topbar"],
@@ -42,6 +45,14 @@ const REQUIRED: Record<string, string[]> = {
     "Monte Carlo",
     "sec-dots",
     "res-kpi",
+    // real metrics must be in the first paint, not fetched: the page used to
+    // render "Loading..." forever whenever /data/results.json was unreachable
+    "CAPABLE",
+    "DISQUALIFIED",
+    "90.3",
+    "0.475",
+    "96.9",
+    "Gated-MES paired tests",
   ],
 };
 

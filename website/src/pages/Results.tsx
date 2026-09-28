@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Footer, GateAndMc, Nav, useResults } from "../shared";
 import { CountUp, SectionDots } from "../components/Fx";
+import BAKED_RESULTS from "../data/resultsData";
 
 /** Chapter rail for the results report. */
 const CHAPTERS: [string, string][] = [
@@ -34,6 +35,9 @@ type Full = {
   multireceiver?: Multi;
   provenance?: { source?: string };
 };
+
+/** baked at build time by tools/export_site_data.py (see useFullResults) */
+const BAKED: unknown = BAKED_RESULTS;
 
 /** half-width of the 95% CI regardless of export shape */
 function ciHalf(v: CIV): number | null {
@@ -74,21 +78,44 @@ function fixed(x: number | null | undefined, d = 3): string {
 }
 
 function useFullResults(): Full | null {
-  const [r, setR] = useState<Full | null>(null);
+  const [r, setR] = useState<Full | null>(BAKED as Full);
   useEffect(() => {
-    fetch("/data/results.json").then((x) => x.json()).then(setR).catch(() => undefined);
+    let alive = true;
+    fetch("/data/results.json")
+      .then((x) => (x.ok ? x.json() : null))
+      .then((j) => {
+        if (alive && j && typeof j === "object" && j.monte_carlo_means) {
+          setR(j as Full);
+        }
+      })
+      .catch(() => undefined);
+    return () => { alive = false; };
   }, []);
   return r;
 }
 
+/**
+ * Reveal-on-scroll. The observer is re-scanning on DOM mutations: blocks that
+ * mount *after* this effect (anything rendered once the data resolves) used to
+ * be born outside the observer and stayed at opacity 0 forever, which is what
+ * made the results tables look empty and stuck.
+ */
 function useReveal() {
   useEffect(() => {
     const obs = new IntersectionObserver(
-      (entries) => entries.forEach((e) => { if (e.isIntersecting) e.target.classList.add("vis"); }),
+      (entries) => entries.forEach((e) => {
+        if (e.isIntersecting) { e.target.classList.add("vis"); obs.unobserve(e.target); }
+      }),
       { threshold: 0.08, rootMargin: "0px 0px -30px 0px" }
     );
-    document.querySelectorAll(".reveal").forEach((n) => obs.observe(n));
-    return () => obs.disconnect();
+    const scan = () =>
+      document.querySelectorAll(".reveal:not(.vis)").forEach((n) => obs.observe(n));
+    scan();
+    const mo = new MutationObserver(scan);
+    mo.observe(document.body, { childList: true, subtree: true });
+    // anything already on screen at load must not wait for a scroll event
+    const t = window.setTimeout(scan, 60);
+    return () => { window.clearTimeout(t); mo.disconnect(); obs.disconnect(); };
   }, []);
 }
 

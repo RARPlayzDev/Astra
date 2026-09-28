@@ -73,6 +73,23 @@ def main() -> None:
     with open(out_dir / "data" / "results.json", "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, allow_nan=False, default=str)
 
+    # Also bake the same payload into a TypeScript module. The pages import it
+    # statically, so the metrics are present on first paint even when the site
+    # is opened from file:// or served from a sub-path where /data/... is not
+    # reachable (a fetch that never lands used to leave the tables on
+    # "Loading..." forever). Mirrors tools/export_docs.py -> docsHtml.ts.
+    ts_out = ROOT / "website" / "src" / "data"
+    ts_out.mkdir(parents=True, exist_ok=True)
+    payload = json.dumps(data, indent=2, allow_nan=False, default=str)
+    (ts_out / "resultsData.ts").write_text(
+        "// AUTO-GENERATED from results/suite_results.json + "
+        "results/benchmark.json by\n"
+        "// tools/export_site_data.py -- do not edit by hand.\n"
+        "// Baked statically so the results render without a network round-trip.\n"
+        f"const DATA: unknown = {payload};\n"
+        "export default DATA;\n",
+        encoding="utf-8")
+
     figs = ROOT / "figures"
     if figs.exists():
         (out_dir / "figures").mkdir(parents=True, exist_ok=True)
