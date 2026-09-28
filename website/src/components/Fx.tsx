@@ -39,56 +39,6 @@ export function Preloader() {
   );
 }
 
-/* ═══════════════ Cursor — dot + trailing ring (desktop, motion OK) ═══════════════ */
-export function CursorFollower() {
-  const [active, setActive] = useState(false);
-  const dotRef = useRef<HTMLDivElement>(null);
-  const ringRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (reducedMotion()) return;
-    if (window.matchMedia("(pointer: coarse)").matches) return;
-    setActive(true);
-  }, []);
-
-  useEffect(() => {
-    if (!active) return;
-    const dot = dotRef.current;
-    const ring = ringRef.current;
-    if (!dot || !ring) return;
-
-    let x = -100, y = -100, rx = -100, ry = -100, raf = 0, seen = false;
-
-    const move = (e: MouseEvent) => {
-      x = e.clientX; y = e.clientY;
-      if (!seen) { seen = true; rx = x; ry = y; dot.style.opacity = ring.style.opacity = "1"; }
-      dot.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%)`;
-      const hot = (e.target as HTMLElement)?.closest?.("a, button, summary, [data-cursor]");
-      ring.classList.toggle("hot", !!hot);
-    };
-    const loop = () => {
-      rx += (x - rx) * 0.16;
-      ry += (y - ry) * 0.16;
-      ring.style.transform = `translate3d(${rx}px, ${ry}px, 0) translate(-50%, -50%)`;
-      raf = requestAnimationFrame(loop);
-    };
-    window.addEventListener("mousemove", move, { passive: true });
-    raf = requestAnimationFrame(loop);
-    return () => {
-      window.removeEventListener("mousemove", move);
-      cancelAnimationFrame(raf);
-    };
-  }, [active]);
-
-  if (!active) return null;
-  return (
-    <>
-      <div ref={dotRef} className="cursor-dot" style={{ opacity: 0 }} aria-hidden />
-      <div ref={ringRef} className="cursor-ring" style={{ opacity: 0 }} aria-hidden />
-    </>
-  );
-}
-
 /* ═══════════════ CountUp — ticks from 0 when scrolled into view ═══════════════ */
 export function CountUp({ to, decimals = 0, duration = 950 }: {
   to: number; decimals?: number; duration?: number;
@@ -119,33 +69,6 @@ export function CountUp({ to, decimals = 0, duration = 950 }: {
   }, [to, duration]);
 
   return <span ref={ref}>{v.toFixed(decimals)}</span>;
-}
-
-/* ═══════════════ Scramble — glyphs resolve into text on mount ═══════════════ */
-export function Scramble({ text, className = "" }: { text: string; className?: string }) {
-  const [out, setOut] = useState(text);
-  useEffect(() => {
-    if (reducedMotion()) return;
-    const glyphs = "\u25A0\u25AA\u2593ABCDEF0123456789/:";
-    const total = 30;
-    let frame = 0;
-    let raf = 0;
-    const step = () => {
-      frame += 1;
-      const reveal = Math.floor((frame / total) * text.length);
-      let s = "";
-      for (let i = 0; i < text.length; i++) {
-        if (i < reveal || text[i] === " ") s += text[i];
-        else s += glyphs[Math.floor(Math.random() * glyphs.length)];
-      }
-      setOut(s);
-      if (frame < total) raf = requestAnimationFrame(step);
-      else setOut(text);
-    };
-    raf = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(raf);
-  }, [text]);
-  return <span className={className}>{out}</span>;
 }
 
 /* ═══════════════ PageWipe — overlay sweep on internal navigation ═══════════════ */

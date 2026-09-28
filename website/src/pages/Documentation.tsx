@@ -177,6 +177,16 @@ export default function Documentation() {
         {/* content */}
         <main className="docpage">
           <h1 className="doc-h1">ASTRA · Software Manual</h1>
+          <p className="doc-lede">
+            The single source of truth for ASTRA — generated from{" "}
+            <code>docs/ASTRA_Software_Documentation.md</code> and served
+            identically by this site and by the desktop application.
+          </p>
+          <div className="doc-meta">
+            <span>{SITE_VERSION}</span>
+            <span>{sections.length} sections</span>
+            <span>← → to page</span>
+          </div>
           <div
             className="doc-content"
             ref={contentRef}

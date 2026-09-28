@@ -543,10 +543,10 @@ export default function Console() {
         <span>{k.threatTtff != null ? `${k.threatTtff.toFixed(0)} slots` : "-"}</span></div>
       <div className="row"><span>Prediction accuracy (band occupancy)</span>
         <span>{(k.predAcc * 100).toFixed(0)}%
-          <span style={{ color: "var(--muted)", marginLeft: 6, fontSize: 11 }}>
+          <span style={{ color: "var(--muted)", marginLeft: 6, fontSize: 12.5 }}>
             n={k.predN}</span></span></div>
-      <div className="row"><span style={{ fontSize: 11.5, color: "var(--muted)" }}>context</span>
-        <span style={{ fontSize: 11.5, color: "var(--muted)" }}>
+      <div className="row"><span style={{ fontSize: 13, color: "var(--muted)" }}>context</span>
+        <span style={{ fontSize: 13, color: "var(--muted)" }}>
           band truly ON in {(k.truthRate * 100).toFixed(0)}% of its dwells -
           predicted ON {(k.predOn * 100).toFixed(0)}%</span></div>
       {k.team > 1 && <div className="row"><span>Cooperative team</span>
@@ -579,7 +579,7 @@ export default function Console() {
     { title: "5 of 7 - Scheduler event log", tab: "mission", sel: '[data-tour="log"]',
       text: "Every scheduler decision lands here: PROBE tests a rhythm hypothesis, LOCK / CONFIRMED means a periodic emitter is phase-locked, DROP retires a stale belief, SHIFT flags an environment change. The lock count is the learning made visible." },
     { title: "6 of 7 - The three bays", tab: "mission", sel: '[data-tour="tabs"]',
-      text: "The console is a command centre. Mission is the live race. Learning Arena trains across episodes in an isolated sandbox - 'Train 5 episodes' runs back-to-back missions on fresh battlefields while the learner keeps its memory. Model Lab verifies headlessly: 'Run shootout' races all seven policies on one seed and the probe table scores prediction honestly at 96.9% versus 54.1% for the sweep. Everything below the tabs belongs to the selected bay." },
+      text: "The console is a command centre. Mission is the live race. Learning Arena trains across episodes in an isolated sandbox - 'Train 5 episodes' runs back-to-back missions on fresh battlefields while the learner keeps its memory. Model Lab verifies headlessly: 'Run shootout' races all five browser policies on one seed and the probe table scores prediction honestly at 96.9% versus 54.1% for the sweep. Everything below the tabs belongs to the selected bay." },
     { title: "7 of 7 - Replay any of this", tab: "mission", sel: '[data-tour="help"]',
       text: "'Quick Guide' reopens the intro cards and 'Help / Tour' replays this tour at any time. You now know enough to demo ASTRA - head back to the site when you're done." },
   ];
@@ -704,7 +704,7 @@ export default function Console() {
               <div className="intro-card">
                 <h4>1 · What this console is</h4>
                 <p>The full ASTRA engine - battlefield generator, receiver
-                  physics, seven competing schedulers - compiled to run entirely
+                  physics, five competing policies - compiled to run entirely
                   in your browser. No install, no server, results are seed-exact.</p>
               </div>
               <div className="intro-card">
@@ -1009,7 +1009,7 @@ export default function Console() {
                     <div className="abar-wrap" style={{ display: "flex", alignItems: "flex-end", width: 26, height: 58, margin: 0 }}>
                       <div className="abar" style={{ height: `${Math.max(5, r.cov * 100)}%` }} />
                     </div>
-                    <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>{r.ep}</div>
+                    <div style={{ fontSize: 12.5, color: "var(--muted)", marginTop: 4 }}>{r.ep}</div>
                   </div>
                 ))}
                 <span className="tbl-note" style={{ marginLeft: 12 }}>

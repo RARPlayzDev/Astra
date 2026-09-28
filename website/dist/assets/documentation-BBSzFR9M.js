@@ -1,4 +1,4 @@
-import{r as c,j as e,P as k,L as _,S as R,D as P,T as E,c as D}from"./styles-e_KIDP7D.js";const S=`<p>\uFEFF# ASTRA — Software Documentation</p>
+import{r as c,j as e,P as _,L as R,S,D as P,T as E,c as D}from"./styles-urLltQ6r.js";const x=`<p>\uFEFF# ASTRA — Software Documentation</p>
 <p><strong>ASTRA — Adaptive Spectrum Threat Recognition &amp; Analysis</strong></p>
 <p>Adaptive scan scheduling for Electronic Support receivers.</p>
 <p>Version 3.0.0 · SIH 2026 prototype · simulation-based research software, not operational equipment.</p>
@@ -26,6 +26,8 @@ import{r as c,j as e,P as k,L as _,S as R,D as P,T as E,c as D}from"./styles-e_K
 <li><a href="#19-frequently-asked-questions">Frequently asked questions</a></li>
 <li><a href="#20-glossary">Glossary</a></li>
 <li><a href="#21-simulation-fidelity-reference">Simulation fidelity reference</a></li>
+<li><a href="#22-desktop-application-reference">Desktop application reference</a></li>
+<li><a href="#23-web-console-reference">Web console reference</a></li>
 </ol>
 <hr />
 <h2 id="1-introduction">1. Introduction</h2>
@@ -541,4 +543,95 @@ docs/                 this document</code></pre>
 <p>(<code>website/src/content/docsHtml.ts</code>), copies it to</p>
 <p><code>website/public/docs/manual.md</code> for the "Download (.md)" button, and emits the</p>
 <p>section index the site's table of contents is built from. The desktop</p>
-<p>application serves the same file at <code>/manual</code>; nothing is maintained twice.</p>`;function N(t){const o=[],n=/<h2[^>]*\bid="([^"]+)"[^>]*>([\s\S]*?)<\/h2>/g;let s;for(;(s=n.exec(t))!==null;){const l=s[1];if(l==="contents")continue;const p=s[2].replace(/<[^>]*>/g,"").replace(/&amp;/g,"&").trim(),h=(p.match(/^(\d+)\./)??[])[1]??"",m=p.replace(/^\d+\.\s*/,"");o.push({id:l,num:h,title:m})}return o}function x(t,o){const n=t.indexOf("<h2",o+4),s=n===-1?t.length:n;return t.slice(o,s).replace(/<hr\s*\/?>/g,"").trim()}function O(t,o){const n=t.indexOf(`<h2 id="${o}"`);if(n===-1){const s=t.indexOf(`id="${o}"`);if(s===-1)return"<p>Section not found — regenerate docs with <code>python -m tools.export_docs</code>.</p>";const l=t.lastIndexOf("<h2",s);return x(t,l===-1?s:l)}return x(t,n)}function j(){const t=c.useMemo(()=>N(S),[]),[o,n]=c.useState(0),[s,l]=c.useState(""),[p,h]=c.useState(!1),m=c.useRef(null),b=c.useMemo(()=>{const r=s.trim().toLowerCase();return r?t.map((a,i)=>({s:a,i})).filter(({s:a})=>a.title.toLowerCase().includes(r)||a.num.includes(r)):t.map((a,i)=>({s:a,i}))},[t,s]);c.useEffect(()=>{const r=decodeURIComponent(window.location.hash.replace(/^#/,""));if(!r)return;const a=t.findIndex(i=>i.id===r);a>=0&&n(a)},[t]),c.useEffect(()=>{window.scrollTo(0,0);const r=t[o];r&&(history.replaceState(null,"","#"+r.id),document.title=`${r.num?r.num+". ":""}${r.title} — ASTRA Docs`);const a=m.current;a&&a.querySelectorAll("pre").forEach(i=>{if(i.querySelector(".code-copy"))return;const d=document.createElement("button");d.className="code-copy",d.type="button",d.textContent="copy",d.addEventListener("click",()=>{var w,v;const T=((w=i.querySelector("code"))==null?void 0:w.textContent)??i.textContent??"";(v=navigator.clipboard)==null||v.writeText(T).then(()=>{d.textContent="copied ✓",setTimeout(()=>d.textContent="copy",1400)}).catch(()=>d.textContent="Ctrl+C")}),i.appendChild(d)})},[o,t]),c.useEffect(()=>{const r=a=>{var d;const i=(d=a.target)==null?void 0:d.tagName;i==="INPUT"||i==="TEXTAREA"||(a.key==="ArrowRight"&&o<t.length-1&&n(o+1),a.key==="ArrowLeft"&&o>0&&n(o-1))};return window.addEventListener("keydown",r),()=>window.removeEventListener("keydown",r)},[o,t.length]);const y=t[o],A=y?O(S,y.id):"",u=t[o-1],g=t[o+1],f=r=>{n(r),h(!1)};return e.jsxs("div",{className:"docs-page",children:[e.jsx(k,{}),e.jsx("header",{className:"doc-topbar",children:e.jsxs("div",{className:"doc-topbar-inner",children:[e.jsx("a",{href:"/","aria-label":"ASTRA home",children:e.jsx(_,{size:24})}),e.jsx("a",{href:"/",className:"brand-txt",children:"ASTRA"}),e.jsxs("span",{className:"crumb",children:["/ ",e.jsx("b",{children:"Documentation"})]}),e.jsx("span",{className:"doc-ver",children:R}),e.jsxs("div",{className:"doc-actions",children:[e.jsx("button",{className:"doc-mobile-toc",type:"button",onClick:()=>h(!p),children:"☰ Contents"}),e.jsx("a",{className:"btn ghost",href:"/docs/manual.md",download:!0,children:"Download .md"}),e.jsx("a",{className:"btn ghost",href:P,download:!0,children:"Get the app"}),e.jsx(E,{}),e.jsx("a",{className:"btn primary",href:"/",children:"Back to site"})]})]})}),e.jsxs("div",{className:"doc-body",children:[e.jsxs("aside",{className:"doc-sidebar"+(p?" open":""),children:[e.jsx("h3",{children:"Table of Contents"}),e.jsx("div",{className:"dsearch",children:e.jsx("input",{type:"search",placeholder:"Filter sections…",value:s,onChange:r=>l(r.target.value),"aria-label":"Filter documentation sections"})}),e.jsxs("nav",{children:[b.map(({s:r,i:a})=>e.jsxs("button",{className:a===o?"on":"",onClick:()=>f(a),type:"button",children:[e.jsx("span",{className:"n",children:r.num||"·"}),e.jsx("span",{children:r.title})]},r.id)),b.length===0&&e.jsxs("div",{className:"no-res",children:["No section matches “",s,"”."]})]})]}),e.jsxs("main",{className:"docpage",children:[e.jsx("h1",{className:"doc-h1",children:"ASTRA · Software Manual"}),e.jsx("div",{className:"doc-content",ref:m,dangerouslySetInnerHTML:{__html:A}}),e.jsxs("div",{className:"doc-pager",children:[u?e.jsxs("button",{onClick:()=>f(o-1),type:"button",children:[e.jsx("span",{className:"dir",children:"← Previous"}),u.num,". ",u.title]}):e.jsx("span",{}),g?e.jsxs("button",{className:"next",onClick:()=>f(o+1),type:"button",children:[e.jsx("span",{className:"dir",children:"Next →"}),g.num,". ",g.title]}):e.jsx("span",{})]})]})]})]})}D(document.getElementById("root")).render(e.jsx(c.StrictMode,{children:e.jsx(j,{})}));
+<p>application serves the same file at <code>/manual</code>; nothing is maintained twice.</p>
+<hr />
+<h2 id="22-desktop-application-reference">22. Desktop application reference</h2>
+<p>The installed application (<code>dist/ASTRA/ASTRA.exe</code>, built from</p>
+<p><code>desktop_qt.py</code> by <code>astra.spec</code> via <code>tools/build_exe.ps1</code>) is a native</p>
+<p>PySide6 window wrapping the same console the website serves.</p>
+<h3 id="22-1-window-service-and-offline-guarantees">22.1 Window, service and offline guarantees</h3>
+<p>On launch the app picks a free loopback port, starts the FastAPI service in a</p>
+<p>daemon thread, polls <code>GET /api/health</code> for up to 30 seconds, then opens a</p>
+<p><code>QWebEngineView</code> at <code>http://127.0.0.1:&lt;port&gt;</code>. Remote URL access from the</p>
+<p>page is disabled (<code>LocalContentCanAccessRemoteUrls = False</code>), so a running</p>
+<p>mission never reaches the network. Closing the window shuts the service down</p>
+<p>cleanly (<code>server.shutdown()</code> plus <code>hub.stop_all()</code>), as does <strong>File → Exit</strong>.</p>
+<h3 id="22-2-menus-and-keyboard-shortcuts">22.2 Menus and keyboard shortcuts</h3>
+<p>Qt supplies the native menu bar; the React menu bar inside the page is hidden</p>
+<p>in Qt mode (<code>window.__AstraQt</code>).</p>
+<table>
+<tr><th>Menu</th><th>Entry</th><th>Shortcut</th></tr>
+<tr><td>File</td><td>New mission</td><td>Ctrl+N</td></tr>
+<tr><td>File</td><td>Open scenario…</td><td>Ctrl+O</td></tr>
+<tr><td>File</td><td>Export results (JSON)</td><td>Ctrl+E</td></tr>
+<tr><td>File</td><td>Exit</td><td>Ctrl+Q</td></tr>
+<tr><td>Run</td><td>Start mission</td><td>F5</td></tr>
+<tr><td>Run</td><td>Stop mission</td><td>Shift+F5</td></tr>
+<tr><td>Run</td><td>Rate: Slow (120/s) · Normal (400/s) · Fast (800/s) · Maximum (1500/s)</td><td>—</td></tr>
+<tr><td>Tools</td><td>Diagnostics…</td><td>Ctrl+D</td></tr>
+<tr><td>Help</td><td>User guide (opens <code>/manual</code>)</td><td>F1</td></tr>
+<tr><td>Help</td><td>About ASTRA</td><td>—</td></tr>
+</table>
+<p>The status bar polls <code>GET /api/live/status</code> every 2 seconds and shows</p>
+<p><code>READY</code> or <code>RUNNING — slot n/T</code>, with a permanent <code>ASTRA 3.0.0</code> label. The</p>
+<p>Run-menu rate presets inject <code>window.__astra_set_speed(n)</code> into the page; the</p>
+<p>default is Normal (400 slots/s).</p>
+<h3 id="22-3-system-tray-and-page-bridge">22.3 System tray and page bridge</h3>
+<p>The system tray offers <strong>Show</strong> (or double-click) and <strong>Exit</strong>. After the page</p>
+<p>loads, a small bridge defines <code>window.__AstraQt</code>, <code>__astra_start</code>,</p>
+<p><code>__astra_stop</code> and <code>__astra_diag</code>, which the native menus call; the Help menu</p>
+<p>navigates the view to <code>/manual</code>, the rendered copy of this document.</p>
+<hr />
+<h2 id="23-web-console-reference">23. Web console reference</h2>
+<p><code>/console.html</code> is the browser build of the same engine</p>
+<p>(<code>website/src/engine/</code>): battlefield generator, receiver physics and five</p>
+<p>policies compiled to run entirely client-side. No server, no install, and</p>
+<p>runs are seed-exact.</p>
+<h3 id="23-1-the-three-bays">23.1 The three bays</h3>
+<table>
+<tr><th>Bay</th><th>Purpose</th></tr>
+<tr><td>Live Mission</td><td>Real-time A/B race: SmartScan against a conventional sweep on one battlefield</td></tr>
+<tr><td>Learning Arena</td><td>Cross-episode training in an isolated sandbox with its own learner memory</td></tr>
+<tr><td>Model Lab</td><td>Headless shootouts and the verification-numbers probe table</td></tr>
+</table>
+<h3 id="23-2-first-run-onboarding-and-guided-tour">23.2 First-run onboarding and guided tour</h3>
+<p>On first visit (state stored under <code>localStorage["astra.console.v1"]</code>) an</p>
+<p>intro modal shows five cards — what the console is, the three bays, how to</p>
+<p>read the waterfall, how to use it, and the offline desktop build — then</p>
+<p>offers the guided tour. The tour has seven stops (demo chips, mission</p>
+<p>configuration, the waterfall, live KPIs and threat board, event log, the</p>
+<p>three bays, replay). Keyboard: <strong>Esc</strong> skips, <strong>←</strong> steps back, <strong>→</strong> or</p>
+<p><strong>Enter</strong> steps forward; the spotlight follows its target while the page</p>
+<p>moves. <em>Quick Guide</em> and <em>Help / Tour</em> in the top bar replay either at any</p>
+<p>time.</p>
+<h3 id="23-3-presentation-demo-presets">23.3 Presentation demo presets</h3>
+<p>One-click scenarios that fully determine seed, opponent and scene, then</p>
+<p>start instantly:</p>
+<table>
+<tr><th>#</th><th>Preset</th><th>Seed</th><th>Battlefield</th></tr>
+<tr><td>1</td><td>Flagship race</td><td>4242</td><td>standard scene, sequential opponent — the headline A/B</td></tr>
+<tr><td>2</td><td>Periodic hunter</td><td>777</td><td>eight scanning radars (period 30–120) — watch phase-locks confirm</td></tr>
+<tr><td>3</td><td>Exploit trap</td><td>999</td><td>UCB opponent on clutter-rich spectrum — high score, half the threats missed</td></tr>
+<tr><td>4</td><td>Low-SNR stress</td><td>31337</td><td>weak signals (SNR 7 ± 3 dB), reduced sensitivity</td></tr>
+<tr><td>5</td><td>Cooperative swarm</td><td>2024</td><td>three receivers per side, band de-confliction, dense 32-band scene</td></tr>
+</table>
+<h3 id="23-4-waterfall-event-log-and-kpis">23.4 Waterfall, event log and KPIs</h3>
+<p>The waterfall shows blue-grey cells for true transmissions (ground truth), a</p>
+<p>light grey column for the band currently tuned, and gold for confirmed</p>
+<p>intercepts. The scheduler event log classifies every line — <strong>PROBE</strong></p>
+<p>(rhythm hypothesis), <strong>LOCK/CONFIRMED</strong> (phase lock), <strong>DROP</strong> (stale belief</p>
+<p>retired), <strong>SHIFT</strong> (environment change), <strong>DONE</strong>, <strong>INFO</strong> — with live</p>
+<p>lock/drop/probe counters and a Clear button. Per-receiver KPI rows update</p>
+<p>every slot: threat coverage, intercepts, reward per dwell, hit rate, false</p>
+<p>alarms, mean and threat time-to-first-fix, prediction accuracy and phase</p>
+<p>locks held.</p>
+<h3 id="23-5-learning-arena-and-model-lab">23.5 Learning Arena and Model Lab</h3>
+<p><strong>Train 5 / Train 10 episodes</strong> runs full missions back-to-back on fresh</p>
+<p>seeds while the SmartScan learner keeps its consolidated band-value memory</p>
+<p>between episodes; <em>Reset learner memory</em> wipes it. Results render as an</p>
+<p>episode table plus coverage bars (rising bars = warm start paying off).</p>
+<p><strong>Run shootout</strong> races the five browser policies — SmartScan, sequential</p>
+<p>sweep, random scan, UCB bandit, linear Q-learning — on the configured seed,</p>
+<p>and the verification table reports next-window prediction accuracy:</p>
+<p>SmartScan 96.9 %, linear Q 96.4 %, UCB 95.5 %, sequential sweep 54.1 %,</p>
+<p>random scan 50.2 %.</p>`;function N(t){const o=[],n=/<h2[^>]*\bid="([^"]+)"[^>]*>([\s\S]*?)<\/h2>/g;let a;for(;(a=n.exec(t))!==null;){const p=a[1];if(p==="contents")continue;const l=a[2].replace(/<[^>]*>/g,"").replace(/&amp;/g,"&").trim(),h=(l.match(/^(\d+)\./)??[])[1]??"",u=l.replace(/^\d+\.\s*/,"");o.push({id:p,num:h,title:u})}return o}function A(t,o){const n=t.indexOf("<h2",o+4),a=n===-1?t.length:n;return t.slice(o,a).replace(/<hr\s*\/?>/g,"").trim()}function O(t,o){const n=t.indexOf(`<h2 id="${o}"`);if(n===-1){const a=t.indexOf(`id="${o}"`);if(a===-1)return"<p>Section not found — regenerate docs with <code>python -m tools.export_docs</code>.</p>";const p=t.lastIndexOf("<h2",a);return A(t,p===-1?a:p)}return A(t,n)}function C(){const t=c.useMemo(()=>N(x),[]),[o,n]=c.useState(0),[a,p]=c.useState(""),[l,h]=c.useState(!1),u=c.useRef(null),b=c.useMemo(()=>{const r=a.trim().toLowerCase();return r?t.map((s,i)=>({s,i})).filter(({s})=>s.title.toLowerCase().includes(r)||s.num.includes(r)):t.map((s,i)=>({s,i}))},[t,a]);c.useEffect(()=>{const r=decodeURIComponent(window.location.hash.replace(/^#/,""));if(!r)return;const s=t.findIndex(i=>i.id===r);s>=0&&n(s)},[t]),c.useEffect(()=>{window.scrollTo(0,0);const r=t[o];r&&(history.replaceState(null,"","#"+r.id),document.title=`${r.num?r.num+". ":""}${r.title} — ASTRA Docs`);const s=u.current;s&&s.querySelectorAll("pre").forEach(i=>{if(i.querySelector(".code-copy"))return;const d=document.createElement("button");d.className="code-copy",d.type="button",d.textContent="copy",d.addEventListener("click",()=>{var w,v;const k=((w=i.querySelector("code"))==null?void 0:w.textContent)??i.textContent??"";(v=navigator.clipboard)==null||v.writeText(k).then(()=>{d.textContent="copied ✓",setTimeout(()=>d.textContent="copy",1400)}).catch(()=>d.textContent="Ctrl+C")}),i.appendChild(d)})},[o,t]),c.useEffect(()=>{const r=s=>{var d;const i=(d=s.target)==null?void 0:d.tagName;i==="INPUT"||i==="TEXTAREA"||(s.key==="ArrowRight"&&o<t.length-1&&n(o+1),s.key==="ArrowLeft"&&o>0&&n(o-1))};return window.addEventListener("keydown",r),()=>window.removeEventListener("keydown",r)},[o,t.length]);const y=t[o],T=y?O(x,y.id):"",m=t[o-1],g=t[o+1],f=r=>{n(r),h(!1)};return e.jsxs("div",{className:"docs-page",children:[e.jsx(_,{}),e.jsx("header",{className:"doc-topbar",children:e.jsxs("div",{className:"doc-topbar-inner",children:[e.jsx("a",{href:"/","aria-label":"ASTRA home",children:e.jsx(R,{size:24})}),e.jsx("a",{href:"/",className:"brand-txt",children:"ASTRA"}),e.jsxs("span",{className:"crumb",children:["/ ",e.jsx("b",{children:"Documentation"})]}),e.jsx("span",{className:"doc-ver",children:S}),e.jsxs("div",{className:"doc-actions",children:[e.jsx("button",{className:"doc-mobile-toc",type:"button",onClick:()=>h(!l),children:"☰ Contents"}),e.jsx("a",{className:"btn ghost",href:"/docs/manual.md",download:!0,children:"Download .md"}),e.jsx("a",{className:"btn ghost",href:P,download:!0,children:"Get the app"}),e.jsx(E,{}),e.jsx("a",{className:"btn primary",href:"/",children:"Back to site"})]})]})}),e.jsxs("div",{className:"doc-body",children:[e.jsxs("aside",{className:"doc-sidebar"+(l?" open":""),children:[e.jsx("h3",{children:"Table of Contents"}),e.jsx("div",{className:"dsearch",children:e.jsx("input",{type:"search",placeholder:"Filter sections…",value:a,onChange:r=>p(r.target.value),"aria-label":"Filter documentation sections"})}),e.jsxs("nav",{children:[b.map(({s:r,i:s})=>e.jsxs("button",{className:s===o?"on":"",onClick:()=>f(s),type:"button",children:[e.jsx("span",{className:"n",children:r.num||"·"}),e.jsx("span",{children:r.title})]},r.id)),b.length===0&&e.jsxs("div",{className:"no-res",children:["No section matches “",a,"”."]})]})]}),e.jsxs("main",{className:"docpage",children:[e.jsx("h1",{className:"doc-h1",children:"ASTRA · Software Manual"}),e.jsxs("p",{className:"doc-lede",children:["The single source of truth for ASTRA — generated from"," ",e.jsx("code",{children:"docs/ASTRA_Software_Documentation.md"})," and served identically by this site and by the desktop application."]}),e.jsxs("div",{className:"doc-meta",children:[e.jsx("span",{children:S}),e.jsxs("span",{children:[t.length," sections"]}),e.jsx("span",{children:"← → to page"})]}),e.jsx("div",{className:"doc-content",ref:u,dangerouslySetInnerHTML:{__html:T}}),e.jsxs("div",{className:"doc-pager",children:[m?e.jsxs("button",{onClick:()=>f(o-1),type:"button",children:[e.jsx("span",{className:"dir",children:"← Previous"}),m.num,". ",m.title]}):e.jsx("span",{}),g?e.jsxs("button",{className:"next",onClick:()=>f(o+1),type:"button",children:[e.jsx("span",{className:"dir",children:"Next →"}),g.num,". ",g.title]}):e.jsx("span",{})]})]})]})]})}D(document.getElementById("root")).render(e.jsx(c.StrictMode,{children:e.jsx(C,{})}));

@@ -1,8 +1,10 @@
 # ASTRA — YouTube Script (6-Minute Cut)
 
-**Runtime:** ~6:00 · **Tone:** confident, technical, zero hype that isn't backed by a
-number · **Speak at ~145 wpm** — every `SAY` block is written word-for-word at that
-pace (~870 spoken words total). Read it exactly as written and the timing holds.
+**Runtime:** 6:00 exactly · **Tone:** confident, technical, zero hype that isn't backed by a
+number · **Speak at ~145 wpm** — the nine `SAY` blocks total **744 spoken words**
+(≈ 5:08 of narration), and the `ACTION` beats (waterfall runs, tour clicks, theme
+crossfade) fill the remaining **~52 seconds** to land on 6:00. Read each block
+word-for-word and the timing holds.
 
 **How to read this document**
 
@@ -45,7 +47,9 @@ pace (~870 spoken words total). Read it exactly as written and the timing holds.
    toggle once for the light-mode shot and switch back.
 5. **Audio:** voice recorded separately if possible (phone/lav in a soft room) —
    separate track = 10× easier edit. Keep −12 dB peaks.
-6. **Mouse:** cursor highlight ON in the recorder, no double-clicks.
+6. **Mouse:** cursor highlight ON in the recorder, no double-clicks. The site no
+   longer draws its own cursor ring, so the recorder's highlight is the only
+   pointer the viewer sees.
 7. **Desktop app:** launch `dist\ASTRA\ASTRA.exe` once beforehand so first-run
    slowness never lands on camera.
 
@@ -68,7 +72,7 @@ Every figure was re-verified in this repo. If a number isn't here, don't say it.
 | 11 | 200-episode Monte Carlo, paired permutation tests, **Holm-corrected**; all comparisons **p < 0.001** | Results page → Significance |
 | 12 | Deep Q-network was benchmarked and **lost** under sparse, non-stationary reward — kept as documented negative result | `results/` + README |
 | 13 | Site `astra-ew.vercel.app` · repo `github.com/RARPlayzDev/Astra` · installer **`ASTRA-Setup-3.0.0.exe`** (Releases, ~164 MB) | nav/footer |
-| 14 | Docs page renders **21 sections**, searchable, copyable code blocks | `/documentation.html` |
+| 14 | Docs page renders **23 sections**, searchable, copyable code blocks | `/documentation.html` |
 
 ---
 
@@ -76,106 +80,106 @@ Every figure was re-verified in this repo. If a number isn't here, don't say it.
 
 ### Scene 1 · HOOK — 0:00 → 0:30 (~70 words)
 
-**SCREEN:** `/` — hero, dark theme, aurora glow behind the ASTRA title, radar sweeping.
-**ACTION:** Cursor still. Let the radar sweep twice. On “…two percent”, scroll down 20 px — nothing more.
+**SCREEN:** `/` — hero, dark theme, spec-sheet title block with the live spectrum strip along the fold.
+**ACTION:** Cursor still. Let the spectrum strip animate once. On “…two percent”, scroll down 20 px — nothing more.
 **SAY:**
-> Somewhere right now, a radar is transmitting… for two percent of the time. On twenty-four bands. And an Electronic Support receiver can listen to only one slice of spectrum at a time. Find it, or miss the war. This is ASTRA — a scan scheduler that stops searching… and starts making appointments.
+> Somewhere right now, a radar is transmitting… for two percent of the time. On twenty-four bands. And an Electronic Support receiver can listen to only one slice of spectrum at a time. Find it, or miss the war. This is ASTRA — an adaptive scan scheduler that learns when emitters speak, predicts the next window, and is already there — without prior intelligence. It stops searching… and starts making appointments.
 
 **ON-SCREEN:** chip top-left `SIH 2026 · DRDO PROBLEM STATEMENT` · at “…two percent" big caption `TRANSMITS 2% OF THE TIME`.
 **EDIT:** Cold open on black → hard cut to hero at 0:03. Slow 4 % push-in on the radar. Sub-bass hit on “ASTRA”.
 
 ---
 
-### Scene 2 · PROBLEM — 0:30 → 1:00 (~72 words)
+### Scene 2 · PROBLEM — 0:30 → 1:00 (~78 words)
 
 **SCREEN:** `/#problem` — the three cards (Conventional / Naive adaptivity / ASTRA's answer).
 **ACTION:** Hover the two red cards briefly, then rest the cursor on the green answer card.
 **SAY:**
-> Conventional receivers sweep blindly — seventy-eight percent coverage, threats found late. A naive bandit does worse: it camps on the busiest band, scores the highest reward… and still misses almost half the threats. Reward and coverage pull in opposite directions. Every scheduler in our benchmark fails one or the other. Except one.
+> Conventional receivers sweep blindly — seventy-eight percent coverage, threats found late. A naive bandit does worse: it camps on the busiest band, scores the highest reward… and still misses almost half the threats. Reward and coverage pull in opposite directions. Every scheduler in our benchmark fails one or the other. Seven entered the gate; one passes every requirement at once. That one is SmartScan — and every number on this page comes from stored seeds you can rerun.
 
 **ON-SCREEN:** stats chips over each card as named — `78% COVERAGE`, `54% DETECTED`, then gold `SMARTSCAN · BOTH`.
 **EDIT:** Punch-in on each card as it's named; whoosh between cards.
 
 ---
 
-### Scene 3 · THE LOOP — 1:00 → 1:30 (~70 words)
+### Scene 3 · THE LOOP — 1:00 → 1:30 (~71 words)
 
 **SCREEN:** `/#how` — the five-step pipeline (Survey → Learn → Predict → Position → Rotate).
 **ACTION:** Trace the five steps left to right with the cursor, one per phrase.
 **SAY:**
-> ASTRA runs one loop. Survey fast to bootstrap statistics. Learn each emitter's fingerprint and rhythm with Rayleigh significance testing. Predict the next transmission window before it opens. Arrive early, dwell through it. Then rotate the remaining time by discounted value — so no band starves. Wrong hypotheses die cheap, because every belief is validated online.
+> ASTRA runs one loop. Survey fast to bootstrap statistics. Learn each emitter's fingerprint and rhythm with Rayleigh significance testing. Predict the next transmission window before it opens. Arrive early, dwell through it. Then rotate the remaining time by discounted value — so no band starves. Wrong hypotheses die cheap, because every belief is validated online. Survey, learn, predict, position, rotate — five phases, one decision per slot, no prior intelligence required.
 
 **ON-SCREEN:** step numbers light up `01 02 03 04 05` in gold, synced to narration.
 **EDIT:** Slide transitions between steps; keep total move under 6 seconds.
 
 ---
 
-### Scene 4 · RESULTS FIRST — 1:30 → 2:15 (~95 words)
+### Scene 4 · RESULTS FIRST — 1:30 → 2:15 (~88 words)
 
 **SCREEN:** `/results.html` — KPI row, then scroll to the KPP gate table.
 **ACTION:** Point at the KPI cards one by one, then scroll to the gate table and rest on the SmartScan row.
 **SAY:**
-> Results first, because this is what defence judging actually looks like. Hard Key Performance Parameters: threat coverage at least ninety percent, prediction better than chance, false alarms bounded. Pass every gate simultaneously — then we rank. Seven schedulers, two hundred Monte Carlo episodes, paired permutation tests, Holm-corrected. One row survives the gate: SmartScan. Every comparison, p below point zero zero one. And the same page carries identification, geolocation and multi-receiver scaling — every figure regenerate-able from one command.
+> Results first, because this is what defence judging actually looks like. Hard Key Performance Parameters: threat coverage at least ninety percent, prediction better than chance, false alarms bounded. Pass every gate simultaneously — then we rank. Seven schedulers, two hundred Monte Carlo episodes, paired permutation tests, Holm-corrected. One row survives the gate: SmartScan. Every comparison, p below point zero zero one. And the same page carries identification, geolocation and multi-receiver scaling — every figure regenerate-able from one command. No cherry-picking: the failing rows stay on the page too.
 
 **ON-SCREEN:** gold circle drawn around the SmartScan row · chip `ONLY MISSION-CAPABLE SCHEDULER` · footer chip `200 EPISODES · PAIRED · HOLM`.
 **EDIT:** Zoom to 120 % on the gate table at “pass every gate”. Restrained — no shake.
 
 ---
 
-### Scene 5 · CONSOLE FIRST-RUN — 2:15 → 3:00 (~95 words)
+### Scene 5 · CONSOLE FIRST-RUN — 2:15 → 3:00 (~90 words)
 
 **SCREEN:** `/console.html`, fresh state (pre-flight `localStorage.removeItem("astra.console.v1")` done, reload).
-**ACTION:** Let the 4 intro cards appear. Cursor hovers two cards, then click **Take the guided tour**. Step through 3–4 spotlight highlights with ← →, showing the gold ring jumping to Start/Mission config/Waterfall. Then press Escape.
+**ACTION:** Let the five intro cards appear. Hover two cards, then click **Take the guided tour**. Step through 3–4 spotlight stops with ← →, showing the gold ring jumping to demo chips / mission config / waterfall. Then press Escape.
 **SAY:**
-> The console teaches itself. First visit: four cards — what this console is, the three bays, how to read the waterfall, how to use it. Then a guided tour takes over and spotlight-jumps to every control that matters — demo scenes, start and pause, mission config, the live waterfall, the KPI tiles — each one explaining what it does in plain language. Sixty seconds and you know the whole instrument. Help reopens it any time.
+> The console teaches itself. First visit: five cards — what this console is, the three bays, how to read the waterfall, how to use it, and the offline desktop build. Then a seven-stop guided tour takes over and spotlight-jumps to every control that matters — demo chips, start and pause, mission config, the live waterfall, the KPI tiles — each one explaining what it does in plain language. Sixty seconds and you know the whole instrument. Help reopens it any time — arrow keys step through, Escape gets you out.
 
 **ON-SCREEN:** captions naming each spotlight target as it lights: `DEMO CHIPS`, `MISSION CONFIG`, `LIVE WATERFALL`…
 **EDIT:** Speed-ramp the mouse travel between spotlight targets to 1.6×; hold at full speed on each tooltip.
 
 ---
 
-### Scene 6 · LIVE A/B + INTELLIGENCE — 3:00 → 4:00 (~112 words)
+### Scene 6 · LIVE A/B + INTELLIGENCE — 3:00 → 4:00 (~116 words)
 
-**SCREEN:** `/console.html` → Operations tab → run the paired mission; then Learning Arena; then Model Lab.
-**ACTION:** (a) Click the smart-scan demo chip, **Start**, let both waterfalls run ~10 s — capture the density difference. (b) Open Learning Arena → **Train 5**. (c) Open Model Lab → **Run shootout**, rest cursor on the probe table.
+**SCREEN:** `/console.html` → Live Mission tab → run the paired mission; then Learning Arena; then Model Lab.
+**ACTION:** (a) Click demo chip **1 - Flagship race**, **Start mission**, let both waterfalls run ~10 s — capture the density difference. (b) Open Learning Arena → **Train 5 episodes**. (c) Open Model Lab → **Run shootout**, rest cursor on the verification table.
 **SAY:**
-> Watch two receivers fly the identical battlefield. Same signals, same seeds — the only variable is the strategy. One waterfall stays sparse while the other fills gold. Then the console trains: the Learning Arena learns from hits and misses and rises episode over episode. And the probe table doesn't flatter us — next-window prediction, ninety-six point nine percent for SmartScan… against fifty-four point one for the sweep. Agile-hop prediction: fifty-three percent top-one, against four percent by chance. We also benchmarked a deep Q-network. It lost. Under sparse, non-stationary reward — so we keep it, documented, as a negative result. Decision latency stays under a millisecond per dwell.
+> Watch two receivers fly the identical battlefield. Same signals, same seeds — the only variable is the strategy. One waterfall stays sparse while the other fills gold. Then the console trains: the Learning Arena learns from hits and misses and rises episode over episode. And the probe table doesn't flatter us — next-window prediction, ninety-six point nine percent for SmartScan… against fifty-four point one for the sweep. Agile-hop prediction: fifty-three percent top-one, against four percent by chance. We also benchmarked a deep Q-network. It lost. Under sparse, non-stationary reward — so we keep it, documented, as a negative result. Mean decision cost stays under a millisecond per dwell — the engine keeps up with the radio.
 
 **ON-SCREEN:** split caption `SAME SCENE · DIFFERENT STRATEGY` · probe chips `96.9%` gold / `54.1%` grey · stamp `NEGATIVE RESULT: DQN — KEPT IN REPORT`.
 **EDIT:** Side-by-side waterfall crop for 6 s. Speed-ramp training to 2×. Beat on “…it lost.” before the DQN line.
 
 ---
 
-### Scene 7 · DOCS + EVIDENCE — 4:00 → 4:40 (~88 words)
+### Scene 7 · DOCS + EVIDENCE — 4:00 → 4:40 (~77 words)
 
 **SCREEN:** `/documentation.html` — type “calibration” in the sidebar filter, open a section, hover a code block; then a terminal with `pytest` and `npm run probe`.
 **ACTION:** Filter → click section → press → once to page. Hover a `<pre>` block and click **copy**. Cut to terminal showing `306 passed` and the probe table.
 **SAY:**
-> Every claim has a paper trail. The documentation ships inside the product — twenty-one sections, from installation to API to simulation fidelity — searchable, paged with arrow keys, code blocks one click to copy. And the evidence itself: three hundred and six automated tests, one command. The prediction probe, one command. Same seeds, same numbers, on any machine. Read the arithmetic before you trust it — that's the whole culture of this project.
+> Every claim has a paper trail. The documentation ships inside the product — twenty-three sections, from installation to API to simulation fidelity to the desktop shortcuts — searchable, paged with arrow keys, code blocks one click to copy. And the evidence itself: three hundred and six automated tests, one command. The prediction probe, one command. Same seeds, same numbers, on any machine. Read the arithmetic before you trust it — that's the whole culture of this project.
 
-**ON-SCREEN:** chip `21 SECTIONS · SEARCHABLE · COPYABLE` · terminal captions `306 PASSED` / `96.9% vs 54.1%`.
+**ON-SCREEN:** chip `23 SECTIONS · SEARCHABLE · COPYABLE` · terminal captions `306 PASSED` / `96.9% vs 54.1%`.
 **EDIT:** Macro zoom on the copy button click. Hard cut black → terminal, keyboard-clack SFX.
 
 ---
 
-### Scene 8 · DESKTOP + HARDWARE — 4:40 → 5:15 (~80 words)
+### Scene 8 · DESKTOP + HARDWARE — 4:40 → 5:15 (~75 words)
 
 **SCREEN:** desktop app — `dist\ASTRA\ASTRA.exe` running, then Tools → Diagnostics (all green); brief flash of `build/rtl/astra_policy_kernel.hpp`.
 **ACTION:** Launch app, start a mission, open Diagnostics, let the all-green list settle 3 s. Then a 2 s cut of the kernel header.
 **SAY:**
-> And it's a real desktop product: one installer, offline, no server — the same console with a local Python engine, self-diagnostics that go all green before you trust it. When this graduates from simulation, the on-ramp is already built: a fixed-point C++ policy kernel and a UDP pulse-descriptor-word stream, so the strategy can move from our laptop… to the receiver.
+> And it's a real desktop product: one installer, offline, no server — the same console with a local Python engine, native menus with real shortcuts, self-diagnostics that go all green before you trust it. When this graduates from simulation, the on-ramp is already built: a fixed-point C++ policy kernel and a UDP pulse-descriptor-word stream, so the strategy can move from our laptop… to the receiver. No cloud, no login, no telemetry — it runs air-gapped.
 
 **ON-SCREEN:** chip `ASTRA-Setup-3.0.0.exe · Windows 10/11 · OFFLINE` · captions `FIXED-POINT KERNEL`, `UDP PDW IN`.
 **EDIT:** Speed-ramp launch; hold on Diagnostics. Gold underline sweep under the all-green list.
 
 ---
 
-### Scene 9 · THEME + CLOSE — 5:15 → 6:00 (~76 words)
+### Scene 9 · THEME + CLOSE — 5:15 → 6:00 (~79 words)
 
 **SCREEN:** back to `/` — click the sun/moon toggle (light-mode beauty shot for 3 s), toggle back to dark, land on hero.
-**ACTION:** One theme click, pause, click back. End on hero with radar sweeping; cursor rests on **Download for Windows**.
+**ACTION:** One theme click, pause, click back. End on hero with the spectrum strip running; cursor rests on **Download v3.0.0**.
 **SAY:**
-> ASTRA — adaptive spectrum threat recognition and analysis. Three hundred and six tests, reproducible results, a console that teaches itself, light or dark — the same product in your browser and on your desktop. Built for a DRDO problem statement under Smart India Hackathon twenty-twenty-six. The installer, the live console and every number on this page are in the description. Download it, run the probe, check our arithmetic.
+> ASTRA — adaptive spectrum threat recognition and analysis. Three hundred and six tests, reproducible results, a console that teaches itself, twenty-three sections of documentation, light or dark — the same product in your browser and on your desktop. Built for a DRDO problem statement under Smart India Hackathon twenty-twenty-six. The installer, the live console and every number on this page are in the description. Download it, run the probe, check our arithmetic. If it holds up, that's the point.
 
 **ON-SCREEN:** lower-third `github.com/RARPlayzDev/Astra · astra-ew.vercel.app` · end card with 3 buttons `DOWNLOAD v3.0.0` `LIVE CONSOLE` `RESULTS`.
 **EDIT:** Theme crossfade is the money shot — hold it. End card in from 5:52; fade audio under last line; radar-sweep SFX out.
@@ -186,7 +190,7 @@ Every figure was re-verified in this repo. If a number isn't here, don't say it.
 
 | # | Shot | Used for |
 |---|---|---|
-| 1 | Hero aurora + radar sweep, 15 s idle | hook / end card |
+| 1 | Hero spectrum strip + sweep instrument, 15 s idle | hook / end card |
 | 2 | Light-mode theme crossfade, 3 takes | Scene 9, Shorts |
 | 3 | First-run cards + one spotlight highlight | Scene 5 alternate takes |
 | 4 | Paired waterfalls running, 20 s | Scene 6 |
@@ -216,8 +220,8 @@ captions (see `VIDEO_EDITING.md`).
 2:15 The console teaches itself (first-run tour)
 3:00 Live A/B + Learning Arena + the probe table
 4:00 Documentation & evidence
-4:45 Windows desktop + hardware on-ramp
-5:20 Light / dark, download, close
+4:40 Windows desktop + hardware on-ramp
+5:15 Light / dark, download, close
 ```
 
 **Description skeleton:**

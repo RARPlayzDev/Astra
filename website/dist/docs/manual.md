@@ -29,6 +29,8 @@ Version 3.0.0 · SIH 2026 prototype · simulation-based research software, not o
 19. [Frequently asked questions](#19-frequently-asked-questions)
 20. [Glossary](#20-glossary)
 21. [Simulation fidelity reference](#21-simulation-fidelity-reference)
+22. [Desktop application reference](#22-desktop-application-reference)
+23. [Web console reference](#23-web-console-reference)
 
 ---
 
@@ -662,3 +664,116 @@ converts the markdown to HTML for the website's Documentation page
 `website/public/docs/manual.md` for the "Download (.md)" button, and emits the
 section index the site's table of contents is built from. The desktop
 application serves the same file at `/manual`; nothing is maintained twice.
+
+---
+
+## 22. Desktop application reference
+
+The installed application (`dist/ASTRA/ASTRA.exe`, built from
+`desktop_qt.py` by `astra.spec` via `tools/build_exe.ps1`) is a native
+PySide6 window wrapping the same console the website serves.
+
+### 22.1 Window, service and offline guarantees
+
+On launch the app picks a free loopback port, starts the FastAPI service in a
+daemon thread, polls `GET /api/health` for up to 30 seconds, then opens a
+`QWebEngineView` at `http://127.0.0.1:<port>`. Remote URL access from the
+page is disabled (`LocalContentCanAccessRemoteUrls = False`), so a running
+mission never reaches the network. Closing the window shuts the service down
+cleanly (`server.shutdown()` plus `hub.stop_all()`), as does **File → Exit**.
+
+### 22.2 Menus and keyboard shortcuts
+
+Qt supplies the native menu bar; the React menu bar inside the page is hidden
+in Qt mode (`window.__AstraQt`).
+
+| Menu | Entry | Shortcut |
+|---|---|---|
+| File | New mission | Ctrl+N |
+| File | Open scenario… | Ctrl+O |
+| File | Export results (JSON) | Ctrl+E |
+| File | Exit | Ctrl+Q |
+| Run | Start mission | F5 |
+| Run | Stop mission | Shift+F5 |
+| Run | Rate: Slow (120/s) · Normal (400/s) · Fast (800/s) · Maximum (1500/s) | — |
+| Tools | Diagnostics… | Ctrl+D |
+| Help | User guide (opens `/manual`) | F1 |
+| Help | About ASTRA | — |
+
+The status bar polls `GET /api/live/status` every 2 seconds and shows
+`READY` or `RUNNING — slot n/T`, with a permanent `ASTRA 3.0.0` label. The
+Run-menu rate presets inject `window.__astra_set_speed(n)` into the page; the
+default is Normal (400 slots/s).
+
+### 22.3 System tray and page bridge
+
+The system tray offers **Show** (or double-click) and **Exit**. After the page
+loads, a small bridge defines `window.__AstraQt`, `__astra_start`,
+`__astra_stop` and `__astra_diag`, which the native menus call; the Help menu
+navigates the view to `/manual`, the rendered copy of this document.
+
+---
+
+## 23. Web console reference
+
+`/console.html` is the browser build of the same engine
+(`website/src/engine/`): battlefield generator, receiver physics and five
+policies compiled to run entirely client-side. No server, no install, and
+runs are seed-exact.
+
+### 23.1 The three bays
+
+| Bay | Purpose |
+|---|---|
+| Live Mission | Real-time A/B race: SmartScan against a conventional sweep on one battlefield |
+| Learning Arena | Cross-episode training in an isolated sandbox with its own learner memory |
+| Model Lab | Headless shootouts and the verification-numbers probe table |
+
+### 23.2 First-run onboarding and guided tour
+
+On first visit (state stored under `localStorage["astra.console.v1"]`) an
+intro modal shows five cards — what the console is, the three bays, how to
+read the waterfall, how to use it, and the offline desktop build — then
+offers the guided tour. The tour has seven stops (demo chips, mission
+configuration, the waterfall, live KPIs and threat board, event log, the
+three bays, replay). Keyboard: **Esc** skips, **←** steps back, **→** or
+**Enter** steps forward; the spotlight follows its target while the page
+moves. *Quick Guide* and *Help / Tour* in the top bar replay either at any
+time.
+
+### 23.3 Presentation demo presets
+
+One-click scenarios that fully determine seed, opponent and scene, then
+start instantly:
+
+| # | Preset | Seed | Battlefield |
+|---|---|---|---|
+| 1 | Flagship race | 4242 | standard scene, sequential opponent — the headline A/B |
+| 2 | Periodic hunter | 777 | eight scanning radars (period 30–120) — watch phase-locks confirm |
+| 3 | Exploit trap | 999 | UCB opponent on clutter-rich spectrum — high score, half the threats missed |
+| 4 | Low-SNR stress | 31337 | weak signals (SNR 7 ± 3 dB), reduced sensitivity |
+| 5 | Cooperative swarm | 2024 | three receivers per side, band de-confliction, dense 32-band scene |
+
+### 23.4 Waterfall, event log and KPIs
+
+The waterfall shows blue-grey cells for true transmissions (ground truth), a
+light grey column for the band currently tuned, and gold for confirmed
+intercepts. The scheduler event log classifies every line — **PROBE**
+(rhythm hypothesis), **LOCK/CONFIRMED** (phase lock), **DROP** (stale belief
+retired), **SHIFT** (environment change), **DONE**, **INFO** — with live
+lock/drop/probe counters and a Clear button. Per-receiver KPI rows update
+every slot: threat coverage, intercepts, reward per dwell, hit rate, false
+alarms, mean and threat time-to-first-fix, prediction accuracy and phase
+locks held.
+
+### 23.5 Learning Arena and Model Lab
+
+**Train 5 / Train 10 episodes** runs full missions back-to-back on fresh
+seeds while the SmartScan learner keeps its consolidated band-value memory
+between episodes; *Reset learner memory* wipes it. Results render as an
+episode table plus coverage bars (rising bars = warm start paying off).
+**Run shootout** races the five browser policies — SmartScan, sequential
+sweep, random scan, UCB bandit, linear Q-learning — on the configured seed,
+and the verification table reports next-window prediction accuracy:
+SmartScan 96.9 %, linear Q 96.4 %, UCB 95.5 %, sequential sweep 54.1 %,
+random scan 50.2 %.

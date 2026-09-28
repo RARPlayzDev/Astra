@@ -86,5 +86,13 @@
   {
     "id": "21-simulation-fidelity-reference",
     "title": "21. Simulation fidelity reference"
+  },
+  {
+    "id": "22-desktop-application-reference",
+    "title": "22. Desktop application reference"
+  },
+  {
+    "id": "23-web-console-reference",
+    "title": "23. Web console reference"
   }
 ]
