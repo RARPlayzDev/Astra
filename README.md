@@ -371,6 +371,23 @@ build step on Vercel, which is why the bundle is committed:
 - `deploy.ps1` (repo root) rebuilds, deploys to production and then HTTP-checks
   the live routes.
 
+**Verify before you deploy** — one command runs the whole site gate:
+
+```powershell
+cd website; npm run check
+```
+
+| Step | What it proves |
+|---|---|
+| `npm run docs:check` | every manual section slices out of the generated HTML, no mojibake |
+| `npm run smoke` | server-renders Home, Documentation, Console and Results; asserts headline copy is present and audits markup (unique ids, resolvable in-page links, one `<h1>`) |
+| `npm run build` | the production bundle builds clean |
+| `npm run verify:dist` | the built bundles still contain each page's class hooks, every asset the HTML references exists, and the no-flash theme bootstrap survived |
+
+The engine parity check is separate and lives in
+[`HOW_TO_TEST.md`](HOW_TO_TEST.md) (Level 7): `node scripts\_bundle.cjs ; node scripts\_smoke.cjs`
+→ `ENGINE SMOKE OK`.
+
 **Troubleshooting:** if `https://astra-ew.vercel.app/` answers
 `404 DEPLOYMENT_NOT_FOUND`, the Vercel project or its deployment was removed —
 nothing is wrong with the code. Run `npx vercel login`, `npx vercel link`
