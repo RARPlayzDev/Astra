@@ -111,8 +111,8 @@ export function Nav() {
         <div className="nav-inner">
         <a className="brand" href="/"><Logo /><span className="brand-name">ASTRA</span></a>
         <div className={"nav-links" + (open ? " open" : "")}>
-          <a href="#problem" onClick={() => setOpen(false)}>Problem</a>
-          <a href="#how" onClick={() => setOpen(false)}>How it works</a>
+          <a href="/#problem" onClick={() => setOpen(false)}>Problem</a>
+          <a href="/#how" onClick={() => setOpen(false)}>How it works</a>
           <a href="/results.html">Results</a>
           <a href="/console.html">Console</a>
           <a href="/documentation.html">Docs</a>

@@ -399,7 +399,8 @@ export default function Results() {
 » python -m venv .venv; .venv\\Scripts\\activate
 » pip install -r requirements.txt
 » python -m pytest tests -q           `}<span className="g">306 passed</span>{`
-» python -m tools.run_benchmark       `}<span className="y">200-episode suite → results/</span>{`
+» python -m ewsmart.experiments --suite full  `}<span className="y">published suite → results/</span>{`
+» python tools/export_site_data.py            `}<span className="b">results/ → the data on this page</span>{`
 » cd website; npm ci; npm run probe   `}<span className="b">prediction probe table</span>{`
 » cd website; npm run dev             `}<span className="d"># browse this page locally</span>
             </pre>

@@ -2,7 +2,7 @@
 
 **ASTRA — Adaptive Spectrum Threat Recognition & Analysis**
 Adaptive scan scheduling for Electronic Support receivers.
-Version 2.0.0 · SIH 2026 prototype · simulation-based research software, not operational equipment.
+Version 3.0.0 · SIH 2026 prototype · simulation-based research software, not operational equipment.
 
 ---
 

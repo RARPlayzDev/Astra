@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { DOCS_HTML } from "../content/docsHtml";
 import { DOWNLOAD_URL, Logo, SITE_VERSION, ThemeToggle } from "../shared";
+import { PageWipe } from "../components/Fx";
 
 type Section = { id: string; num: string; title: string };
 
@@ -118,6 +119,7 @@ export default function Documentation() {
 
   return (
     <div className="docs-page">
+      <PageWipe />
       {/* top bar */}
       <header className="doc-topbar">
         <div className="doc-topbar-inner">
@@ -174,6 +176,7 @@ export default function Documentation() {
 
         {/* content */}
         <main className="docpage">
+          <h1 className="doc-h1">ASTRA · Software Manual</h1>
           <div
             className="doc-content"
             ref={contentRef}
