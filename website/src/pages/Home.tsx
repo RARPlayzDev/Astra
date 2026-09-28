@@ -163,6 +163,9 @@ function useReveal() {
 export default function Home() {
   useReveal();
 
+  // Duplicate the stack so the marquee track can loop seamlessly (translateX -50%)
+  const techLoop = [...TECH_STACK, ...TECH_STACK];
+
   return (
     <>
       <Nav />
@@ -170,12 +173,12 @@ export default function Home() {
       <SectionDots items={CHAPTERS} />
       <HeroScroll />
 
-      {/* ═══ TECH STACK ═══ */}
+      {/* ═══ TECH STACK MARQUEE ═══ */}
       <section className="tech-marquee-section">
         <div className="tech-marquee-label">Technology Stack</div>
         <div className="tech-marquee-track">
-          {TECH_STACK.map((t) => (
-            <div className="tech-item" key={t.name}>
+          {techLoop.map((t, i) => (
+            <div className="tech-item" key={`${t.name}-${i}`}>
               <span className="tech-item-dot" />
               <span className="tech-item-text">{t.name}</span>
               <span className="tech-item-sub">{t.sub}</span>
