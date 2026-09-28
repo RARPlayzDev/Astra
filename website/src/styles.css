@@ -996,6 +996,79 @@ canvas {
 .k { color: var(--muted); font-size: 11px; }
 .res { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 
+/* ═══════════════ CONSOLE TABLES · THREAT BOARD · GEOLOCATION MAP ═══════════════ */
+table.res {
+  border-collapse: collapse; width: 100%; min-width: 460px;
+  font-size: var(--fs-sm);
+}
+table.res th {
+  text-align: left; padding: 10px 14px;
+  font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--muted); font-weight: 700; white-space: nowrap;
+  border-bottom: 1px solid var(--border);
+}
+table.res td {
+  padding: 9px 14px; border-bottom: 1px solid var(--line-soft);
+  white-space: nowrap;
+}
+table.res tbody tr { transition: background-color var(--dur-fast) var(--ease); }
+table.res tbody tr:hover td { background: var(--tint); }
+table.res tr:last-child td { border-bottom: none; }
+table.res tr.hl td { background: var(--gold-tint); }
+
+.board-sum { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.board-sum span {
+  font-size: var(--fs-xs); font-family: var(--font-mono);
+  color: var(--muted); background: var(--tint);
+  border: 1px solid var(--border); border-radius: 2px; padding: 3px 10px;
+}
+.board-sum b { color: var(--soft); }
+
+/* geolocation panel — stats strip, map, legend */
+.geo-stats { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.geo-stats div {
+  flex: 1 1 110px; background: var(--panel-2);
+  border: 1px solid var(--border); border-radius: var(--r);
+  padding: 10px 14px; display: flex; flex-direction: column; gap: 4px;
+}
+.geo-stats span {
+  font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--muted); font-weight: 700;
+}
+.geo-stats b {
+  font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+  font-size: var(--fs-md); color: var(--soft);
+}
+.geo-map {
+  background: var(--panel-2); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 14px; margin-bottom: 14px;
+}
+.geo-map svg {
+  width: 100%; aspect-ratio: 1 / 1; max-height: 460px;
+  display: block; margin: 0 auto;
+}
+.geo-map .grid { stroke: var(--line-soft); stroke-width: 0.25; }
+.geo-map .rx { fill: var(--accent); }
+.geo-map .rxlbl, .geo-map .elbl {
+  fill: var(--muted); font-size: 2.6px; font-family: var(--font-mono);
+}
+.geo-map .brg { stroke: var(--accent); stroke-width: 0.3; opacity: 0.55; }
+.geo-map .truth { fill: none; stroke: var(--amber); stroke-width: 0.5; }
+.geo-map .est { fill: var(--red); }
+.geo-key {
+  display: flex; gap: 16px; flex-wrap: wrap; margin-top: 10px;
+  font-size: var(--fs-xs); color: var(--muted); font-family: var(--font-mono);
+}
+.geo-key i {
+  display: inline-block; width: 10px; height: 10px; border-radius: 2px;
+  margin-right: 5px; vertical-align: -1px;
+}
+.geo-key .k-rx { background: var(--accent); }
+.geo-key .k-truth { background: none; border: 1.5px solid var(--amber); border-radius: 50%; }
+.geo-key .k-est { background: var(--red); border-radius: 50%; }
+.geo-key .k-brg { background: linear-gradient(90deg, var(--accent), transparent); }
+
+/* ═══════════════════════════ KPP TABLE ENHANCEMENTS ═══════════════════════════ */
 /* ═══════════════════════════ KPP TABLE ENHANCEMENTS ═══════════════════════════ */
 .kpp-legend {
   display: flex; align-items: center; gap: 12px; flex-wrap: wrap;

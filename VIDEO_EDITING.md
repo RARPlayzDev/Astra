@@ -95,7 +95,7 @@ Library → "cinematic" / "documentary" tags is a safe royalty-free pool). Ride 
 - Resolve the track exactly on the word "anticipates" in Scene 12
 
 **SFX (A3) — use sparingly, max ~8 in the whole video:** soft tick on KPP pill
-reveal, low riser into Scene 6, one impact hit on `IT LOST.` (Scene 8), whoosh on
+reveal, low riser into Scene 6, one impact hit on `IT LOST.` (Scene 6), whoosh on
 the end-card fade. If you can hear the SFX as an event rather than feel it, it's
 too loud (-20 dB is plenty).
 

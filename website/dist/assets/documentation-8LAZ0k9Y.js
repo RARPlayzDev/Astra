@@ -1,4 +1,4 @@
-import{r as c,j as e,P as _,L as R,S,D as P,T as E,c as D}from"./styles-urLltQ6r.js";const x=`<p>\uFEFF# ASTRA — Software Documentation</p>
+import{r as c,j as e,P as _,L as R,S,D as P,T as E,c as D}from"./styles-Bps5M1nR.js";const x=`<p>\uFEFF# ASTRA — Software Documentation</p>
 <p><strong>ASTRA — Adaptive Spectrum Threat Recognition &amp; Analysis</strong></p>
 <p>Adaptive scan scheduling for Electronic Support receivers.</p>
 <p>Version 3.0.0 · SIH 2026 prototype · simulation-based research software, not operational equipment.</p>

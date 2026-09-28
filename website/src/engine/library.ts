@@ -2,7 +2,7 @@
  * Browser analogue of ewsmart/identification.py - JC Wise-style library
  * matching over measured stream fingerprints. PARITY CONTRACT applies.
  */
-import type { RFEnvironment } from "./core";
+import { mulberry32, type RFEnvironment } from "./core";
 
 export interface LibraryEntry {
   name: string; cls: string;
@@ -29,22 +29,34 @@ const inRange = (v: number, r: [number, number] | null, slack = 0.15) => {
   return r[0] - pad <= v && v <= r[1] + pad;
 };
 
+/** 1 inside the range, decaying linearly to 0 one range-width outside it. */
+const fit = (v: number, r: [number, number]) => {
+  const width = Math.max(r[1] - r[0], 1e-6);
+  if (v < r[0]) return Math.max(0, 1 - (r[0] - v) / width);
+  if (v > r[1]) return Math.max(0, 1 - (v - r[1]) / width);
+  return 1;
+};
+
 export interface Fingerprint {
   freqCenterMhz: number; pwMeanUs: number; scanPeriod: number | null;
 }
 
-/** identify(): returns [entry|null, confidence]. */
+/**
+ * identify(): returns [entry|null, confidence]. Frequency is a hard gate (a
+ * 5 % band tolerance, as in ewsmart/identification.py); pulse width and scan
+ * rhythm contribute graded fit, so confidence reflects how well the *measured*
+ * fingerprint sits inside the entry rather than a pass/fail count.
+ */
 export function identify(fp: Fingerprint,
                          library: LibraryEntry[] = LIBRARY):
     [LibraryEntry | null, number] {
   let best: LibraryEntry | null = null, bestScore = 0;
   for (const e of library) {
-    const freqOk = inRange(fp.freqCenterMhz, e.freqRange, 0.05);
-    if (!freqOk) continue;
-    const pwOk = inRange(fp.pwMeanUs, e.pwRange);
-    const scanOk = e.scanRange === null || fp.scanPeriod === null ||
-      inRange(fp.scanPeriod, e.scanRange, 0.35);
-    const score = (2 * Number(freqOk) + Number(pwOk) + Number(scanOk)) / 4;
+    if (!inRange(fp.freqCenterMhz, e.freqRange, 0.05)) continue;
+    const pwFit = fit(fp.pwMeanUs, e.pwRange);
+    const scanFit = e.scanRange === null || fp.scanPeriod === null
+      ? 1 : fit(fp.scanPeriod, e.scanRange);
+    const score = (2 * 1 + pwFit + scanFit) / 4;
     if (score > bestScore) { best = e; bestScore = score; }
   }
   return best !== null && bestScore >= 0.5 ? [best, bestScore] : [null, 0];
@@ -53,54 +65,107 @@ export function identify(fp: Fingerprint,
 export interface IdRow {
   eid: number; identified: string; cls: string; threat: string;
   confidence: number; pulses: number; ground_truth: string; correct: boolean;
+  /** Measured centre frequency (MHz) and pulse width (us). */
+  freqMhz: number; pwUs: number; snrDb: number;
 }
 
 interface StreamInfo {
   freqSum: number; pwSum: number; n: number;
   hitTimes: number[];
+  aoaSin: number; aoaCos: number; aoaN: number;
+  snrMax: number;
 }
 
 /** Build measured fingerprints per emitter from dwell observations. */
 export class StreamCollector {
   private streams = new Map<number, StreamInfo>();
 
-  observe(eidsOnBand: number[],
-          detections: { eid: number }[], t: number): void {
+  /**
+   * Fold one dwell's detections into the stream fingerprints. Each sample is a
+   * *measurement*: the emitter's true centre frequency and pulse width carry a
+   * per-emitter systematic bias scaled by how well the signal is heard (weak
+   * or LPI streams fingerprint poorly, exactly as section 21.4 of the manual
+   * describes), and the AOA samples are the receiver's measured bearings.
+   */
+  observe(detections: { eid: number; aoaDeg?: number; snrDb?: number }[],
+          t: number): void {
     for (const d of detections) {
-      const s = this.streams.get(d.eid) ??
-        { freqSum: 0, pwSum: 0, n: 0, hitTimes: [] };
-      const e = this.emitters.get(d.eid);
-      if (e) {
-        s.freqSum += e.freqMhz; s.pwSum += e.pwUs; s.n += 1;
-        s.hitTimes.push(t);
-        this.streams.set(d.eid, s);
+      const meta = this.emitters.get(d.eid);
+      if (!meta) continue;
+      const s = this.streams.get(d.eid) ?? {
+        freqSum: 0, pwSum: 0, n: 0, hitTimes: [],
+        aoaSin: 0, aoaCos: 0, aoaN: 0, snrMax: Number.NEGATIVE_INFINITY,
+      };
+      s.freqSum += meta.freqMhz * meta.freqBias;
+      s.pwSum += meta.pwUs * meta.pwBias;
+      s.n += 1;
+      s.hitTimes.push(t);
+      if (d.aoaDeg != null) {
+        const r = (d.aoaDeg * Math.PI) / 180;
+        s.aoaSin += Math.sin(r); s.aoaCos += Math.cos(r); s.aoaN += 1;
       }
+      if (d.snrDb != null) s.snrMax = Math.max(s.snrMax, d.snrDb);
+      this.streams.set(d.eid, s);
     }
-    void eidsOnBand;
   }
 
   attach(env: RFEnvironment): void {
     for (const e of env.emitters) {
+      // deterministic per-emitter measurement bias (reproducible per seed)
+      const rng = mulberry32(
+        (0x9e3779b9 ^ Math.imul(e.eid + 1, 2246822519)) >>> 0);
+      const quality = Math.max(0, Math.min(1, (e.snrDb + 5) / 20));
+      const freqSpread = 0.02 * (1.2 - quality);
+      const pwSpread = 0.26 * (1.2 - quality);
       this.emitters.set(e.eid, {
         freqMhz: e.freqMhz, pwUs: e.pwUs, kind: e.kind,
         period: e.period, onLen: e.onLen, offset: e.offset,
+        freqBias: 1 + (rng() - 0.5) * freqSpread,
+        pwBias: 1 + (rng() - 0.5) * pwSpread,
       });
     }
   }
   private emitters = new Map<number, {
     freqMhz: number; pwUs: number; kind: string;
-    period: number; onLen: number; offset: number }>();
+    period: number; onLen: number; offset: number;
+    freqBias: number; pwBias: number }>();
 
-  /** Rows for emitters with enough evidence, sorted by confidence. */
+  /** Circular-mean measured bearing (deg) per stream, for triangulation. */
+  measuredAoa(): Map<number, number> {
+    const out = new Map<number, number>();
+    for (const [eid, s] of this.streams) {
+      if (s.aoaN < 2) continue;
+      const deg = (Math.atan2(s.aoaSin, s.aoaCos) * 180) / Math.PI;
+      out.set(eid, (deg + 360) % 360);
+    }
+    return out;
+  }
+
+  /** Peak SNR (dB) heard for a stream, used for AOA error weighting. */
+  snrOf(eid: number): number {
+    const s = this.streams.get(eid);
+    return s && isFinite(s.snrMax) ? s.snrMax : 12;
+  }
+
+  /** Streams with enough evidence to identify (>= 3 intercepted pulses). */
+  streamCount(minHits = 3): number {
+    let n = 0;
+    for (const s of this.streams.values()) if (s.n >= minHits) n += 1;
+    return n;
+  }
+
+  /** Rows for emitters with enough evidence: HIGH threat first, then confidence. */
   report(limit = 10): IdRow[] {
     const rows: IdRow[] = [];
     for (const [eid, s] of this.streams) {
       if (s.n < 3) continue;
       const meta = this.emitters.get(eid)!;
-      // measured fingerprint
+      // measured fingerprint (not the emitter's true specification)
+      const measuredFreq = s.freqSum / s.n;
+      const measuredPw = s.pwSum / s.n;
+      // observed rhythm from intercept gaps, when the emitter is a scanner
       let scanPeriod: number | null = null;
       if (meta.kind === "periodic" || meta.kind === "spatial") {
-        // estimate from intercept gaps when we have them
         const ts = s.hitTimes;
         if (ts.length >= 3) {
           const diffs: number[] = [];
@@ -111,8 +176,8 @@ export class StreamCollector {
         }
       }
       const [entry, conf] = identify({
-        freqCenterMhz: meta.freqMhz,
-        pwMeanUs: meta.pwUs,
+        freqCenterMhz: measuredFreq,
+        pwMeanUs: measuredPw,
         scanPeriod,
       });
       const truthEntry = identify({
@@ -121,19 +186,27 @@ export class StreamCollector {
         scanPeriod: meta.kind === "periodic" || meta.kind === "spatial"
           ? meta.period : null,
       })[0];
+      const identified = entry?.name ?? null;
+      const truth = truthEntry?.name ?? null;
       rows.push({
         eid,
-        identified: entry?.name ?? "UNKNOWN",
+        identified: identified ?? "UNKNOWN",
         cls: entry?.cls ?? "-",
         threat: (entry?.threat ?? "-") as string,
         confidence: +conf.toFixed(2),
         pulses: s.n,
-        ground_truth: truthEntry?.name ?? "UNKNOWN",
-        correct: entry !== null &&
-                 (entry?.name ?? "") === (truthEntry?.name ?? ""),
+        ground_truth: truth ?? "UNKNOWN",
+        correct: identified === truth,
+        freqMhz: +measuredFreq.toFixed(1),
+        pwUs: +measuredPw.toFixed(2),
+        snrDb: +this.snrOf(eid).toFixed(1),
       });
     }
-    rows.sort((a, b) => b.confidence - a.confidence || b.pulses - a.pulses);
+    const rank: Record<string, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 };
+    rows.sort((a, b) =>
+      (rank[a.threat] ?? 3) - (rank[b.threat] ?? 3) ||
+      b.confidence - a.confidence || b.pulses - a.pulses);
     return rows.slice(0, limit);
   }
 }
+

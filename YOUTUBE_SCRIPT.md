@@ -162,15 +162,15 @@ Every figure was re-verified in this repo. If a number isn't here, don't say it.
 
 ---
 
-### Scene 8 · DESKTOP + HARDWARE — 4:40 → 5:15 (~75 words)
+### Scene 8 · WEBSITE DEMO → DESKTOP — 4:40 → 5:15 (~75 words)
 
-**SCREEN:** desktop app — `dist\ASTRA\ASTRA.exe` running, then Tools → Diagnostics (all green); brief flash of `build/rtl/astra_policy_kernel.hpp`.
-**ACTION:** Launch app, start a mission, open Diagnostics, let the all-green list settle 3 s. Then a 2 s cut of the kernel header.
+**SCREEN:** `/console.html` → Live Mission tab with the **Threat board** and **Geolocation** panels populated; then cut to `dist\ASTRA\ASTRA.exe` — native window, Data & Sources (Simulated │ UDP Bridge │ Log Tail), then Tools → Diagnostics.
+**ACTION:** On the site: (re-run demo chip **1 - Flagship race** + **Start mission** if the Scene 6 run has ended) let it tick ~15 s, rest the cursor on a threat-board row (confidence under 100 %), then on the geolocation CEP readout. Cut to the desktop app: sweep the cursor across the menu bar (File · View · Run · Tools · Help) and toolbar, open the **UDP Bridge** source card, then Tools → Diagnostics and let the all-green list settle 3 s.
 **SAY:**
-> And it's a real desktop product: one installer, offline, no server — the same console with a local Python engine, native menus with real shortcuts, self-diagnostics that go all green before you trust it. When this graduates from simulation, the on-ramp is already built: a fixed-point C++ policy kernel and a UDP pulse-descriptor-word stream, so the strategy can move from our laptop… to the receiver. No cloud, no login, no telemetry — it runs air-gapped.
+> Everything runs in the browser first: the threat board scores each intercepted stream on its measured fingerprint — never a fake perfect confidence — while the geolocation map fixes emitters from real bearings and reports the circular error honestly. Then the same product installs as a Windows app: native window, menus and toolbar, pulse-descriptor words in over UDP or a log tail, manual included, diagnostics all green. No cloud, no login — it runs air-gapped.
 
-**ON-SCREEN:** chip `ASTRA-Setup-3.0.0.exe · Windows 10/11 · OFFLINE` · captions `FIXED-POINT KERNEL`, `UDP PDW IN`.
-**EDIT:** Speed-ramp launch; hold on Diagnostics. Gold underline sweep under the all-green list.
+**ON-SCREEN:** chip `ONE ENGINE · BROWSER FIRST · DESKTOP READY` · captions `MEASURED FINGERPRINT`, `UDP PDW IN`, `DIAGNOSTICS ALL GREEN`.
+**EDIT:** Hard cut website → desktop window on “Windows app”. Gold underline sweep under the all-green diagnostics list.
 
 ---
 
@@ -198,7 +198,7 @@ Every figure was re-verified in this repo. If a number isn't here, don't say it.
 | 6 | Docs search + copy-click macro | Scene 7 |
 | 7 | Terminal: `306 passed` + probe table | Scene 7 |
 | 8 | `ASTRA.exe` launch + Diagnostics all-green | Scene 8 |
-| 9 | Kernel header scroll, 5 s | Scene 8 |
+| 9 | Mission tab: threat board + geolocation map populating, 15 s | Scene 8 |
 
 **Still assets:** `assets/astra_mark_512.png` (logo), `figures/*.png` (publication
 figures — translucent backgrounds), brand palette `#05070b` bg · `#cfa453` gold ·
@@ -220,7 +220,7 @@ captions (see `VIDEO_EDITING.md`).
 2:15 The console teaches itself (first-run tour)
 3:00 Live A/B + Learning Arena + the probe table
 4:00 Documentation & evidence
-4:40 Windows desktop + hardware on-ramp
+4:40 Browser panels first, then the Windows desktop
 5:15 Light / dark, download, close
 ```
 

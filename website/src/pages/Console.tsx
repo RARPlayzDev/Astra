@@ -2,14 +2,74 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Logo, ThemeToggle } from "../shared";
 import { PageWipe } from "../components/Fx";
 import {
-  DEFAULT_SCENARIO, ESReceiver, RFEnvironment,
+  DEFAULT_SCENARIO, ESReceiver, RFEnvironment, mulberry32,
   type Scenario,
 } from "../engine/core";
 import {
   LinearQLearning, RandomScan, SequentialSweep, SmartScanScheduler,
   TeamScheduler, UCBScheduler, type Scheduler,
 } from "../engine/schedulers";
-import { StreamCollector, type IdRow } from "../engine/library";
+import { LIBRARY, StreamCollector, type IdRow } from "../engine/library";
+import {
+  cepStats, receiverRing, simulateBearings, triangulate,
+  type BearingLine, type Pt,
+} from "../engine/geo";
+
+/**
+ * Cooperative geolocation network used by the console panel: the primary
+ * receiver at the origin plus two cooperating nodes on a 50 km ring — the same
+ * geometry `GET /api/geolocation` builds. Modelled cooperating bearings carry
+ * sigma = 2.0 deg, mirroring `ewsmart.geo.simulate_bearings(..., 2.0, rng)`.
+ */
+const GEO_NODES = receiverRing(3, 50);
+const GEO_SIGMA_DEG = 2.0;
+
+interface GeoRow {
+  eid: number; aoaDeg: number;
+  truth: Pt; est: Pt; errorKm: number; residualKm: number;
+}
+interface GeoReport {
+  nodes: Pt[]; sigmaDeg: number; rows: GeoRow[];
+  n: number; mean: number | null; cep50: number | null; cep90: number | null;
+}
+
+/**
+ * Triangulate every stream receiver A actually intercepted. The solver sees
+ * only bearings plus the nodes' known positions: node 0 carries the receiver's
+ * *measured* AOA (circular mean of intercepted pulses), the cooperating nodes
+ * carry the CRLB-style 2 deg model at their baselines. Ground truth is used
+ * for scoring only, never as an input.
+ */
+function geoReport(s: {
+  env: RFEnvironment;
+  collectors: { a: StreamCollector };
+}): GeoReport {
+  const measured = s.collectors.a.measuredAoa();
+  const rows: GeoRow[] = [];
+  for (const e of s.env.emitters) {
+    const measuredDeg = measured.get(e.eid);
+    if (measuredDeg == null) continue;          // nothing was intercepted
+    const rng = mulberry32(
+      (0x27d4eb2f ^ Math.imul(e.eid + 1, 2654435761)) >>> 0);
+    const modelled = simulateBearings([e.xKm, e.yKm], GEO_NODES,
+                                      GEO_SIGMA_DEG, rng);
+    const lines: BearingLine[] = [[GEO_NODES[0], measuredDeg],
+                                  ...modelled.slice(1)];
+    const t = triangulate(lines);
+    if (!t) continue;
+    rows.push({
+      eid: e.eid, aoaDeg: measuredDeg,
+      truth: [e.xKm, e.yKm], est: [t.x, t.y],
+      errorKm: Math.hypot(t.x - e.xKm, t.y - e.yKm),
+      residualKm: t.residualKm,
+    });
+  }
+  rows.sort((a, b) => a.errorKm - b.errorKm);
+  const st = cepStats(rows.map((r) => r.errorKm));
+  return { nodes: GEO_NODES, sigmaDeg: GEO_SIGMA_DEG, rows,
+           n: st.n, mean: st.mean, cep50: st.cep50, cep90: st.cep90 };
+}
+
 
 const MAXCOLS = 260;
 type Buf = { occ: number[][]; actions: number[]; hits: number[]; nBands: number };
@@ -167,11 +227,7 @@ export default function Console() {
   const [logLines, setLogLines] = useState<string[]>([]);
   const [tab, setTab] = useState<"mission" | "arena" | "lab">("mission");
   const [idRows, setIdRows] = useState<IdRow[]>([]);
-  const [geoData, setGeoData] = useState<null | {
-    receivers: {x:number;y:number}[]; truePos: {x:number;y:number}[];
-    estPos: {x:number;y:number}[]; errors: number[];
-    mean: number; cep50: number; cep90: number;
-  }>(null);
+  const [geoData, setGeoData] = useState<null | GeoReport>(null);
 
   const bufs = useRef<{ a: Buf; b: Buf }>({ a: newBuf(), b: newBuf() });
   const cvs = useRef<{ a: HTMLCanvasElement | null; b: HTMLCanvasElement | null }>
@@ -363,7 +419,7 @@ export default function Console() {
           s.rewardSum[side] += rTotal;
           if (anyHit && !anyFa) s.hits[side] += 1;
           if (anyFa) s.fa[side] += 1;
-          s.collectors[side].observe([], results[0].detections, t);
+          s.collectors[side].observe(results[0].detections, t);
           team.updateAll(t, bands, results, rTotal / Math.max(1, results.length));
           push(bufs.current[side], occCol, bands[0], anyHit && !anyFa);
         };
@@ -395,28 +451,7 @@ export default function Console() {
       draw(cvs.current.b, bufs.current.b);
       if (s.t % 300 < Math.max(1, Math.round(speed / 20))) {
         setIdRows(s.collectors.a.report(8));
-        // Compute geolocation from emitter positions
-        const ems = s.env.emitters;
-        const kRx = 3;
-        const rxFix = [{x:0,y:0}];
-        for (let i=1;i<kRx;i++){const a=2*Math.PI*i/kRx;rxFix.push({x:+(50*Math.cos(a)).toFixed(1),y:+(50*Math.sin(a)).toFixed(1)});}
-        const trueP = ems.map(e=>({x:e.xKm,y:e.yKm}));
-        const estP:{x:number;y:number}[]=[];const errs:number[]=[];
-        for(const tp of trueP){
-          let sumA=0,sumB=0,sumC=0,sumD=0;
-          for(const rx of rxFix){const bearing=Math.atan2(tp.y-rx.y,tp.x-rx.x);sumA+=Math.cos(bearing)**2;sumB+=Math.cos(bearing)*Math.sin(bearing);sumC+=Math.cos(bearing)*(rx.x*Math.cos(bearing)+rx.y*Math.sin(bearing));sumD+=Math.sin(bearing)*(rx.x*Math.cos(bearing)+rx.y*Math.sin(bearing));}
-          const det=sumA*sumD-sumB*sumC;
-          const ex=det!==0?(sumD*(sumC)-sumB*(sumD))/det:tp.x;
-          const ey=det!==0?(sumA*(sumD)-sumB*(sumC))/det:tp.y;
-          const exf=isFinite(ex)?ex:tp.x;const eyf=isFinite(ey)?ey:tp.y;
-          estP.push({x:+exf.toFixed(1),y:+eyf.toFixed(1)});
-          errs.push(+Math.hypot(exf-tp.x,eyf-tp.y).toFixed(2));
-        }
-        const sorted=[...errs].sort((a,b)=>a-b);
-        const mean=errs.reduce((a,b)=>a+b,0)/errs.length;
-        setGeoData({receivers:rxFix,truePos:trueP,estPos:estP,errors:errs,
-          mean:+mean.toFixed(2),cep50:sorted[Math.floor(sorted.length*0.5)]??0,
-          cep90:sorted[Math.floor(sorted.length*0.9)]??0});
+        setGeoData(geoReport(s));
       }
       if (s.t >= s.cfg.T) {
         setRunning(false);
@@ -927,30 +962,44 @@ export default function Console() {
           <div className="body tablewrap">
             {idRows.length === 0 && (
               <p className="tbl-note">Streams appear here after three or more
-              intercepts, matched against the JC Wise-class library.</p>)}
-            {idRows.length > 0 && (
-              <table className="res" style={{ minWidth: 520 }}>
+              intercepts. Each row is a <b>measured</b> fingerprint - centre
+              frequency, pulse width and observed rhythm - matched against the
+              {LIBRARY.length}-entry JC Wise-class library; ground truth is
+              shown only to score the call.</p>)}
+            {idRows.length > 0 && (<>
+              <div className="board-sum">
+                <span><b>{idRows.length}</b> identified</span>
+                <span><b>{idRows.filter((r) => r.threat === "HIGH").length}</b> high threat</span>
+                <span><b>{idRows.filter((r) => r.correct).length}/{idRows.length}</b> match ground truth</span>
+                <span><b>{idRows.reduce((a, r) => a + r.pulses, 0)}</b> intercepted pulses</span>
+              </div>
+              <table className="res">
                 <thead><tr>
                   <th>EID</th><th>Identified</th><th>Class</th><th>Threat</th>
-                  <th>Confidence</th><th>Pulses</th><th>Match</th>
+                  <th className="num">Conf.</th><th className="num">Measured</th>
+                  <th className="num">SNR</th><th className="num">Pulses</th>
+                  <th>Ground truth</th><th>Match</th>
                 </tr></thead>
                 <tbody>
                   {idRows.map((r) => (
-                    <tr key={r.eid}>
+                    <tr key={r.eid} className={r.threat === "HIGH" ? "hl" : ""}>
                       <td className="num">{r.eid}</td>
                       <td>{r.identified}</td>
                       <td>{r.cls}</td>
                       <td><span className={"pill " +
                             (r.threat === "HIGH" ? "fail" : "pass")}>{r.threat}</span></td>
-                      <td className="num">{r.confidence}</td>
+                      <td className="num">{Math.round(r.confidence * 100)}%</td>
+                      <td className="num">{r.freqMhz} MHz · {r.pwUs} µs</td>
+                      <td className="num">{r.snrDb} dB</td>
                       <td className="num">{r.pulses}</td>
+                      <td>{r.ground_truth}</td>
                       <td><span className={"pill " + (r.correct ? "pass" : "fail")}>
                         {r.correct ? "MATCH" : "MISS"}</span></td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-            )}
+            </>)}
           </div>
         </div>
 
@@ -1082,29 +1131,103 @@ export default function Console() {
         {tab === "mission" && (<>
         {geoData && (
           <div className="panel" style={{ marginTop: 16 }}>
-            <h3>Geolocation — AOA Triangulation</h3>
+            <h3>Geolocation - AOA triangulation</h3>
             <div className="body">
-              <div className="kv" style={{ marginBottom: 12 }}>
-                <div className="row"><span>Mean error</span><span>{geoData.mean} km</span></div>
-                <div className="row"><span>CEP50 (median)</span><span>{geoData.cep50} km</span></div>
-                <div className="row"><span>CEP90</span><span>{geoData.cep90} km</span></div>
-                <div className="row"><span>Emitters localised</span><span>{geoData.truePos.length}</span></div>
-                <div className="row"><span>Receivers</span><span>{geoData.receivers.length}</span></div>
+              <p className="tbl-note">
+                Bearings only - no truth goes into the solver. Node 0 is
+                Receiver A&apos;s measured AOA (circular mean of intercepted
+                pulses); the two cooperating nodes carry a {geoData.sigmaDeg}°
+                noise model on 50 km baselines. The estimate is the
+                least-squares intersection (linear seed + Gauss-Newton refine);
+                ground truth is scored afterwards.
+              </p>
+              <div className="geo-stats">
+                <div><span>Mean error</span><b>{geoData.mean != null ? `${geoData.mean.toFixed(2)} km` : "-"}</b></div>
+                <div><span>CEP50</span><b>{geoData.cep50 != null ? `${geoData.cep50.toFixed(2)} km` : "-"}</b></div>
+                <div><span>CEP90</span><b>{geoData.cep90 != null ? `${geoData.cep90.toFixed(2)} km` : "-"}</b></div>
+                <div><span>Localised</span><b>{geoData.n}</b></div>
+                <div><span>Nodes</span><b>{geoData.nodes.length}</b></div>
               </div>
-              <table className="res" style={{ minWidth: 400 }}>
-                <thead><tr><th>#</th><th>True (km)</th><th>Est (km)</th><th>Error (km)</th></tr></thead>
-                <tbody>
-                  {geoData.truePos.slice(0,12).map((t,i)=>(
-                    <tr key={i}>
-                      <td className="num">{i+1}</td>
-                      <td className="num">({t.x}, {t.y})</td>
-                      <td className="num">({geoData.estPos[i]?.x}, {geoData.estPos[i]?.y})</td>
-                      <td className="num">{geoData.errors[i]}</td>
-                    </tr>
+              <div className="geo-map">
+                <svg viewBox="0 0 100 100" preserveAspectRatio="none"
+                     aria-label="Geolocation map" role="img">
+                  {[-50, -25, 25, 50].map((g) => (
+                    <g key={g}>
+                      <line x1={((g + 62) / 124) * 100} y1="0"
+                            x2={((g + 62) / 124) * 100} y2="100"
+                            className="grid" />
+                      <line x1="0" y1={((g + 62) / 124) * 100}
+                            x2="100" y2={((g + 62) / 124) * 100}
+                            className="grid" />
+                    </g>
                   ))}
-                </tbody>
-              </table>
-              {geoData.truePos.length>12 && <p className="tbl-note">Showing 12 of {geoData.truePos.length} emitters</p>}
+                  {geoData.nodes.map((n, i) => (
+                    <g key={`rx${i}`}>
+                      <rect x={((n[0] + 62) / 124) * 100 - 0.9}
+                            y={((n[1] + 62) / 124) * 100 - 0.9}
+                            width="1.8" height="1.8" className="rx" />
+                      <text x={((n[0] + 62) / 124) * 100 + 2}
+                            y={((n[1] + 62) / 124) * 100 - 2}
+                            className="rxlbl">{i === 0 ? "RX-A" : `RX-${i + 1}`}</text>
+                    </g>
+                  ))}
+                  {geoData.rows.map((r) => (
+                    <g key={`b${r.eid}`}>
+                      <line x1={((geoData.nodes[0][0] + 62) / 124) * 100}
+                            y1={((geoData.nodes[0][1] + 62) / 124) * 100}
+                            x2={((r.est[0] + 62) / 124) * 100}
+                            y2={((r.est[1] + 62) / 124) * 100}
+                            className="brg" />
+                    </g>
+                  ))}
+                  {geoData.rows.map((r) => (
+                    <g key={`p${r.eid}`}>
+                      <circle cx={((r.truth[0] + 62) / 124) * 100}
+                              cy={((r.truth[1] + 62) / 124) * 100}
+                              r="1.4" className="truth" />
+                      <circle cx={((r.est[0] + 62) / 124) * 100}
+                              cy={((r.est[1] + 62) / 124) * 100}
+                              r="1.1" className="est" />
+                      <text x={((r.est[0] + 62) / 124) * 100 + 2}
+                            y={((r.est[1] + 62) / 124) * 100 + 3}
+                            className="elbl">E{r.eid}</text>
+                    </g>
+                  ))}
+                </svg>
+                <div className="geo-key">
+                  <span><i className="k-rx" /> receiver</span>
+                  <span><i className="k-truth" /> truth</span>
+                  <span><i className="k-est" /> estimate</span>
+                  <span><i className="k-brg" /> measured AOA</span>
+                </div>
+              </div>
+              <div className="tablewrap">
+                <table className="res">
+                  <thead><tr>
+                    <th>EID</th><th className="num">Measured AOA</th>
+                    <th className="num">Estimate (km)</th>
+                    <th className="num">Truth (km)</th>
+                    <th className="num">Error (km)</th>
+                    <th className="num">Residual (km)</th>
+                  </tr></thead>
+                  <tbody>
+                    {geoData.rows.map((r) => (
+                      <tr key={r.eid}>
+                        <td className="num">{r.eid}</td>
+                        <td className="num">{r.aoaDeg.toFixed(1)}°</td>
+                        <td className="num">{r.est[0].toFixed(1)}, {r.est[1].toFixed(1)}</td>
+                        <td className="num">{r.truth[0].toFixed(1)}, {r.truth[1].toFixed(1)}</td>
+                        <td className="num">{r.errorKm.toFixed(2)}</td>
+                        <td className="num">{r.residualKm.toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {geoData.n === 0 && (
+                <p className="tbl-note">No stream has been intercepted on two
+                or more pulses yet - the solution appears once Receiver A has a
+                circular-mean bearing.</p>)}
             </div>
           </div>
         )}
