@@ -433,7 +433,7 @@ export default function Home() {
         <div className="wrap">
           <div className="reveal">
             <div className="section-label">Frequently asked queries</div>
-            <h2 className="section-title">Questions judges actually ask</h2>
+            <h2 className="section-title">Straight answers to common questions</h2>
           </div>
           <div className="faq reveal">
             <details open>

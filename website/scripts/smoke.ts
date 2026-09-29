@@ -32,7 +32,7 @@ const REQUIRED: Record<string, string[]> = {
     "road-col vision",
     "sec-dots",
     "Frequently asked queries",
-    "Questions judges actually ask",
+    "Straight answers to common questions",
     // the KPP gate on Home must also render from the baked data
     "CAPABLE",
     "DISQUALIFIED",
