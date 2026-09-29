@@ -1117,7 +1117,9 @@ p.intro-lede { color: var(--muted); font-size: var(--fs-xs); margin-top: 0; }
   transition: border-color var(--dur) var(--ease), background-color var(--dur) var(--ease),
               transform var(--dur-fast) var(--ease);
 }
-.intro-card:hover { border-color: var(--amber); background: var(--gold-tint); transform: translateY(-2px); }
+/* no hover affordance: these cards are informational, not clickable -
+   a lift/border highlight promised interaction that does not exist */
+.intro-card:hover { border-color: var(--border); background: var(--tint); transform: none; }
 .intro-card h4 {
   margin: 0 0 6px; font-size: 11.5px; letter-spacing: 1.4px;
   text-transform: uppercase; color: var(--amber); font-family: var(--font-mono);

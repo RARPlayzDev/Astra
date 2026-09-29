@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { DOWNLOAD_URL, Footer, GateAndMc, Nav, SITE_VERSION as SITE_VER, useResults } from "../shared";
 import HeroScroll from "../components/HeroScroll";
-import { CountUp, Preloader, SectionDots } from "../components/Fx";
+import { CountUp, PageWipe, Preloader, SectionDots } from "../components/Fx";
 import SweepScope from "../components/SweepScope";
 
 /** Chapter rail for the long-form home page. */
@@ -24,9 +24,7 @@ const STATS: [string, string, string, string][] = [
   ["306", "", "Automated tests", "pytest suite, all passing in CI"],
   ["96.9", "%", "Prediction accuracy", "SmartScan vs 54.1% sequential sweep"],
   ["90–95.8", "%", "Threat coverage", "across seeds under the KPP gate"],
-  ["1.8", "×", "Faster first fix", "time-to-intercept vs sequential"],
   ["200", "", "Monte Carlo episodes", "paired permutation, Holm-corrected"],
-  ["13/13", "", "PS checks live", "problem-statement coverage audit"],
 ];
 
 const TECH_STACK = [
@@ -55,8 +53,6 @@ const FEATURES: [string, string, string][] = [
   ["◈", "Prediction engine", "Rayleigh period estimation converts periodic emitters from search problems into appointments."],
   ["●", "Emitter identification", "Streams fingerprinted against a JC Wise-class library with confidence scores and threat classification."],
   ["◆", "Multi-receiver geolocation", "Cooperative AOA triangulation; CEP improves from 3.2 km to 1.7 km with more receivers."],
-  ["◐", "Live paired demonstration", "Two receivers fly identical battlefields side by side — strategy is the only variable."],
-  ["⬢", "Fixed-point policy kernel", "A C++ header kernel mirrors the Python policy in fixed point — the on-ramp from simulation to receiver firmware."],
 ];
 
 /** Mission walkthrough — one cycle of the loop, told as phases. */
@@ -118,18 +114,13 @@ const ROAD: [string, string, string, string[]][] = [
     "Simulation engine with a 306-test suite",
     "Adaptive web console with guided onboarding",
     "Windows desktop app — v3.0.0 installer",
-    "Fixed-point C++ policy kernel",
-    "UDP PDW stream interface",
-    "Auto-generated docs and figure pipeline",
   ]],
   ["next", "Next", "The immediate engineering queue.", [
     "Hardware-in-the-loop trials over the UDP PDW stream",
-    "Receiver-specific dwell constraints and tuner profiles",
     "Wider emitter library for threat classification",
   ]],
   ["vision", "Vision", "Where the architecture is designed to go.", [
     "Integration with DRDO Electronic Support suites",
-    "Cooperative multi-node geolocation at operational scale",
     "On-device policy inference on embedded receivers",
   ]],
 ];
@@ -159,6 +150,7 @@ export default function Home() {
     <>
       <Nav />
       <Preloader />
+      <PageWipe />
       <SectionDots items={CHAPTERS} />
       <HeroScroll />
 
@@ -191,12 +183,6 @@ export default function Home() {
                 blue ones are agile and keep changing frequency — those are the
                 harder prey. Every lock mark is a candidate the follow-up scan
                 will look at more closely.
-              </p>
-              <p className="section-desc">
-                The same logic runs in the web console and in the desktop app;
-                the picture above is decorative, but the schedule it imitates is
-                the real one: dwell budgets, revisit intervals and lock
-                bookkeeping straight out of <code>engine/models.py</code>.
               </p>
               <div className="sweep-legend">
                 <span><i style={{ background: "#cfa453" }} /> Periodic — lockable</span>
@@ -552,28 +538,6 @@ export default function Home() {
 » npm run build && npm run dev        `}<span className="d"># edit the site locally</span>
             </pre>
           </div>
-          <div className="res-method reveal">
-            <div className="method-step">
-              <div className="mi">01 · SEED</div>
-              <h5>Deterministic by construction</h5>
-              <p>Scenarios are defined by seed — rerunning a benchmark reproduces bit-identical JSON outputs.</p>
-            </div>
-            <div className="method-step">
-              <div className="mi">02 · GATE</div>
-              <h5>KPPs before score</h5>
-              <p>Schedulers must pass every Key Performance Parameter simultaneously before any ranking counts.</p>
-            </div>
-            <div className="method-step">
-              <div className="mi">03 · STATISTICS</div>
-              <h5>Significance, not vibes</h5>
-              <p>200-episode Monte Carlo, paired permutation tests, Holm correction across seven comparators.</p>
-            </div>
-            <div className="method-step">
-              <div className="mi">04 · AUDIT</div>
-              <h5>Negative results kept</h5>
-              <p>The DQN that lost under sparse reward stays in the report — with the reason it lost.</p>
-            </div>
-          </div>
         </div>
       </section>
 
@@ -649,16 +613,6 @@ export default function Home() {
                 hardware on-ramp exists — a fixed-point C++ policy kernel and a UDP PDW
                 stream interface — but the prototype validates in software so results
                 are exactly reproducible.
-              </div>
-            </details>
-            <details>
-              <summary>Is the desktop app the same as the web console?</summary>
-              <div className="faq-a">
-                Yes. The Windows installer wraps the same React console in a WebView2
-                shell with the Python engine running locally — offline, no server, plus{" "}
-                <i>Tools → Diagnostics</i> self-tests. The{" "}
-                <a href="/console.html">browser console</a> is the zero-install way to
-                demo it.
               </div>
             </details>
             <details>

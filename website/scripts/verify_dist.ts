@@ -25,12 +25,12 @@ const MUST: [string, string[]][] = [
 
 /**
  * Hooks shared by more than one page get hoisted by Rollup into a common
- * chunk, so they must be searched across *all* bundles rather than one page.
+ * chunk, and which chunk that is changes as pages gain/lose shared imports
+ * (e.g. PageWipe became landing-only), so search *all* bundles rather than
+ * hardcoding one — the guard is "the copy survived the build", not "it sits
+ * in styles-*.js".
  */
-const SHARED: [string, string[]][] = [
-  [findAsset("styles-"), ["sec-dots", "Page sections"]],
-];
-MUST.push(...SHARED);
+const SHARED = ["sec-dots", "Page sections"];
 
 let failed = 0;
 
@@ -43,6 +43,22 @@ for (const [file, needles] of MUST) {
     console.log(`FAIL ${name}  missing: ${missing.join(", ")}`);
   } else {
     console.log(`ok   ${name}  (${needles.length} hooks)`);
+  }
+}
+
+const bundles = readdirSync(ASSETS)
+  .filter((f) => f.endsWith(".js"))
+  .map((f) => join(ASSETS, f));
+const bundleText = new Map(bundles.map((b) => [b, readFileSync(b, "utf8")]));
+
+for (const needle of SHARED) {
+  const hit = [...bundleText.values()].find((t) => t.includes(needle));
+  if (!hit) {
+    failed++;
+    console.log(`FAIL shared hook "${needle}" missing from every bundle`);
+  } else {
+    const name = [...bundleText].find(([, t]) => t === hit)![0].split(/[\\/]/).pop();
+    console.log(`ok   shared hook "${needle}" in ${name}`);
   }
 }
 

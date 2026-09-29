@@ -73,6 +73,7 @@ website/documentation.html
 # generated esbuild bundles only — the *.ts sources and _bundle.cjs are
 # hand-written and must stay tracked (npm run probe / smoke / docs:check)
 website/scripts/_docs_check.cjs
+website/scripts/_metric_audit.cjs
 website/scripts/_page_smoke.cjs
 website/scripts/_pred_probe.cjs
 website/scripts/_smoke.cjs

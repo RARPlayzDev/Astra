@@ -1,6 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Logo, ThemeToggle } from "../shared";
-import { PageWipe } from "../components/Fx";
 import {
   DEFAULT_SCENARIO, ESReceiver, RFEnvironment, mulberry32,
   type Scenario,
@@ -743,7 +742,6 @@ export default function Console() {
 
   return (
     <>
-      <PageWipe />
       <h1 className="sr-only">ASTRA — live console (prototype)</h1>
       <div className="doc-topbar">
         <div className="wrap" style={{ display: "flex", alignItems: "center",

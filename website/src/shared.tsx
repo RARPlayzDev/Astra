@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from "react";
-import { PageWipe } from "./components/Fx";
 import BAKED_RESULTS from "./data/resultsData";
 
 type MeanCI = Record<string, number | null>;
@@ -146,7 +145,6 @@ export function Nav() {
       </div>
       <div className="nav-progress" style={{ width: progress + "%" }} />
       </nav>
-      <PageWipe />
     </>
   );
 }
