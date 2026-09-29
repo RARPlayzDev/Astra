@@ -130,7 +130,7 @@ export function Nav() {
         <a className="brand" href="/"><Logo /><span className="brand-name">ASTRA</span></a>
         <div className={"nav-links" + (open ? " open" : "")}>
           <a href="/#problem" onClick={() => setOpen(false)}>Problem</a>
-          <a href="/#how" onClick={() => setOpen(false)}>How it works</a>
+          <a href="/#walkthrough" onClick={() => setOpen(false)}>How it works</a>
           <a href="/results.html">Results</a>
           <a href="/console.html">Console</a>
           <a href="/documentation.html">Docs</a>
@@ -175,7 +175,7 @@ export function Footer() {
       </div>
       <div className="footer-col">
         <h4>Research</h4>
-        <a href="/#how">Methodology</a>
+        <a href="/#reproduce">Methodology</a>
         <a href="/#capabilities">Capabilities</a>
         <a href="/results.html#figures">Figures</a>
         <a href="/results.html#reproduce">Reproduce</a>

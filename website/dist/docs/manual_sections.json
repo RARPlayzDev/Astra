@@ -94,5 +94,29 @@
   {
     "id": "23-web-console-reference",
     "title": "23. Web console reference"
+  },
+  {
+    "id": "24-console-metrics-reference",
+    "title": "24. Console metrics reference"
+  },
+  {
+    "id": "25-metric-audit-harness",
+    "title": "25. Metric audit harness"
+  },
+  {
+    "id": "26-geolocation-and-cooperative-aoa-reference",
+    "title": "26. Geolocation and cooperative AOA reference"
+  },
+  {
+    "id": "27-emitter-identification-reference",
+    "title": "27. Emitter identification reference"
+  },
+  {
+    "id": "28-website-verification-gates",
+    "title": "28. Website verification gates"
+  },
+  {
+    "id": "29-performance-and-latency-reference",
+    "title": "29. Performance and latency reference"
   }
 ]

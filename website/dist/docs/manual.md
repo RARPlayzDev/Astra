@@ -31,6 +31,12 @@ Version 3.0.0 · SIH 2026 prototype · simulation-based research software, not o
 21. [Simulation fidelity reference](#21-simulation-fidelity-reference)
 22. [Desktop application reference](#22-desktop-application-reference)
 23. [Web console reference](#23-web-console-reference)
+24. [Console metrics reference](#24-console-metrics-reference)
+25. [Metric audit harness](#25-metric-audit-harness)
+26. [Geolocation and cooperative AOA reference](#26-geolocation-and-cooperative-aoa-reference)
+27. [Emitter identification reference](#27-emitter-identification-reference)
+28. [Website verification gates](#28-website-verification-gates)
+29. [Performance and latency reference](#29-performance-and-latency-reference)
 
 ---
 
@@ -763,8 +769,10 @@ intercepts. The scheduler event log classifies every line — **PROBE**
 retired), **SHIFT** (environment change), **DONE**, **INFO** — with live
 lock/drop/probe counters and a Clear button. Per-receiver KPI rows update
 every slot: threat coverage, intercepts, reward per dwell, hit rate, false
-alarms, mean and threat time-to-first-fix, prediction accuracy and phase
-locks held.
+alarms (count and per-1k rate), mean first-fix and censored threat TTFF,
+prediction accuracy and phase locks held - each comparable row marks the
+leading receiver in amber. Chapter 24 is the full metric contract, including
+when and why a baseline can lead a row; `npm run audit:metrics` guards it.
 
 ### 23.5 Learning Arena and Model Lab
 
@@ -777,3 +785,197 @@ sweep, random scan, UCB bandit, linear Q-learning — on the configured seed,
 and the verification table reports next-window prediction accuracy:
 SmartScan 96.9 %, linear Q 96.4 %, UCB 95.5 %, sequential sweep 54.1 %,
 random scan 50.2 %.
+
+---
+
+## 24. Console metrics reference
+
+The web console's Live Mission KPI cards update every slot. This chapter is
+the contract for each row: what is measured, over what denominator, and which
+direction is better. Both receivers run in one twin-battlefield mission: the
+same emitters, the same slot clock, only the scan policy differs (Receiver A
+is SmartScan, Receiver B is the selected baseline). Each side's receiver noise
+realisation comes from its own derived seed (`seed*7+11` for A, `seed*13+29`
+for B), so detection luck is independent but statistically identical.
+
+### 24.1 Row definitions
+
+| Row | Definition | Better |
+|---|---|---|
+| Threat coverage | distinct threat emitters ever intercepted / total threats | higher |
+| Threats intercepted | the same quantity in absolute form (found of total) | higher |
+| All-emitter intercept ratio | distinct emitters ever intercepted / all emitters (clutter included) | higher |
+| Reward per dwell | sum of per-dwell rewards / (slots x receivers). Dwell rewards: threat hit +1.00, clutter hit +0.15, empty -0.05, false alarm -0.08 | higher |
+| Hit rate | slots with at least one clean intercept / slots | higher |
+| False alarms | count, plus rate per 1000 slots, of dwells that raised a false alarm | lower |
+| Mean TTFF (first fix) | mean over emitters *found* of the slot of their first interception - parity with `ewsmart.metrics.mean_time_to_first_intercept` | lower |
+| Threat TTFF (censored) | the same first-fix mean over *every* threat: a threat not yet fixed costs the full horizon T - parity with `ewsmart.metrics.threat_ttff_censored` | lower |
+| Prediction accuracy | fraction of dwells where `predict(t, band)` equals the chosen band's ground truth; the context row shows how often that band was truly ON | higher |
+| Phase locks held | validated periodic locks held by *this side's* scheduler | n/a (SmartScan only) |
+
+Two defects used to distort this card and are now fixed and guarded by the
+audit harness (chapter 25): the opponent's card displayed Receiver A's lock
+count, and "Mean TTFF" averaged *every* clean-hit slot - a value that drifts
+toward T/2 and made every baseline look faster in 16 of 16 audit runs.
+
+### 24.2 When a baseline leads a row - and why it is honest
+
+The audit (4 seeds x 4 baselines, full 3000-slot missions) found the
+remaining opponent leads are small, rare and explainable:
+
+| Row | Where the baseline leads | Why it is real |
+|---|---|---|
+| Reward / hit rate / prediction (UCB) | 3 of 16 runs (e.g. seed 4242: 0.949 vs 0.935 reward) | UCB is exploit-only: it camps on the richest band and never spends slots surveying. SmartScan's reconnaissance and probe dwells are deliberate one-slot costs. Where camping happens to be enough, UCB edges those rows - then its threat coverage collapses (0.527-0.857 on the seeds that matter; the "exploit trap" demo, preset 3) |
+| Mean TTFF over found emitters | 3 of 16 runs, by 1-10 slots | Survivorship: the baseline only counts emitters it managed to find - misses drop out of the mean. Read it together with coverage; Threat TTFF (censored) charges misses the full horizon |
+| All-emitter intercept ratio | 2 of 16 runs (seed 31337 vs sweep/random) | SmartScan deprioritises valueless clutter under the reward model while a blind sweep eventually visits every band. Threat coverage - the KPP that matters - stays at 100 % for A in those runs |
+| Threat TTFF (censored), early mission | 3 of 16 runs, by 1-10 slots | A blind sweep's first revolution gives every band one visit within `n_bands` slots, while SmartScan pays a ~10-slot cold-start survey. The lead never survives to coverage, reward or prediction |
+
+**Reading rule.** No single row decides the comparison - the KPP gate does
+(coverage >= 0.90, prediction >= 0.50, false alarms <= 5e-4/slot). The
+flagship A/B (seed 4242, sequential) shows the shape: SmartScan 100 %
+coverage, 0.935 reward/dwell, 96.2 % hit rate, 97.9 % prediction accuracy,
+versus the sweep's 85.7 %, 0.142, 45.1 % and 54.1 %. The two cards mark the
+leader of each comparable row in amber; ties stay neutral.
+
+---
+
+## 25. Metric audit harness
+
+`npm run audit:metrics` (from `website/`) is the regression check for
+chapter 24's contract. It replays the console's exact KPI pipeline headless -
+four seeds (4242, 777, 999, 31337) x four baselines (sequential, random, UCB,
+linear Q), full 3000-slot missions, twin battlefields - and then:
+
+1. asserts every displayed figure is in range (coverage, hit rate and
+   prediction within [0,1]; first-fix TTFF inside the horizon);
+2. asserts the side-specific lock rule: a baseline side can never report a
+   non-zero phase-lock count;
+3. prints a per-run A/B table - coverage, hit rate, reward, false alarms,
+   prediction, both TTFF forms (old and fixed semantics), lock counts;
+4. prints the "where the opponent beats SmartScan" tally quoted in 24.2.
+
+The script exits non-zero on any invariant failure, so it can be chained
+after `npm run check` in CI. Related probes:
+
+| Command | What it measures |
+|---|---|
+| `npm run probe` | prediction accuracy exactly as the console scores it: SmartScan 96.9 %, linear Q 96.4 %, UCB 95.5 %, sequential 54.1 %, random 50.2 % (seed 4242) |
+| `npm run audit:metrics` | KPI invariants + opponent-leads report (this chapter) |
+| `npm run smoke` | render-time page assertions (chapter 28) |
+
+---
+
+## 26. Geolocation and cooperative AOA reference
+
+**What it does.** Converts angle-of-arrival bearings from cooperating
+receivers into emitter ground positions and reports error the way defence
+T&E does - CEP percentiles, not anecdotes.
+
+**How it works.** The solver (`website/src/engine/geo.ts`, a direct port of
+`ewsmart/geo.py`) takes bearing lines from known node positions, computes a
+least-squares fix refined by Gauss-Newton iterations (`triangulate`), then
+reports mean, CEP50 and CEP90 error (`cepStats`). Bearings are degrees from
+east, 0-360, in both implementations - a parity contract. Node geometry comes
+from `receiverRing(3, 50)`: the primary receiver at the origin and two
+cooperating nodes on a 50 km ring, the same geometry `GET /api/geolocation`
+builds. Modelled cooperating bearings carry a CRLB-style sigma = 2.0 deg,
+mirroring `ewsmart.geo.simulate_bearings(..., 2.0, rng)`.
+
+**Console panel semantics.** The Live Mission geolocation panel localises
+every stream Receiver A actually intercepted:
+
+1. node 0 carries the receiver's *measured* AOA - the circular mean of the
+   intercepted pulses' bearings, a real measurement;
+2. nodes 1-2 carry the 2 deg bearing model at their baselines (a single
+   receiver cannot observe the other nodes' AOAs - the panel says so);
+3. ground truth is used only for scoring: per-row error plus the mean / CEP50
+   / CEP90 readout. It is never an input to the solver.
+
+**Measured.** Headless sanity at seed 4242, default scene: every intercepted
+stream localised with no NaN - mean error 2.17 km, CEP50 2.06 km, CEP90
+4.56 km. Bearing diversity is what tightens the fix: adding receivers moves
+median CEP from 3.2 km (two nodes) to 1.7 km (three), the figure quoted on
+the landing page.
+
+**How to read the panel.** Hollow amber markers are ground truth, filled red
+are triangulated estimates, the grey ring is the receiver network, and each
+line from node 0 is a measured bearing. Rows sort by error; a large residual
+on one stream means poor geometry for that bearing, not a solver fault.
+
+---
+
+## 27. Emitter identification reference
+
+**What it does.** After three or more intercepts of one stream, match its
+measured fingerprint against the emitter library and score the call with a
+confidence the operator can audit.
+
+**How it works** (console `website/src/engine/library.ts`, parity with
+`ewsmart/identification.py`):
+
+1. *Measurement.* Each stream's centre frequency and pulse width are observed
+   through the receiver chain: a per-emitter systematic bias scaled by signal
+   quality, so the fingerprint is what the receiver could measure - never the
+   emitter's true parameters. The board's Measured column shows the observed
+   MHz / us / SNR values directly.
+2. *Gate.* Library entries whose frequency range excludes the measured centre
+   frequency (5 % band tolerance) are eliminated outright.
+3. *Grade.* The best remaining entry scores `(2 + pwFit + scanFit) / 4` -
+   frequency is implicitly full weight after the gate, pulse width and scan
+   rhythm contribute graded fits that decay linearly one range-width outside
+   the library range. Confidence is therefore in [0.5, 1.0]; a perfect 1.00
+   only appears when every measured feature sits inside the range.
+4. *Rank.* The board sorts by threat rank, then confidence; ground truth is
+   shown only to score the call (MATCH / MISS columns).
+
+**Library.** Ten ELINT radar classes in the browser console: SNOW DRIFT,
+FLAT FACE, POP GROUP, FLAP LID-A, SQUARE PAIR, BIG BACK, CROSS SLOT, HALF
+PLATE, TIN SHIELD, LONG TRACK - each with frequency, pulse-width and (where
+applicable) scan-period ranges plus a HIGH / MEDIUM / LOW threat level. The
+Python library adds two COMINT profiles (RADIO SET-FH, TDM NET) that are
+reached through the signal-class stage, never by generic fingerprint scoring.
+
+**Measured.** Seed-4242 sanity run: confidences graded across 0.95-1.00 with
+a MISS row present - the board is a measurement, not a rubber stamp.
+Overlapping classes (TIN SHIELD vs SNOW DRIFT share S-band) can legitimately
+swap on a weak stream; the ground-truth column exists precisely so the call
+can be audited.
+
+---
+
+## 28. Website verification gates
+
+The site ships self-checking; run everything from `website/`:
+
+| Command | Asserts |
+|---|---|
+| `npm run check` | the full gate: docs:check + smoke + build + verify:dist |
+| `npm run docs:check` | every manual section derives and renders (> 200 chars, anchors resolve), at least 20 sections, no mojibake |
+| `npm run smoke` | server-renders all four pages; required headline strings present; unique ids; every `#anchor` resolves; one `<h1>` per page |
+| `npm run build` | production build into `dist/` |
+| `npm run verify:dist` | every hashed asset referenced by the four HTML entries resolves; shared CSS carries required markers |
+| `npm run probe` | prediction-accuracy probe under console scoring rules |
+| `npm run audit:metrics` | KPI invariants + opponent-leads report (chapter 25) |
+| `npx tsc --noEmit` | type safety across engine, pages and scripts |
+
+Python side: `python -m pytest tests -q` (306 tests). The full verification
+ladder, including the engine parity bundle, is in `HOW_TO_TEST.md`.
+
+---
+
+## 29. Performance and latency reference
+
+| Claim | Evidence |
+|---|---|
+| Per-decision latency under 1 ms for every scheduler | `tests/test_performance.py::test_scheduler_decision_under_1ms[...]` - parametrised once per policy: bandit-ucb, openloop-priority, openloop-random, openloop-sequential, rl-dqn, rl-linear-q, smart-scan |
+| Measured decision cost 0.5-0.9 ms per dwell on the benchmark host | `results/performance.json` (platform stamped into the artifact) |
+| Fixed-point kernel matches the float policy | `ewsmart.realtime.PolicyKernel` in Q8.8; `tests/test_realtime_kernel.py` asserts bit-for-bit agreement at the kernel's quantisation granularity; `tools/export_cpp_kernel` emits the same arithmetic as compilable C++ |
+| Full-episode wall clock stays sane | `tests/test_performance.py::test_full_episode_wall_clock_sane` |
+| Browser engine stays honest | the TypeScript port runs the same scenario engine; `npm run probe` and the page smoke gate keep behaviour aligned |
+
+Simulation slots are discrete and seed-defined, so the console's speed knob
+changes only how fast slots are *played*, never the result: the same seed
+reproduces the same mission, frame for frame, on any machine.
+
+
+

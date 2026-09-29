@@ -1,4 +1,4 @@
-import{r as c,j as e,P as _,L as R,S,D as P,T as E,c as D}from"./styles-DQ5I_A9Z.js";const x=`<p>\uFEFF# ASTRA — Software Documentation</p>
+import{r as c,j as e,P as _,L as R,S,D as P,T as E,c as C}from"./styles-6anyxSqt.js";const T=`<p>\uFEFF# ASTRA — Software Documentation</p>
 <p><strong>ASTRA — Adaptive Spectrum Threat Recognition &amp; Analysis</strong></p>
 <p>Adaptive scan scheduling for Electronic Support receivers.</p>
 <p>Version 3.0.0 · SIH 2026 prototype · simulation-based research software, not operational equipment.</p>
@@ -28,6 +28,12 @@ import{r as c,j as e,P as _,L as R,S,D as P,T as E,c as D}from"./styles-DQ5I_A9Z
 <li><a href="#21-simulation-fidelity-reference">Simulation fidelity reference</a></li>
 <li><a href="#22-desktop-application-reference">Desktop application reference</a></li>
 <li><a href="#23-web-console-reference">Web console reference</a></li>
+<li><a href="#24-console-metrics-reference">Console metrics reference</a></li>
+<li><a href="#25-metric-audit-harness">Metric audit harness</a></li>
+<li><a href="#26-geolocation-and-cooperative-aoa-reference">Geolocation and cooperative AOA reference</a></li>
+<li><a href="#27-emitter-identification-reference">Emitter identification reference</a></li>
+<li><a href="#28-website-verification-gates">Website verification gates</a></li>
+<li><a href="#29-performance-and-latency-reference">Performance and latency reference</a></li>
 </ol>
 <hr />
 <h2 id="1-introduction">1. Introduction</h2>
@@ -623,8 +629,10 @@ docs/                 this document</code></pre>
 <p>retired), <strong>SHIFT</strong> (environment change), <strong>DONE</strong>, <strong>INFO</strong> — with live</p>
 <p>lock/drop/probe counters and a Clear button. Per-receiver KPI rows update</p>
 <p>every slot: threat coverage, intercepts, reward per dwell, hit rate, false</p>
-<p>alarms, mean and threat time-to-first-fix, prediction accuracy and phase</p>
-<p>locks held.</p>
+<p>alarms (count and per-1k rate), mean first-fix and censored threat TTFF,</p>
+<p>prediction accuracy and phase locks held - each comparable row marks the</p>
+<p>leading receiver in amber. Chapter 24 is the full metric contract, including</p>
+<p>when and why a baseline can lead a row; <code>npm run audit:metrics</code> guards it.</p>
 <h3 id="23-5-learning-arena-and-model-lab">23.5 Learning Arena and Model Lab</h3>
 <p><strong>Train 5 / Train 10 episodes</strong> runs full missions back-to-back on fresh</p>
 <p>seeds while the SmartScan learner keeps its consolidated band-value memory</p>
@@ -634,4 +642,182 @@ docs/                 this document</code></pre>
 <p>sweep, random scan, UCB bandit, linear Q-learning — on the configured seed,</p>
 <p>and the verification table reports next-window prediction accuracy:</p>
 <p>SmartScan 96.9 %, linear Q 96.4 %, UCB 95.5 %, sequential sweep 54.1 %,</p>
-<p>random scan 50.2 %.</p>`;function N(t){const o=[],n=/<h2[^>]*\bid="([^"]+)"[^>]*>([\s\S]*?)<\/h2>/g;let a;for(;(a=n.exec(t))!==null;){const p=a[1];if(p==="contents")continue;const l=a[2].replace(/<[^>]*>/g,"").replace(/&amp;/g,"&").trim(),h=(l.match(/^(\d+)\./)??[])[1]??"",u=l.replace(/^\d+\.\s*/,"");o.push({id:p,num:h,title:u})}return o}function A(t,o){const n=t.indexOf("<h2",o+4),a=n===-1?t.length:n;return t.slice(o,a).replace(/<hr\s*\/?>/g,"").trim()}function O(t,o){const n=t.indexOf(`<h2 id="${o}"`);if(n===-1){const a=t.indexOf(`id="${o}"`);if(a===-1)return"<p>Section not found — regenerate docs with <code>python -m tools.export_docs</code>.</p>";const p=t.lastIndexOf("<h2",a);return A(t,p===-1?a:p)}return A(t,n)}function C(){const t=c.useMemo(()=>N(x),[]),[o,n]=c.useState(0),[a,p]=c.useState(""),[l,h]=c.useState(!1),u=c.useRef(null),b=c.useMemo(()=>{const r=a.trim().toLowerCase();return r?t.map((s,i)=>({s,i})).filter(({s})=>s.title.toLowerCase().includes(r)||s.num.includes(r)):t.map((s,i)=>({s,i}))},[t,a]);c.useEffect(()=>{const r=decodeURIComponent(window.location.hash.replace(/^#/,""));if(!r)return;const s=t.findIndex(i=>i.id===r);s>=0&&n(s)},[t]),c.useEffect(()=>{window.scrollTo(0,0);const r=t[o];r&&(history.replaceState(null,"","#"+r.id),document.title=`${r.num?r.num+". ":""}${r.title} — ASTRA Docs`);const s=u.current;s&&s.querySelectorAll("pre").forEach(i=>{if(i.querySelector(".code-copy"))return;const d=document.createElement("button");d.className="code-copy",d.type="button",d.textContent="copy",d.addEventListener("click",()=>{var w,v;const k=((w=i.querySelector("code"))==null?void 0:w.textContent)??i.textContent??"";(v=navigator.clipboard)==null||v.writeText(k).then(()=>{d.textContent="copied ✓",setTimeout(()=>d.textContent="copy",1400)}).catch(()=>d.textContent="Ctrl+C")}),i.appendChild(d)})},[o,t]),c.useEffect(()=>{const r=s=>{var d;const i=(d=s.target)==null?void 0:d.tagName;i==="INPUT"||i==="TEXTAREA"||(s.key==="ArrowRight"&&o<t.length-1&&n(o+1),s.key==="ArrowLeft"&&o>0&&n(o-1))};return window.addEventListener("keydown",r),()=>window.removeEventListener("keydown",r)},[o,t.length]);const y=t[o],T=y?O(x,y.id):"",m=t[o-1],g=t[o+1],f=r=>{n(r),h(!1)};return e.jsxs("div",{className:"docs-page",children:[e.jsx(_,{}),e.jsx("header",{className:"doc-topbar",children:e.jsxs("div",{className:"doc-topbar-inner",children:[e.jsx("a",{href:"/","aria-label":"ASTRA home",children:e.jsx(R,{size:24})}),e.jsx("a",{href:"/",className:"brand-txt",children:"ASTRA"}),e.jsxs("span",{className:"crumb",children:["/ ",e.jsx("b",{children:"Documentation"})]}),e.jsx("span",{className:"doc-ver",children:S}),e.jsxs("div",{className:"doc-actions",children:[e.jsx("button",{className:"doc-mobile-toc",type:"button",onClick:()=>h(!l),children:"☰ Contents"}),e.jsx("a",{className:"btn ghost",href:"/docs/manual.md",download:!0,children:"Download .md"}),e.jsx("a",{className:"btn ghost",href:P,download:!0,children:"Get the app"}),e.jsx(E,{}),e.jsx("a",{className:"btn primary",href:"/",children:"Back to site"})]})]})}),e.jsxs("div",{className:"doc-body",children:[e.jsxs("aside",{className:"doc-sidebar"+(l?" open":""),children:[e.jsx("h3",{children:"Table of Contents"}),e.jsx("div",{className:"dsearch",children:e.jsx("input",{type:"search",placeholder:"Filter sections…",value:a,onChange:r=>p(r.target.value),"aria-label":"Filter documentation sections"})}),e.jsxs("nav",{children:[b.map(({s:r,i:s})=>e.jsxs("button",{className:s===o?"on":"",onClick:()=>f(s),type:"button",children:[e.jsx("span",{className:"n",children:r.num||"·"}),e.jsx("span",{children:r.title})]},r.id)),b.length===0&&e.jsxs("div",{className:"no-res",children:["No section matches “",a,"”."]})]})]}),e.jsxs("main",{className:"docpage",children:[e.jsx("h1",{className:"doc-h1",children:"ASTRA · Software Manual"}),e.jsxs("p",{className:"doc-lede",children:["The single source of truth for ASTRA — generated from"," ",e.jsx("code",{children:"docs/ASTRA_Software_Documentation.md"})," and served identically by this site and by the desktop application."]}),e.jsxs("div",{className:"doc-meta",children:[e.jsx("span",{children:S}),e.jsxs("span",{children:[t.length," sections"]}),e.jsx("span",{children:"← → to page"})]}),e.jsx("div",{className:"doc-content",ref:u,dangerouslySetInnerHTML:{__html:T}}),e.jsxs("div",{className:"doc-pager",children:[m?e.jsxs("button",{onClick:()=>f(o-1),type:"button",children:[e.jsx("span",{className:"dir",children:"← Previous"}),m.num,". ",m.title]}):e.jsx("span",{}),g?e.jsxs("button",{className:"next",onClick:()=>f(o+1),type:"button",children:[e.jsx("span",{className:"dir",children:"Next →"}),g.num,". ",g.title]}):e.jsx("span",{})]})]})]})]})}D(document.getElementById("root")).render(e.jsx(c.StrictMode,{children:e.jsx(C,{})}));
+<p>random scan 50.2 %.</p>
+<hr />
+<h2 id="24-console-metrics-reference">24. Console metrics reference</h2>
+<p>The web console's Live Mission KPI cards update every slot. This chapter is</p>
+<p>the contract for each row: what is measured, over what denominator, and which</p>
+<p>direction is better. Both receivers run in one twin-battlefield mission: the</p>
+<p>same emitters, the same slot clock, only the scan policy differs (Receiver A</p>
+<p>is SmartScan, Receiver B is the selected baseline). Each side's receiver noise</p>
+<p>realisation comes from its own derived seed (<code>seed<em>7+11</code> for A, <code>seed</em>13+29</code></p>
+<p>for B), so detection luck is independent but statistically identical.</p>
+<h3 id="24-1-row-definitions">24.1 Row definitions</h3>
+<table>
+<tr><th>Row</th><th>Definition</th><th>Better</th></tr>
+<tr><td>Threat coverage</td><td>distinct threat emitters ever intercepted / total threats</td><td>higher</td></tr>
+<tr><td>Threats intercepted</td><td>the same quantity in absolute form (found of total)</td><td>higher</td></tr>
+<tr><td>All-emitter intercept ratio</td><td>distinct emitters ever intercepted / all emitters (clutter included)</td><td>higher</td></tr>
+<tr><td>Reward per dwell</td><td>sum of per-dwell rewards / (slots x receivers). Dwell rewards: threat hit +1.00, clutter hit +0.15, empty -0.05, false alarm -0.08</td><td>higher</td></tr>
+<tr><td>Hit rate</td><td>slots with at least one clean intercept / slots</td><td>higher</td></tr>
+<tr><td>False alarms</td><td>count, plus rate per 1000 slots, of dwells that raised a false alarm</td><td>lower</td></tr>
+<tr><td>Mean TTFF (first fix)</td><td>mean over emitters <em>found</em> of the slot of their first interception - parity with <code>ewsmart.metrics.mean_time_to_first_intercept</code></td><td>lower</td></tr>
+<tr><td>Threat TTFF (censored)</td><td>the same first-fix mean over <em>every</em> threat: a threat not yet fixed costs the full horizon T - parity with <code>ewsmart.metrics.threat_ttff_censored</code></td><td>lower</td></tr>
+<tr><td>Prediction accuracy</td><td>fraction of dwells where <code>predict(t, band)</code> equals the chosen band's ground truth; the context row shows how often that band was truly ON</td><td>higher</td></tr>
+<tr><td>Phase locks held</td><td>validated periodic locks held by <em>this side's</em> scheduler</td><td>n/a (SmartScan only)</td></tr>
+</table>
+<p>Two defects used to distort this card and are now fixed and guarded by the</p>
+<p>audit harness (chapter 25): the opponent's card displayed Receiver A's lock</p>
+<p>count, and "Mean TTFF" averaged <em>every</em> clean-hit slot - a value that drifts</p>
+<p>toward T/2 and made every baseline look faster in 16 of 16 audit runs.</p>
+<h3 id="24-2-when-a-baseline-leads-a-row-and-why-it-is-honest">24.2 When a baseline leads a row - and why it is honest</h3>
+<p>The audit (4 seeds x 4 baselines, full 3000-slot missions) found the</p>
+<p>remaining opponent leads are small, rare and explainable:</p>
+<table>
+<tr><th>Row</th><th>Where the baseline leads</th><th>Why it is real</th></tr>
+<tr><td>Reward / hit rate / prediction (UCB)</td><td>3 of 16 runs (e.g. seed 4242: 0.949 vs 0.935 reward)</td><td>UCB is exploit-only: it camps on the richest band and never spends slots surveying. SmartScan's reconnaissance and probe dwells are deliberate one-slot costs. Where camping happens to be enough, UCB edges those rows - then its threat coverage collapses (0.527-0.857 on the seeds that matter; the "exploit trap" demo, preset 3)</td></tr>
+<tr><td>Mean TTFF over found emitters</td><td>3 of 16 runs, by 1-10 slots</td><td>Survivorship: the baseline only counts emitters it managed to find - misses drop out of the mean. Read it together with coverage; Threat TTFF (censored) charges misses the full horizon</td></tr>
+<tr><td>All-emitter intercept ratio</td><td>2 of 16 runs (seed 31337 vs sweep/random)</td><td>SmartScan deprioritises valueless clutter under the reward model while a blind sweep eventually visits every band. Threat coverage - the KPP that matters - stays at 100 % for A in those runs</td></tr>
+<tr><td>Threat TTFF (censored), early mission</td><td>3 of 16 runs, by 1-10 slots</td><td>A blind sweep's first revolution gives every band one visit within <code>n_bands</code> slots, while SmartScan pays a ~10-slot cold-start survey. The lead never survives to coverage, reward or prediction</td></tr>
+</table>
+<p><strong>Reading rule.</strong> No single row decides the comparison - the KPP gate does</p>
+<p>(coverage &gt;= 0.90, prediction &gt;= 0.50, false alarms &lt;= 5e-4/slot). The</p>
+<p>flagship A/B (seed 4242, sequential) shows the shape: SmartScan 100 %</p>
+<p>coverage, 0.935 reward/dwell, 96.2 % hit rate, 97.9 % prediction accuracy,</p>
+<p>versus the sweep's 85.7 %, 0.142, 45.1 % and 54.1 %. The two cards mark the</p>
+<p>leader of each comparable row in amber; ties stay neutral.</p>
+<hr />
+<h2 id="25-metric-audit-harness">25. Metric audit harness</h2>
+<p><code>npm run audit:metrics</code> (from <code>website/</code>) is the regression check for</p>
+<p>chapter 24's contract. It replays the console's exact KPI pipeline headless -</p>
+<p>four seeds (4242, 777, 999, 31337) x four baselines (sequential, random, UCB,</p>
+<p>linear Q), full 3000-slot missions, twin battlefields - and then:</p>
+<ol>
+<li>asserts every displayed figure is in range (coverage, hit rate and</li>
+</ol>
+<p>prediction within [0,1]; first-fix TTFF inside the horizon);</p>
+<ol>
+<li>asserts the side-specific lock rule: a baseline side can never report a</li>
+</ol>
+<p>non-zero phase-lock count;</p>
+<ol>
+<li>prints a per-run A/B table - coverage, hit rate, reward, false alarms,</li>
+</ol>
+<p>prediction, both TTFF forms (old and fixed semantics), lock counts;</p>
+<ol>
+<li>prints the "where the opponent beats SmartScan" tally quoted in 24.2.</li>
+</ol>
+<p>The script exits non-zero on any invariant failure, so it can be chained</p>
+<p>after <code>npm run check</code> in CI. Related probes:</p>
+<table>
+<tr><th>Command</th><th>What it measures</th></tr>
+<tr><td><code>npm run probe</code></td><td>prediction accuracy exactly as the console scores it: SmartScan 96.9 %, linear Q 96.4 %, UCB 95.5 %, sequential 54.1 %, random 50.2 % (seed 4242)</td></tr>
+<tr><td><code>npm run audit:metrics</code></td><td>KPI invariants + opponent-leads report (this chapter)</td></tr>
+<tr><td><code>npm run smoke</code></td><td>render-time page assertions (chapter 28)</td></tr>
+</table>
+<hr />
+<h2 id="26-geolocation-and-cooperative-aoa-reference">26. Geolocation and cooperative AOA reference</h2>
+<p><strong>What it does.</strong> Converts angle-of-arrival bearings from cooperating</p>
+<p>receivers into emitter ground positions and reports error the way defence</p>
+<p>T&amp;E does - CEP percentiles, not anecdotes.</p>
+<p><strong>How it works.</strong> The solver (<code>website/src/engine/geo.ts</code>, a direct port of</p>
+<p><code>ewsmart/geo.py</code>) takes bearing lines from known node positions, computes a</p>
+<p>least-squares fix refined by Gauss-Newton iterations (<code>triangulate</code>), then</p>
+<p>reports mean, CEP50 and CEP90 error (<code>cepStats</code>). Bearings are degrees from</p>
+<p>east, 0-360, in both implementations - a parity contract. Node geometry comes</p>
+<p>from <code>receiverRing(3, 50)</code>: the primary receiver at the origin and two</p>
+<p>cooperating nodes on a 50 km ring, the same geometry <code>GET /api/geolocation</code></p>
+<p>builds. Modelled cooperating bearings carry a CRLB-style sigma = 2.0 deg,</p>
+<p>mirroring <code>ewsmart.geo.simulate_bearings(..., 2.0, rng)</code>.</p>
+<p><strong>Console panel semantics.</strong> The Live Mission geolocation panel localises</p>
+<p>every stream Receiver A actually intercepted:</p>
+<ol>
+<li>node 0 carries the receiver's <em>measured</em> AOA - the circular mean of the</li>
+</ol>
+<p>intercepted pulses' bearings, a real measurement;</p>
+<ol>
+<li>nodes 1-2 carry the 2 deg bearing model at their baselines (a single</li>
+</ol>
+<p>receiver cannot observe the other nodes' AOAs - the panel says so);</p>
+<ol>
+<li>ground truth is used only for scoring: per-row error plus the mean / CEP50</li>
+</ol>
+<p>/ CEP90 readout. It is never an input to the solver.</p>
+<p><strong>Measured.</strong> Headless sanity at seed 4242, default scene: every intercepted</p>
+<p>stream localised with no NaN - mean error 2.17 km, CEP50 2.06 km, CEP90</p>
+<p>4.56 km. Bearing diversity is what tightens the fix: adding receivers moves</p>
+<p>median CEP from 3.2 km (two nodes) to 1.7 km (three), the figure quoted on</p>
+<p>the landing page.</p>
+<p><strong>How to read the panel.</strong> Hollow amber markers are ground truth, filled red</p>
+<p>are triangulated estimates, the grey ring is the receiver network, and each</p>
+<p>line from node 0 is a measured bearing. Rows sort by error; a large residual</p>
+<p>on one stream means poor geometry for that bearing, not a solver fault.</p>
+<hr />
+<h2 id="27-emitter-identification-reference">27. Emitter identification reference</h2>
+<p><strong>What it does.</strong> After three or more intercepts of one stream, match its</p>
+<p>measured fingerprint against the emitter library and score the call with a</p>
+<p>confidence the operator can audit.</p>
+<p><strong>How it works</strong> (console <code>website/src/engine/library.ts</code>, parity with</p>
+<p><code>ewsmart/identification.py</code>):</p>
+<ol>
+<li><em>Measurement.</em> Each stream's centre frequency and pulse width are observed</li>
+</ol>
+<p>through the receiver chain: a per-emitter systematic bias scaled by signal</p>
+<p>quality, so the fingerprint is what the receiver could measure - never the</p>
+<p>emitter's true parameters. The board's Measured column shows the observed</p>
+<p>MHz / us / SNR values directly.</p>
+<ol>
+<li><em>Gate.</em> Library entries whose frequency range excludes the measured centre</li>
+</ol>
+<p>frequency (5 % band tolerance) are eliminated outright.</p>
+<ol>
+<li><em>Grade.</em> The best remaining entry scores <code>(2 + pwFit + scanFit) / 4</code> -</li>
+</ol>
+<p>frequency is implicitly full weight after the gate, pulse width and scan</p>
+<p>rhythm contribute graded fits that decay linearly one range-width outside</p>
+<p>the library range. Confidence is therefore in [0.5, 1.0]; a perfect 1.00</p>
+<p>only appears when every measured feature sits inside the range.</p>
+<ol>
+<li><em>Rank.</em> The board sorts by threat rank, then confidence; ground truth is</li>
+</ol>
+<p>shown only to score the call (MATCH / MISS columns).</p>
+<p><strong>Library.</strong> Ten ELINT radar classes in the browser console: SNOW DRIFT,</p>
+<p>FLAT FACE, POP GROUP, FLAP LID-A, SQUARE PAIR, BIG BACK, CROSS SLOT, HALF</p>
+<p>PLATE, TIN SHIELD, LONG TRACK - each with frequency, pulse-width and (where</p>
+<p>applicable) scan-period ranges plus a HIGH / MEDIUM / LOW threat level. The</p>
+<p>Python library adds two COMINT profiles (RADIO SET-FH, TDM NET) that are</p>
+<p>reached through the signal-class stage, never by generic fingerprint scoring.</p>
+<p><strong>Measured.</strong> Seed-4242 sanity run: confidences graded across 0.95-1.00 with</p>
+<p>a MISS row present - the board is a measurement, not a rubber stamp.</p>
+<p>Overlapping classes (TIN SHIELD vs SNOW DRIFT share S-band) can legitimately</p>
+<p>swap on a weak stream; the ground-truth column exists precisely so the call</p>
+<p>can be audited.</p>
+<hr />
+<h2 id="28-website-verification-gates">28. Website verification gates</h2>
+<p>The site ships self-checking; run everything from <code>website/</code>:</p>
+<table>
+<tr><th>Command</th><th>Asserts</th></tr>
+<tr><td><code>npm run check</code></td><td>the full gate: docs:check + smoke + build + verify:dist</td></tr>
+<tr><td><code>npm run docs:check</code></td><td>every manual section derives and renders (&gt; 200 chars, anchors resolve), at least 20 sections, no mojibake</td></tr>
+<tr><td><code>npm run smoke</code></td><td>server-renders all four pages; required headline strings present; unique ids; every <code>#anchor</code> resolves; one <code>&lt;h1&gt;</code> per page</td></tr>
+<tr><td><code>npm run build</code></td><td>production build into <code>dist/</code></td></tr>
+<tr><td><code>npm run verify:dist</code></td><td>every hashed asset referenced by the four HTML entries resolves; shared CSS carries required markers</td></tr>
+<tr><td><code>npm run probe</code></td><td>prediction-accuracy probe under console scoring rules</td></tr>
+<tr><td><code>npm run audit:metrics</code></td><td>KPI invariants + opponent-leads report (chapter 25)</td></tr>
+<tr><td><code>npx tsc --noEmit</code></td><td>type safety across engine, pages and scripts</td></tr>
+</table>
+<p>Python side: <code>python -m pytest tests -q</code> (306 tests). The full verification</p>
+<p>ladder, including the engine parity bundle, is in <code>HOW_TO_TEST.md</code>.</p>
+<hr />
+<h2 id="29-performance-and-latency-reference">29. Performance and latency reference</h2>
+<table>
+<tr><th>Claim</th><th>Evidence</th></tr>
+<tr><td>Per-decision latency under 1 ms for every scheduler</td><td><code>tests/test_performance.py::test_scheduler_decision_under_1ms[...]</code> - parametrised once per policy: bandit-ucb, openloop-priority, openloop-random, openloop-sequential, rl-dqn, rl-linear-q, smart-scan</td></tr>
+<tr><td>Measured decision cost 0.5-0.9 ms per dwell on the benchmark host</td><td><code>results/performance.json</code> (platform stamped into the artifact)</td></tr>
+<tr><td>Fixed-point kernel matches the float policy</td><td><code>ewsmart.realtime.PolicyKernel</code> in Q8.8; <code>tests/test_realtime_kernel.py</code> asserts bit-for-bit agreement at the kernel's quantisation granularity; <code>tools/export_cpp_kernel</code> emits the same arithmetic as compilable C++</td></tr>
+<tr><td>Full-episode wall clock stays sane</td><td><code>tests/test_performance.py::test_full_episode_wall_clock_sane</code></td></tr>
+<tr><td>Browser engine stays honest</td><td>the TypeScript port runs the same scenario engine; <code>npm run probe</code> and the page smoke gate keep behaviour aligned</td></tr>
+</table>
+<p>Simulation slots are discrete and seed-defined, so the console's speed knob</p>
+<p>changes only how fast slots are <em>played</em>, never the result: the same seed</p>
+<p>reproduces the same mission, frame for frame, on any machine.</p>`;function F(t){const o=[],n=/<h2[^>]*\bid="([^"]+)"[^>]*>([\s\S]*?)<\/h2>/g;let a;for(;(a=n.exec(t))!==null;){const l=a[1];if(l==="contents")continue;const p=a[2].replace(/<[^>]*>/g,"").replace(/&amp;/g,"&").trim(),h=(p.match(/^(\d+)\./)??[])[1]??"",m=p.replace(/^\d+\.\s*/,"");o.push({id:l,num:h,title:m})}return o}function A(t,o){const n=t.indexOf("<h2",o+4),a=n===-1?t.length:n;return t.slice(o,a).replace(/<hr\s*\/?>/g,"").trim()}function N(t,o){const n=t.indexOf(`<h2 id="${o}"`);if(n===-1){const a=t.indexOf(`id="${o}"`);if(a===-1)return"<p>Section not found — regenerate docs with <code>python -m tools.export_docs</code>.</p>";const l=t.lastIndexOf("<h2",a);return A(t,l===-1?a:l)}return A(t,n)}function O(){const t=c.useMemo(()=>F(T),[]),[o,n]=c.useState(0),[a,l]=c.useState(""),[p,h]=c.useState(!1),m=c.useRef(null),b=c.useMemo(()=>{const r=a.trim().toLowerCase();return r?t.map((s,i)=>({s,i})).filter(({s})=>s.title.toLowerCase().includes(r)||s.num.includes(r)):t.map((s,i)=>({s,i}))},[t,a]);c.useEffect(()=>{const r=decodeURIComponent(window.location.hash.replace(/^#/,""));if(!r)return;const s=t.findIndex(i=>i.id===r);s>=0&&n(s)},[t]),c.useEffect(()=>{window.scrollTo(0,0);const r=t[o];r&&(history.replaceState(null,"","#"+r.id),document.title=`${r.num?r.num+". ":""}${r.title} — ASTRA Docs`);const s=m.current;s&&s.querySelectorAll("pre").forEach(i=>{if(i.querySelector(".code-copy"))return;const d=document.createElement("button");d.className="code-copy",d.type="button",d.textContent="copy",d.addEventListener("click",()=>{var w,v;const k=((w=i.querySelector("code"))==null?void 0:w.textContent)??i.textContent??"";(v=navigator.clipboard)==null||v.writeText(k).then(()=>{d.textContent="copied ✓",setTimeout(()=>d.textContent="copy",1400)}).catch(()=>d.textContent="Ctrl+C")}),i.appendChild(d)})},[o,t]),c.useEffect(()=>{const r=s=>{var d;const i=(d=s.target)==null?void 0:d.tagName;i==="INPUT"||i==="TEXTAREA"||(s.key==="ArrowRight"&&o<t.length-1&&n(o+1),s.key==="ArrowLeft"&&o>0&&n(o-1))};return window.addEventListener("keydown",r),()=>window.removeEventListener("keydown",r)},[o,t.length]);const y=t[o],x=y?N(T,y.id):"",u=t[o-1],g=t[o+1],f=r=>{n(r),h(!1)};return e.jsxs("div",{className:"docs-page",children:[e.jsx(_,{}),e.jsx("header",{className:"doc-topbar",children:e.jsxs("div",{className:"doc-topbar-inner",children:[e.jsx("a",{href:"/","aria-label":"ASTRA home",children:e.jsx(R,{size:24})}),e.jsx("a",{href:"/",className:"brand-txt",children:"ASTRA"}),e.jsxs("span",{className:"crumb",children:["/ ",e.jsx("b",{children:"Documentation"})]}),e.jsx("span",{className:"doc-ver",children:S}),e.jsxs("div",{className:"doc-actions",children:[e.jsx("button",{className:"doc-mobile-toc",type:"button",onClick:()=>h(!p),children:"☰ Contents"}),e.jsx("a",{className:"btn ghost",href:"/docs/manual.md",download:!0,children:"Download .md"}),e.jsx("a",{className:"btn ghost",href:P,download:!0,children:"Get the app"}),e.jsx(E,{}),e.jsx("a",{className:"btn primary",href:"/",children:"Back to site"})]})]})}),e.jsxs("div",{className:"doc-body",children:[e.jsxs("aside",{className:"doc-sidebar"+(p?" open":""),children:[e.jsx("h3",{children:"Table of Contents"}),e.jsx("div",{className:"dsearch",children:e.jsx("input",{type:"search",placeholder:"Filter sections…",value:a,onChange:r=>l(r.target.value),"aria-label":"Filter documentation sections"})}),e.jsxs("nav",{children:[b.map(({s:r,i:s})=>e.jsxs("button",{className:s===o?"on":"",onClick:()=>f(s),type:"button",children:[e.jsx("span",{className:"n",children:r.num||"·"}),e.jsx("span",{children:r.title})]},r.id)),b.length===0&&e.jsxs("div",{className:"no-res",children:["No section matches “",a,"”."]})]})]}),e.jsxs("main",{className:"docpage",children:[e.jsx("h1",{className:"doc-h1",children:"ASTRA · Software Manual"}),e.jsxs("p",{className:"doc-lede",children:["The single source of truth for ASTRA — generated from"," ",e.jsx("code",{children:"docs/ASTRA_Software_Documentation.md"})," and served identically by this site and by the desktop application."]}),e.jsxs("div",{className:"doc-meta",children:[e.jsx("span",{children:S}),e.jsxs("span",{children:[t.length," sections"]}),e.jsx("span",{children:"← → to page"})]}),e.jsx("div",{className:"doc-content",ref:m,dangerouslySetInnerHTML:{__html:x}}),e.jsxs("div",{className:"doc-pager",children:[u?e.jsxs("button",{onClick:()=>f(o-1),type:"button",children:[e.jsx("span",{className:"dir",children:"← Previous"}),u.num,". ",u.title]}):e.jsx("span",{}),g?e.jsxs("button",{className:"next",onClick:()=>f(o+1),type:"button",children:[e.jsx("span",{className:"dir",children:"Next →"}),g.num,". ",g.title]}):e.jsx("span",{})]})]})]})]})}C(document.getElementById("root")).render(e.jsx(c.StrictMode,{children:e.jsx(O,{})}));

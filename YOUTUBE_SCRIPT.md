@@ -72,7 +72,33 @@ Every figure was re-verified in this repo. If a number isn't here, don't say it.
 | 11 | 200-episode Monte Carlo, paired permutation tests, **Holm-corrected**; all comparisons **p < 0.001** | Results page → Significance |
 | 12 | Deep Q-network was benchmarked and **lost** under sparse, non-stationary reward — kept as documented negative result | `results/` + README |
 | 13 | Site `astra-ew.vercel.app` · repo `github.com/RARPlayzDev/Astra` · installer **`ASTRA-Setup-3.0.0.exe`** (Releases, ~164 MB) | nav/footer |
-| 14 | Docs page renders **23 sections**, searchable, copyable code blocks | `/documentation.html` |
+| 14 | Docs page renders **29 sections**, searchable, copyable code blocks | `/documentation.html` |
+
+---
+
+## 1b · Demo plan — pick ONE demo, shoot it fast
+
+If only one demo makes the cut, make it **chip `1 - Flagship race`**
+(seed 4242 vs sequential). It is the *same seed as the probe* (96.9 % vs
+54.1 %), it is the benchmark A/B, and it populates both the threat board and
+the geolocation panel — one chip feeds Scenes 6 **and** 8 with zero extra
+setup.
+
+| Priority | Chip | Why shoot it | One-line pitch if a judge asks |
+|---|---|---|---|
+| **1 — shoot this** | `1 - Flagship race` | headline A/B, probe-seed parity, fills every panel | "Same battlefield, only the strategy differs: 100 % coverage vs 85.7 %." |
+| 2 — +30 s budget | `2 - Periodic hunter` | phase locks visibly CONFIRM in the event log | "A lock needs repeated proof — stale beliefs self-destruct." |
+| 3 — cautionary | `3 - Exploit trap` | UCB edges reward, then coverage collapses to 52.7 % | "Highest score on the board, half the threats missed — that's the trap." |
+
+**Fast path (~35 s of screen time):** chip 1 → Start → 10 s of waterfalls
+(Scene 6a) → Train 5 (6b, speed-ramped in the edit) → shootout table (6c) →
+re-run chip 1 → threat board + geolocation (Scene 8). Skip presets 4 and 5
+on camera — Low-SNR and Swarm need explanation time the cut doesn't have.
+
+**Narrate results, not clicks.** Every demo line maps to a verified fact:
+coverage → fact 3, prediction → fact 2, locks → fact 5, the DQN loss →
+fact 12, sub-ms → fact 7, panels honest → section 24 of the manual. If a
+number isn't in section 1, don't say it — improvise *around* it instead.
 
 ---
 
@@ -104,12 +130,12 @@ Every figure was re-verified in this repo. If a number isn't here, don't say it.
 
 ### Scene 3 · THE LOOP — 1:00 → 1:30 (~71 words)
 
-**SCREEN:** `/#how` — the five-step pipeline (Survey → Learn → Predict → Position → Rotate).
-**ACTION:** Trace the five steps left to right with the cursor, one per phrase.
+**SCREEN:** `/#walkthrough` — the five phase cards (Cold start → Fingerprint → Lock → Predict → Defend).
+**ACTION:** Trace the five phase cards top to bottom, resting on each as it is named.
 **SAY:**
-> ASTRA runs one loop. Survey fast to bootstrap statistics. Learn each emitter's fingerprint and rhythm with Rayleigh significance testing. Predict the next transmission window before it opens. Arrive early, dwell through it. Then rotate the remaining time by discounted value — so no band starves. Wrong hypotheses die cheap, because every belief is validated online. Survey, learn, predict, position, rotate — five phases, one decision per slot, no prior intelligence required.
+> ASTRA runs one loop. A cold-start survey bootstraps statistics across every band. Each stream is fingerprinted; rhythms are believed only after Rayleigh significance testing. Validated locks turn search into an appointment: predict the next window, arrive early, dwell through it. Everything else rotates by discounted value — so no band starves. Wrong hypotheses die cheap. Survey, learn, predict, position, rotate — five phases, one decision per slot, no prior intelligence required.
 
-**ON-SCREEN:** step numbers light up `01 02 03 04 05` in gold, synced to narration.
+**ON-SCREEN:** phase tags light up `01 02 03 04 05` in gold, synced to narration.
 **EDIT:** Slide transitions between steps; keep total move under 6 seconds.
 
 ---
@@ -155,9 +181,9 @@ Every figure was re-verified in this repo. If a number isn't here, don't say it.
 **SCREEN:** `/documentation.html` — type “calibration” in the sidebar filter, open a section, hover a code block; then a terminal with `pytest` and `npm run probe`.
 **ACTION:** Filter → click section → press → once to page. Hover a `<pre>` block and click **copy**. Cut to terminal showing `306 passed` and the probe table.
 **SAY:**
-> Every claim has a paper trail. The documentation ships inside the product — twenty-three sections, from installation to API to simulation fidelity to the desktop shortcuts — searchable, paged with arrow keys, code blocks one click to copy. And the evidence itself: three hundred and six automated tests, one command. The prediction probe, one command. Same seeds, same numbers, on any machine. Read the arithmetic before you trust it — that's the whole culture of this project.
+> Every claim has a paper trail. The documentation ships inside the product — twenty-nine sections, from installation to API to simulation fidelity to the desktop shortcuts — searchable, paged with arrow keys, code blocks one click to copy. And the evidence itself: three hundred and six automated tests, one command. The prediction probe, one command. Same seeds, same numbers, on any machine. Read the arithmetic before you trust it — that's the whole culture of this project.
 
-**ON-SCREEN:** chip `23 SECTIONS · SEARCHABLE · COPYABLE` · terminal captions `306 PASSED` / `96.9% vs 54.1%`.
+**ON-SCREEN:** chip `29 SECTIONS · SEARCHABLE · COPYABLE` · terminal captions `306 PASSED` / `96.9% vs 54.1%`.
 **EDIT:** Macro zoom on the copy button click. Hard cut black → terminal, keyboard-clack SFX.
 
 ---
@@ -179,7 +205,7 @@ Every figure was re-verified in this repo. If a number isn't here, don't say it.
 **SCREEN:** back to `/` — click the sun/moon toggle (light-mode beauty shot for 3 s), toggle back to dark, land on hero.
 **ACTION:** One theme click, pause, click back. End on hero with the spectrum strip running; cursor rests on **Download v3.0.0**.
 **SAY:**
-> ASTRA — adaptive spectrum threat recognition and analysis. Three hundred and six tests, reproducible results, a console that teaches itself, twenty-three sections of documentation, light or dark — the same product in your browser and on your desktop. Built for a DRDO problem statement under Smart India Hackathon twenty-twenty-six. The installer, the live console and every number on this page are in the description. Download it, run the probe, check our arithmetic. If it holds up, that's the point.
+> ASTRA — adaptive spectrum threat recognition and analysis. Three hundred and six tests, reproducible results, a console that teaches itself, twenty-nine sections of documentation, light or dark — the same product in your browser and on your desktop. Built for a DRDO problem statement under Smart India Hackathon twenty-twenty-six. The installer, the live console and every number on this page are in the description. Download it, run the probe, check our arithmetic. If it holds up, that's the point.
 
 **ON-SCREEN:** lower-third `github.com/RARPlayzDev/Astra · astra-ew.vercel.app` · end card with 3 buttons `DOWNLOAD v3.0.0` `LIVE CONSOLE` `RESULTS`.
 **EDIT:** Theme crossfade is the money shot — hold it. End card in from 5:52; fade audio under last line; radar-sweep SFX out.

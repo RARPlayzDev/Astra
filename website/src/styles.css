@@ -882,6 +882,9 @@ canvas {
 }
 .kv .row span:first-child { color: var(--muted); }
 .kv .row span:last-child { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+/* leader marker: this side strictly leads the other receiver on this figure */
+.kv .row span.win { color: var(--amber); font-weight: 700; }
+.kv .hint { font-style: normal; font-size: 11px; letter-spacing: .4px; opacity: .8; }
 .legend { display: flex; gap: 20px; flex-wrap: wrap; margin: 12px 0 0; font-size: 13px; color: var(--muted); }
 .legend i {
   display: inline-block; width: 12px; height: 12px;
@@ -1502,8 +1505,9 @@ pre:hover .code-copy { opacity: 1; }
   padding: 4px 8px; border-radius: var(--r-sm); opacity: 0; pointer-events: none;
   transition: opacity 0.2s var(--ease), transform 0.2s var(--ease);
 }
-.sec-dots button:hover::after { opacity: 1; transform: translateY(-50%) translateX(0); }
-@media (max-width: 1280px) { .sec-dots { display: none; } }
+.sec-dots button:hover::after,
+.sec-dots button.on::after { opacity: 1; transform: translateY(-50%) translateX(0); }
+@media (max-width: 720px) { .sec-dots { display: none; } }
 
 /* ═══════════════════ MISSION WALKTHROUGH — timeline ═══════════════════ */
 .tl { position: relative; margin-top: 50px; padding-left: 36px; max-width: 880px; }

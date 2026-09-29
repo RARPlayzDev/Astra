@@ -99,13 +99,13 @@ function draw(cv: HTMLCanvasElement | null, b: Buf) {
 
 interface Kpi {
   cov: number; found: number; threats: number; allRatio: number;
-  reward: number; hitRate: number; fa: number;
+  reward: number; hitRate: number; fa: number; faRate: number;
   ttff: number | null; threatTtff: number | null;
   predAcc: number; locks: number; team: number; predN: number;
   truthRate: number; predOn: number;
 }
 const emptyKpi = (): Kpi => ({ cov: 0, found: 0, threats: 0, allRatio: 0,
-  reward: 0, hitRate: 0, fa: 0, ttff: null, threatTtff: null,
+  reward: 0, hitRate: 0, fa: 0, faRate: 0, ttff: null, threatTtff: null,
   predAcc: 0, predN: 0, locks: 0, team: 1, truthRate: 0, predOn: 0 });
 
 type OpponentKind = "openloop-sequential" | "openloop-random"
@@ -396,14 +396,18 @@ export default function Console() {
             truth ||= res.truthPresent;
             for (const d of res.detections) {
               const e = s.env.emitters.find((x) => x.eid === d.eid);
-              if (!s.seenAll[side].has(d.eid)) s.seenAll[side].add(d.eid);
+              if (!s.seenAll[side].has(d.eid)) {
+                s.seenAll[side].add(d.eid);
+                // Time-to-first-fix: only the FIRST detection of an emitter
+                // counts (parity with ewsmart.metrics mean_time_to_first_intercept).
+                s.ttffAll[side].push(t);
+              }
               if (e?.threat && !s.seenThreats[side].has(d.eid)) {
                 s.seenThreats[side].add(d.eid);
                 s.ttffThreat[side].push(t);
               }
             }
           }
-          if (anyHit && !anyFa) s.ttffAll[side].push(t);
           // Prediction scoring must compare a prediction with the truth of
           // the SAME band it was made for.  Scoring against the OR of all
           // team receivers' bands (the old code) inflated "true" and made
@@ -426,26 +430,41 @@ export default function Console() {
         runSide("a", s.team.a); runSide("b", s.team.b);
       }
       setSlot(s.t);
-      const kpi = (side: "a" | "b"): Kpi => ({
-        cov: s.seenThreats[side].size / Math.max(1, s.nThreats),
-        found: s.seenThreats[side].size, threats: s.nThreats,
-        allRatio: s.seenAll[side].size / Math.max(1, s.env.emitters.length),
-        reward: s.rewardSum[side] / Math.max(1, s.t),
-        hitRate: s.hits[side] / Math.max(1, s.t),
-        fa: s.fa[side],
-        ttff: s.ttffAll[side].length
-          ? s.ttffAll[side].reduce((x, y) => x + y, 0) / s.ttffAll[side].length
-          : null,
-        threatTtff: s.ttffThreat[side].length
-          ? s.ttffThreat[side].reduce((x, y) => x + y, 0) / s.ttffThreat[side].length
-          : null,
-        predAcc: s.pred[side][1] ? s.pred[side][0] / s.pred[side][1] : 0,
-        predN: s.pred[side][1],
-        truthRate: s.pred[side][1] ? s.pred[side][2] / s.pred[side][1] : 0,
-        predOn: s.pred[side][1] ? s.pred[side][3] / s.pred[side][1] : 0,
-        locks: (s.team.a.first as SmartScanScheduler).locks ?? 0,
-        team: teamSize,
-      });
+      const kpi = (side: "a" | "b"): Kpi => {
+        // Reward is accumulated across the team's dwells, so the per-dwell
+        // denominator is slots x receivers - not slots (else swarm demos
+        // read teamSize x too high against the "Reward per dwell" label).
+        const dwells = Math.max(1, s.t * s.rx[side].length);
+        const firstFixes = s.ttffAll[side];
+        const threatFixes = s.ttffThreat[side];
+        // Mean time-to-first-fix over emitters actually found; the threat row
+        // is the CENSORED mean (unfixed threats count as the full horizon,
+        // parity with ewsmart.metrics threat_ttff_censored) so an opponent
+        // that silently misses emitters can never look "faster".
+        const ttff = firstFixes.length
+          ? firstFixes.reduce((x, y) => x + y, 0) / firstFixes.length : null;
+        const threatTtff = threatFixes.reduce((x, y) => x + y, 0) / Math.max(1, s.nThreats)
+          + (s.nThreats - threatFixes.length) * s.cfg.T / Math.max(1, s.nThreats);
+        return {
+          cov: s.seenThreats[side].size / Math.max(1, s.nThreats),
+          found: s.seenThreats[side].size, threats: s.nThreats,
+          allRatio: s.seenAll[side].size / Math.max(1, s.env.emitters.length),
+          reward: s.rewardSum[side] / dwells,
+          hitRate: s.hits[side] / Math.max(1, s.t),
+          fa: s.fa[side],
+          faRate: s.fa[side] / Math.max(1, s.t),
+          ttff,
+          threatTtff,
+          predAcc: s.pred[side][1] ? s.pred[side][0] / s.pred[side][1] : 0,
+          predN: s.pred[side][1],
+          truthRate: s.pred[side][1] ? s.pred[side][2] / s.pred[side][1] : 0,
+          predOn: s.pred[side][1] ? s.pred[side][3] / s.pred[side][1] : 0,
+          // Side-specific: receiver B's card must show B's scheduler locks,
+          // never A's (this used to read team.a for BOTH cards).
+          locks: (s.team[side].first as { locks?: number }).locks ?? 0,
+          team: s.rx[side].length,
+        };
+      };
       setKA(kpi("a")); setKB(kpi("b"));
       draw(cvs.current.a, bufs.current.a);
       draw(cvs.current.b, bufs.current.b);
@@ -561,23 +580,42 @@ export default function Console() {
   };
 
 
-  const Kv = ({ k, dt }: { k: Kpi; dt?: string }) => (
+  /**
+   * One side's KPI card.  `o` is the other side's KPI: when present every
+   * directly-comparable row marks the leader in amber (ties stay neutral), so
+   * a viewer can see at a glance which receiver leads each figure of merit.
+   */
+  const Kv = ({ k, o, dt }: { k: Kpi; o?: Kpi; dt?: string }) => {
+    // class for the value span: "win" when this side strictly leads
+    const lead = (self: number | null, other: number | null | undefined,
+                  higherWins: boolean): string => {
+      if (o == null || self == null || other == null || self === other) return "";
+      return (higherWins ? self > other : self < other) ? "win" : "";
+    };
+    return (
     <div className="kv" data-tour={dt}>
       <div className="row"><span>Threat coverage</span>
-        <span>{(k.cov * 100).toFixed(0)}%</span></div>
+        <span className={lead(k.cov, o?.cov, true)}>{(k.cov * 100).toFixed(0)}%</span></div>
       <div className="row"><span>Threats intercepted</span>
         <span>{k.found} of {k.threats}</span></div>
       <div className="row"><span>All-emitter intercept ratio</span>
-        <span>{(k.allRatio * 100).toFixed(0)}%</span></div>
-      <div className="row"><span>Reward per dwell</span><span>{k.reward.toFixed(3)}</span></div>
-      <div className="row"><span>Hit rate</span><span>{(k.hitRate * 100).toFixed(0)}%</span></div>
-      <div className="row"><span>False alarms</span><span>{k.fa}</span></div>
-      <div className="row"><span>Mean TTFF</span>
-        <span>{k.ttff != null ? `${k.ttff.toFixed(0)} slots` : "-"}</span></div>
-      <div className="row"><span>Threat TTFF</span>
-        <span>{k.threatTtff != null ? `${k.threatTtff.toFixed(0)} slots` : "-"}</span></div>
+        <span className={lead(k.allRatio, o?.allRatio, true)}>{(k.allRatio * 100).toFixed(0)}%</span></div>
+      <div className="row"><span>Reward per dwell</span>
+        <span className={lead(k.reward, o?.reward, true)}>{k.reward.toFixed(3)}</span></div>
+      <div className="row"><span>Hit rate</span>
+        <span className={lead(k.hitRate, o?.hitRate, true)}>{(k.hitRate * 100).toFixed(0)}%</span></div>
+      <div className="row"><span>False alarms</span>
+        <span className={lead(k.fa, o?.fa, false)}>{k.fa}
+          <span style={{ color: "var(--muted)", marginLeft: 6, fontSize: 12.5 }}>
+            {(k.faRate * 1000).toFixed(1)}/1k slots</span></span></div>
+      <div className="row"><span>Mean TTFF <i className="hint">(first fix)</i></span>
+        <span className={lead(k.ttff, o?.ttff, false)}>
+          {k.ttff != null ? `${k.ttff.toFixed(0)} slots` : "-"}</span></div>
+      <div className="row"><span>Threat TTFF <i className="hint">(censored)</i></span>
+        <span className={lead(k.threatTtff, o?.threatTtff, false)}>
+          {k.threatTtff != null ? `${k.threatTtff.toFixed(0)} slots` : "-"}</span></div>
       <div className="row"><span>Prediction accuracy (band occupancy)</span>
-        <span>{(k.predAcc * 100).toFixed(0)}%
+        <span className={lead(k.predAcc, o?.predAcc, true)}>{(k.predAcc * 100).toFixed(0)}%
           <span style={{ color: "var(--muted)", marginLeft: 6, fontSize: 12.5 }}>
             n={k.predN}</span></span></div>
       <div className="row"><span style={{ fontSize: 13, color: "var(--muted)" }}>context</span>
@@ -588,7 +626,8 @@ export default function Console() {
         <span>{k.team} receivers</span></div>}
       <div className="row"><span>Phase locks held</span><span>{k.locks}</span></div>
     </div>
-  );
+    );
+  };
 
   const [showQuick, setShowQuick] = useState(false);
   const [tourIdx, setTourIdx] = useState(-1);
@@ -946,7 +985,7 @@ export default function Console() {
               <canvas ref={(el) => { cvs.current[side as "a" | "b"] = el; }}
                       width={640} height={190}
                       data-tour={side === "a" ? "waterfall" : undefined} />
-              <Kv k={side === "a" ? kA : kB}
+              <Kv k={side === "a" ? kA : kB} o={side === "a" ? kB : kA}
                   dt={side === "a" ? "kpi" : undefined} />
             </div>
           ))}
