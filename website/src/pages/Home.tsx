@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { DOWNLOAD_URL, Footer, GateAndMc, Nav, SITE_VERSION as SITE_VER, useResults } from "../shared";
+import { DOWNLOAD_URL, Footer, GateAndMc, Nav, SITE_VERSION as SITE_VER } from "../shared";
 import HeroScroll from "../components/HeroScroll";
 import { CountUp, PageWipe, Preloader, SectionDots } from "../components/Fx";
 import SweepScope from "../components/SweepScope";
@@ -12,12 +12,10 @@ const CHAPTERS: [string, string][] = [
   ["walkthrough", "Mission walkthrough"],
   ["architecture", "Architecture"],
   ["results", "Results"],
-  ["compare", "Head-to-head"],
   ["capabilities", "Capabilities"],
-  ["desktop", "Desktop app"],
   ["reproduce", "Reproduce"],
   ["roadmap", "Roadmap"],
-  ["faq", "FAQ"],
+  ["faq", "Queries"],
 ];
 
 const STATS: [string, string, string, string][] = [
@@ -96,17 +94,6 @@ const LAYERS: [string, string, string[]][] = [
     "Fixed-point C++ policy kernel for deployment targets.",
     "KPP gate · mission-effectiveness score · 200-episode Monte Carlo audit.",
   ]],
-];
-
-/** Head-to-head — verbatim from results/benchmark.json (50-episode means). */
-const CMP: [string, string, string, string, "ok" | "no"][] = [
-  ["Sequential sweep", "0.186", "77.5%", "46.1%", "no"],
-  ["Random scan", "0.188", "97.5%", "46.0%", "no"],
-  ["Priority sweep", "0.186", "76.5%", "46.1%", "no"],
-  ["UCB bandit", "0.900", "52.7%", "99.5%", "no"],
-  ["Linear Q-learning", "0.449", "88.0%", "18.4%", "no"],
-  ["Deep Q-network", "0.200", "88.7%", "42.6%", "no"],
-  ["ASTRA SmartScan", "0.471", "92.0%", "54.5%", "ok"],
 ];
 
 const ROAD: [string, string, string, string[]][] = [
@@ -372,59 +359,6 @@ export default function Home() {
       </section>
 
       {/* ═══ CAPABILITIES ═══ */}
-      {/* ═══ HEAD-TO-HEAD ═══ */}
-      <section className="section" id="compare">
-        <div className="wrap">
-          <div className="reveal">
-            <div className="section-label">Head-to-head</div>
-            <h2 className="section-title">Seven schedulers, one acceptance gate</h2>
-            <p className="section-desc">
-              The full benchmark table, verbatim from the artifact. Reward alone
-              is a trap — the top-scoring scheduler is the one that misses nearly
-              half the threats.
-            </p>
-          </div>
-          <div className="cmp-wrap reveal">
-            <table className="cmp">
-              <thead>
-                <tr>
-                  <th>Scheduler</th>
-                  <th>Avg reward</th>
-                  <th>Threat coverage</th>
-                  <th>Next-hop prediction</th>
-                  <th>Mission capable</th>
-                </tr>
-              </thead>
-              <tbody>
-                {CMP.map(([name, rew, cov, pred, verdict]) => {
-                  const us = verdict === "ok";
-                  return (
-                    <tr key={name} className={us ? "win" : ""}>
-                      <td className={us ? "us" : ""}>{name}</td>
-                      <td className={us ? "us" : ""}>{rew}</td>
-                      <td className={us ? "us" : ""}>{cov}</td>
-                      <td className={us ? "us" : ""}>{pred}</td>
-                      <td className={us ? "us" : ""}>
-                        <span className={`verdict ${verdict}`}>{us ? "✓ PASS" : "✗ FAIL"}</span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          <p className="cmp-note reveal d2">
-            <b>Read the prediction column carefully.</b> It is the next-hop
-            prediction benchmark from the Monte Carlo artifact (KPP floor 0.5).
-            The UCB bandit leads on reward and prediction because it camps on one
-            busy band — and its threat coverage collapses to 0.527, so it fails
-            the gate. Coverage and reward are reported separately from the
-            agile-hop probe, where SmartScan predicts <b>96.9%</b> of windows
-            against 54.1% for a sequential sweep.
-          </p>
-        </div>
-      </section>
-
       <section className="section" id="capabilities">
         <div className="wrap">
           <div className="reveal">
@@ -439,79 +373,6 @@ export default function Home() {
                 <p>{d}</p>
               </div>
             ))}
-          </div>
-          <div id="download" className="download-section reveal">
-            <h3>Get ASTRA {SITE_VER}</h3>
-            <div className="dl-grid">
-              <ol className="dl-steps">
-                <li>
-                  Download <b>ASTRA-Setup-3.0.0.exe</b>{" "}
-                  <a href={DOWNLOAD_URL} download style={{ color: "var(--accent)", textDecoration: "underline" }}>
-                    from GitHub Releases (~164 MB)
-                  </a>
-                </li>
-                <li>Run the installer — choose destination folder and optional desktop icon.</li>
-                <li>Launch <b>ASTRA</b> from the Start Menu.</li>
-                <li>
-                  Press <i>Start Mission</i>, then open{" "}
-                  <i>Tools → Diagnostics</i> to verify all self-tests pass.
-                </li>
-                <li>
-                  First run of the web console shows the guided tour — take it,
-                  it maps every control in 60 seconds.
-                </li>
-              </ol>
-              <div className="dl-reqs">
-                <h4>Requirements</h4>
-                <ul>
-                  <li>Windows 10 or 11 (64-bit)</li>
-                  <li>~600 MB disk space</li>
-                  <li>No internet required at runtime</li>
-                  <li>WebView2 ships with Windows</li>
-                  <li>SHA256 checksum published in release notes</li>
-                </ul>
-                <div style={{ marginTop: 18, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                  <a className="btn primary" href={DOWNLOAD_URL} download>Download installer</a>
-                  <a className="btn ghost" href="/console.html">Try in browser</a>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══ DESKTOP APPLICATION ═══ */}
-      <section className="section" id="desktop" style={{ paddingTop: "clamp(48px, 7vw, 84px)" }}>
-        <div className="wrap">
-          <div className="reveal">
-            <div className="section-label">Desktop application</div>
-            <h2 className="section-title">The whole system as an offline Windows app</h2>
-            <p className="section-desc">
-              Everything on this site — simulation, prediction, Arena, results —
-              also ships as a single installer. The desktop app is the field
-              build: it starts a local server, opens the same console UI in a
-              WebView2 window, and adds the hardware side the browser cannot do.
-              Nothing phones home; the app runs air-gapped by design.
-            </p>
-          </div>
-          <div className="features-grid">
-            {[
-              ["⊞", "Mission control", "Start Mission spins up the local server and the console loads inside the desktop window — identical tabs, identical tour, identical one-click demos."],
-              ["◈", "Diagnostics & self-test", "Tools → Diagnostics (Ctrl+D) verifies survey data, builder mode, the embedded scenario library, model artifacts and the frontend bundle in one pass."],
-              ["⇩", "PDW and UDP ingest", "Real pulse descriptor words arrive over UDP for offline analysis — the hardware pipeline that a browser tab can never own."],
-              ["☰", "SQLite event log", "Runs, locks and alerts are written to a local SQLite file, so a mission stays auditable after the laptop shuts down."],
-            ].map(([ic, t, d], i) => (
-              <div className="feat reveal" key={t} style={{ transitionDelay: `${i * 0.06}s` }}>
-                <div className="feat-icon">{ic}</div>
-                <h4>{t}</h4>
-                <p>{d}</p>
-              </div>
-            ))}
-          </div>
-          <div className="reveal" style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 26 }}>
-            <a className="btn primary" href={DOWNLOAD_URL} download>Download ASTRA-Setup-3.0.0.exe</a>
-            <a className="btn ghost" href="/documentation.html">Read the manual</a>
-            <a className="btn ghost" href="/console.html">Or try it in the browser</a>
           </div>
         </div>
       </section>
@@ -571,7 +432,7 @@ export default function Home() {
       <section className="section" id="faq">
         <div className="wrap">
           <div className="reveal">
-            <div className="section-label">FAQ</div>
+            <div className="section-label">Frequently asked queries</div>
             <h2 className="section-title">Questions judges actually ask</h2>
           </div>
           <div className="faq reveal">
