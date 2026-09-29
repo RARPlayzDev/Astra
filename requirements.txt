@@ -2,3 +2,4 @@ numpy>=1.26
 fastapi>=0.110
 uvicorn>=0.29
 markdown
+matplotlib>=3.7

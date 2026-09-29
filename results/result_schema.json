@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://astra.local/schemas/suite_results.schema.json",
+  "title": "ASTRA experiment suite results",
+  "description": "Canonical machine-readable schema for results/suite_results.json produced by `python -m ewsmart.experiments --suite full`. Every top-level section corresponds to one experiment in ewsmart/experiments.py. Metric aggregates are {mean, ci95} pairs where either field may be null when no finite samples exist (see ewsmart.metrics.json_safe / confidence_interval).",
+  "type": "object",
+  "required": [
+    "monte_carlo",
+    "significance",
+    "mission_effectiveness"
+  ],
+  "properties": {
+    "monte_carlo": {
+      "type": "object",
+      "description": "scheduler name -> per-metric {mean, ci95} aggregates over the held-out Monte Carlo episodes.",
+      "additionalProperties": { "$ref": "#/$defs/metricAggregateMap" }
+    },
+    "significance": {
+      "type": "array",
+      "description": "Paired significance rows: smart-scan vs each comparator on a metric.",
+      "items": { "$ref": "#/$defs/significanceRow" }
+    },
+    "significance_gated_mes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/significanceRow" }
+    },
+    "mission_effectiveness": {
+      "type": "object",
+      "required": ["scores", "ranking", "kpps"],
+      "properties": {
+        "scores": { "type": "object" },
+        "ranking": { "type": "array", "items": { "type": "string" } },
+        "kpps": { "type": "object" }
+      }
+    },
+    "learning": { "type": ["object", "array"] },
+    "identification": { "type": ["object", "array"] },
+    "example_episode_metrics": { "type": "object" },
+    "roc": { "type": "object" },
+    "sensitivity": { "type": "object" },
+    "ablation": { "type": ["object", "array"] },
+    "multireceiver": { "type": ["object", "array"] },
+    "geolocation": { "type": ["object", "array"] }
+  },
+  "$defs": {
+    "numberOrNull": {
+      "type": ["number", "null"]
+    },
+    "metricAggregate": {
+      "type": "object",
+      "description": "One figure-of-merit aggregate. `mean` is the episode-averaged value; `ci95` is the half-width of the 95% confidence interval. Both may be null when no finite samples exist.",
+      "required": ["mean"],
+      "properties": {
+        "mean": { "$ref": "#/$defs/numberOrNull" },
+        "ci95": { "$ref": "#/$defs/numberOrNull" }
+      },
+      "additionalProperties": true
+    },
+    "metricAggregateMap": {
+      "type": "object",
+      "description": "Map of metric key -> metricAggregate. Recognised keys mirror ewsmart.metrics.compute_metrics.",
+      "additionalProperties": { "$ref": "#/$defs/metricAggregate" }
+    },
+    "significanceRow": {
+      "type": "object",
+      "required": ["comparator", "mean_diff", "p_value", "n"],
+      "properties": {
+        "comparator": { "type": "string" },
+        "mean_diff": { "type": "number" },
+        "ci95_low": { "$ref": "#/$defs/numberOrNull" },
+        "ci95_high": { "$ref": "#/$defs/numberOrNull" },
+        "p_value": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "n": { "type": "integer", "minimum": 0 },
+        "significant": { "type": "boolean" },
+        "metric": { "type": "string" }
+      },
+      "additionalProperties": true
+    }
+  }
+}

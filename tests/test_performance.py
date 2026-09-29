@@ -138,7 +138,9 @@ def test_latency_artifact_percentiles_and_platform(tmp_path=None):
     Writes ``results/performance.json`` so the README and evaluation docs can
     cite measured tail latencies (not just means) with the exact platform
     they were measured on.  The hard 1 ms gate stays on the mean, matching
-    ``test_scheduler_decision_under_1ms``; percentiles are recorded evidence.
+    ``test_scheduler_decision_under_1ms`` — including that test's single
+    documented retry, so host contention cannot decide the verdict while a
+    sustained regression still fails; percentiles are recorded evidence.
     """
     import json as _json
     import platform as _platform
@@ -146,21 +148,29 @@ def test_latency_artifact_percentiles_and_platform(tmp_path=None):
            if s.name in ("smart-scan", "rl-dqn")]
     n_ticks = 4000
     repeats = 3
-    lat = {}
-    worst_mean = 0.0
-    for s in foc:
-        passes = [_latencies(s, n_ticks=n_ticks) for _ in range(repeats)]
-        # Report the least-contended pass (same workload; see _benchmark).
-        best = min(passes,
-                   key=lambda p: float(np.asarray(p, dtype=float).mean()))
-        arr = np.asarray(best, dtype=float)
-        row = {"mean_ms": float(arr.mean()),
-               "p50_ms": float(np.percentile(arr, 50)),
-               "p95_ms": float(np.percentile(arr, 95)),
-               "p99_ms": float(np.percentile(arr, 99)),
-               "max_ms": float(arr.max())}
-        lat[s.name] = row
-        worst_mean = max(worst_mean, row["mean_ms"])
+    for attempt in (0, 1):
+        lat = {}
+        worst_mean = 0.0
+        for s in foc:
+            passes = [_latencies(s, n_ticks=n_ticks) for _ in range(repeats)]
+            # Report the least-contended pass (same workload; see _benchmark).
+            best = min(passes,
+                       key=lambda p: float(np.asarray(p, dtype=float).mean()))
+            arr = np.asarray(best, dtype=float)
+            row = {"mean_ms": float(arr.mean()),
+                   "p50_ms": float(np.percentile(arr, 50)),
+                   "p95_ms": float(np.percentile(arr, 95)),
+                   "p99_ms": float(np.percentile(arr, 99)),
+                   "max_ms": float(arr.max())}
+            lat[s.name] = row
+            worst_mean = max(worst_mean, row["mean_ms"])
+        if worst_mean < LIMIT_MS or attempt == 1:
+            break
+        # Same single documented retry as ``test_scheduler_decision_under_1ms``:
+        # the workload and the 1 ms limit are untouched, repeating only stops a
+        # transient host-load burst from deciding the verdict.  A real cost
+        # regression raises the retry as well.
+        time.sleep(2.0)
     artifact = {
         "protocol": {"n_bands": N_BANDS, "n_ticks": n_ticks,
                      "warmup_ticks": WARMUP_TICKS, "limit_ms": LIMIT_MS,

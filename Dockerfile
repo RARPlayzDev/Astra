@@ -1,7 +1,8 @@
-# One-command reproducible environment for SIH judges.
-# Build:  docker build -t ewsmart .
-# Run:    docker run -p 8000:8000 ewsmart
-# Then open http://localhost:8000  (React command centre; /docs = OpenAPI)
+# Convenience container: builds the React command centre, then serves the
+# API + built SPA from the Python runtime.
+# Build:  docker build -t astra .
+# Run:    docker run -p 8000:8000 astra
+# Then open http://localhost:8000  (React command centre; /api-docs = OpenAPI)
 
 # ---- stage 1: build the React frontend -------------------------------------
 FROM node:22-slim AS web
@@ -18,13 +19,18 @@ WORKDIR /app
 COPY pyproject.toml README.md ./
 COPY ewsmart ./ewsmart
 COPY server ./server
-COPY dashboard.py ./
-COPY results ./results
-COPY figures ./figures
+COPY docs ./docs
 COPY scenarios ./scenarios
 COPY --from=web /web/dist ./frontend/dist
 
-RUN python -m pip install --no-cache-dir ".[dash,api]"
+# results/ and figures/ are git-ignored build products, so a fresh clone carries
+# neither and a `COPY results ./results` would abort the build outright.  The API
+# degrades gracefully on empty directories; mount local artifacts for real data:
+#   docker run -p 8000:8000 -v "$PWD/results:/app/results" \
+#                          -v "$PWD/figures:/app/figures" astra
+RUN mkdir -p results figures
+
+RUN python -m pip install --no-cache-dir .
 
 EXPOSE 8000
 

@@ -36,7 +36,8 @@ astra_service.log
 
 # ── Data / runtime ─────────────────────────────────────────────────────
 models/*.npz
-results/
+results/*
+!results/result_schema.json
 results.json
 .scenario_cache/
 
@@ -82,6 +83,24 @@ website/scripts/_verify_dist.cjs
 # ── Freebuff / local ───────────────────────────────────────────────────
 .freebuff/
 .streamlit/
+
+# ── Scratch / working notes ────────────────────────────────────────────
+# Kept on disk for local reference, deliberately not part of the repo: these
+# duplicated the manual, the documentation site or the changelog, so they drift
+# out of date silently. See docs/changelog.md ("repository cleanup").
+ASTRA.md
+EVALUATION.md
+PROJECT_EXPLAINED.md
+VIDEO_EDITING.md
+YOUTUBE_SCRIPT.md
+documentation.md
+ppt.md
+problem.md
+docs/ps-alignment-sentence-report.md
+docs/ps-coverage-v2.md
+docs/smart-scan-alignment-report.md
+PIPELINE_ARCHITECTURE_DIAGRAMS.md
+ASTRA_SIH2026_Presentation_v3.pptx
 
 # ── Environment ────────────────────────────────────────────────────────
 .env
