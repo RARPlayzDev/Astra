@@ -60,7 +60,7 @@ with Holm-Bonferroni correction at α=0.05:
 - SmartScan vs Random scan: **p < 1e-4** ✓
 - SmartScan vs Q-learning: **p < 1e-4** ✓
 
-200 held-out episodes with 95% confidence intervals.
+50 held-out episodes with 95% confidence intervals.
 
 ## Regenerating results
 
@@ -69,7 +69,7 @@ python -m ewsmart.experiments --suite full
 ```
 
 This runs the complete evaluation suite (~10 minutes):
-- Monte Carlo evaluation (200 episodes per scheduler)
+- Monte Carlo evaluation (50 episodes per scheduler)
 - Statistical significance tests
 - Mission Effectiveness Score with KPP gating
 - Sensitivity analysis (bands, SNR, agility, density)

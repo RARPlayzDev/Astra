@@ -549,8 +549,8 @@ source of truth. Use this alongside `ppt.md` (the slide-spec prompt for the
 | Demo path | Website first — one-click flagship race, ~35 s fast path — then the desktop app | `YOUTUBE_SCRIPT.md` §1b, Scene 8 |
 | Video reference | Narration timed to exactly 6:00 (744 spoken words at 145 wpm + ~52 s action beats) | `YOUTUBE_SCRIPT.md` |
 
-*Episode-count note: `results/*.json` records the protocol as **50** held-out
-episodes, and that is the number in the manual, this document and the Results
-page data file. Some marketing prose elsewhere (site headings, video script)
-still rounds it to "200-episode"; verify against the artifacts before quoting,
-or regenerate the suite at 200 episodes so every surface agrees.*
+*Episode-count note: every presentation surface (site, video script, desktop
+console, docs) was aligned on 2026-09-30 to the artifact protocol — **50**
+held-out episodes — after marketing prose had drifted to "200". If you ever
+raise `CANONICAL_PROTOCOL["episodes"]`, regenerate the suite and update all
+surfaces in the same change.*

@@ -34,7 +34,7 @@ const TECH_STACK = [
   { name: "Rayleigh estimation", sub: "Period detection" },
   { name: "UCB Bandits", sub: "Exploration" },
   { name: "Q-Learning", sub: "Value-based RL" },
-  { name: "Monte Carlo", sub: "200-episode validation" },
+  { name: "Monte Carlo", sub: "50-episode validation" },
   { name: "Webview", sub: "Desktop UI shell" },
   { name: "Vite", sub: "Frontend bundler" },
   { name: "Holm correction", sub: "Statistical rigor" },
@@ -92,7 +92,7 @@ const LAYERS: [string, string, string[]][] = [
   ["Layer 04", "Act & audit", [
     "Dwell plan issued to the tuner every cycle.",
     "Fixed-point C++ policy kernel for deployment targets.",
-    "KPP gate · mission-effectiveness score · 200-episode Monte Carlo audit.",
+    "KPP gate · mission-effectiveness score · 50-episode Monte Carlo audit.",
   ]],
 ];
 
@@ -335,7 +335,7 @@ export default function Home() {
             <h2 className="section-title">Judged the way defence judges systems</h2>
             <p className="section-desc">
               Hard Key Performance Parameters first — threat coverage ≥ 90%,
-              prediction better than chance, false alarms bounded. 200-episode
+              prediction better than chance, false alarms bounded. 50-episode
               Monte Carlo, paired permutation tests, Holm-corrected.
               <a href="/results.html" style={{ marginLeft: 10, fontWeight: 600 }}>
                 Full results page →
@@ -448,7 +448,7 @@ export default function Home() {
             <details>
               <summary>How do we know it actually works?</summary>
               <div className="faq-a">
-                Three layers: <b>306 automated tests</b>, a <b>200-episode Monte Carlo</b>
+                Three layers: <b>306 automated tests</b>, a <b>50-episode Monte Carlo</b>
                 benchmark with paired permutation tests and Holm correction, and a
                 <b> KPP gate</b> borrowed from defence acceptance style — coverage ≥ 90%,
                 prediction better than chance, false alarms bounded. All numbers come

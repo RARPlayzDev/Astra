@@ -135,7 +135,7 @@ function McTable({ s }: { s: Summary }) {
   ];
   return (
     <div className="panel">
-      <h3>Monte Carlo &mdash; 200 held-out episodes</h3>
+      <h3>Monte Carlo &mdash; 50 held-out episodes</h3>
       <div className="body table-wrap" style={{ paddingTop: 6 }}>
         <table className="data">
           <thead><tr><th>Scheduler</th>{cols.map(([, t]) => <th key={t}>{t}</th>)}</tr></thead>

@@ -69,7 +69,7 @@ Every figure was re-verified in this repo. If a number isn't here, don't say it.
 | 8 | PS coverage audit **13/13** live checks | `GET /api/ps-coverage` |
 | 9 | Geolocation CEP improves **3.2 km → 1.7 km** with more receivers | Results page |
 | 10 | Battlefield: **24 bands, 2–18 GHz**; emitters transmit ~**2 %** of the time | `website/src/engine/core.ts` |
-| 11 | 200-episode Monte Carlo, paired permutation tests, **Holm-corrected**; all comparisons **p < 0.001** | Results page → Significance |
+| 11 | 50-episode Monte Carlo, paired permutation tests, **Holm-corrected**; all comparisons **p < 0.001** | Results page → Significance |
 | 12 | Deep Q-network was benchmarked and **lost** under sparse, non-stationary reward — kept as documented negative result | `results/` + README |
 | 13 | Site `astra-ew.vercel.app` · repo `github.com/RARPlayzDev/Astra` · installer **`ASTRA-Setup-3.0.0.exe`** (Releases, ~164 MB) | nav/footer |
 | 14 | Docs page renders **29 sections**, searchable, copyable code blocks | `/documentation.html` |
@@ -145,9 +145,9 @@ number isn't in section 1, don't say it — improvise *around* it instead.
 **SCREEN:** `/results.html` — KPI row, then scroll to the KPP gate table.
 **ACTION:** Point at the KPI cards one by one, then scroll to the gate table and rest on the SmartScan row.
 **SAY:**
-> Results first, because this is what defence judging actually looks like. Hard Key Performance Parameters: threat coverage at least ninety percent, prediction better than chance, false alarms bounded. Pass every gate simultaneously — then we rank. Seven schedulers, two hundred Monte Carlo episodes, paired permutation tests, Holm-corrected. One row survives the gate: SmartScan. Every comparison, p below point zero zero one. And the same page carries identification, geolocation and multi-receiver scaling — every figure regenerate-able from one command. No cherry-picking: the failing rows stay on the page too.
+> Results first, because this is what defence judging actually looks like. Hard Key Performance Parameters: threat coverage at least ninety percent, prediction better than chance, false alarms bounded. Pass every gate simultaneously — then we rank. Seven schedulers, fifty held-out Monte Carlo episodes, paired permutation tests, Holm-corrected. One row survives the gate: SmartScan. Every comparison, p below point zero zero one. And the same page carries identification, geolocation and multi-receiver scaling — every figure regenerate-able from one command. No cherry-picking: the failing rows stay on the page too.
 
-**ON-SCREEN:** gold circle drawn around the SmartScan row · chip `ONLY MISSION-CAPABLE SCHEDULER` · footer chip `200 EPISODES · PAIRED · HOLM`.
+**ON-SCREEN:** gold circle drawn around the SmartScan row · chip `ONLY MISSION-CAPABLE SCHEDULER` · footer chip `50 EPISODES · PAIRED · HOLM`.
 **EDIT:** Zoom to 120 % on the gate table at “pass every gate”. Restrained — no shake.
 
 ---
@@ -258,7 +258,7 @@ captions (see `VIDEO_EDITING.md`).
 > https://astra-ew.vercel.app/documentation.html · Repo:
 > https://github.com/RARPlayzDev/Astra · Windows installer:
 > `ASTRA-Setup-3.0.0.exe` (Releases, ~164 MB) · 306 automated tests · next-window
-> prediction 96.9% vs 54.1% sequential sweep (`npm run probe`) · 200-episode Monte
+> prediction 96.9% vs 54.1% sequential sweep (`npm run probe`) · 50-episode Monte
 > Carlo, Holm-corrected, all comparisons p < 0.001 · results are seed-exact and
 > reproducible. Simulation-based research prototype for Smart India Hackathon 2026,
 > against a DRDO problem statement — not operational equipment.

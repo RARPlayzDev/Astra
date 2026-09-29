@@ -74,7 +74,7 @@ export default function Home({ meta, onStart, onGo }: Props) {
         <div className="stat">
           <div className="k">Threat Coverage</div>
           <div className="v good">{pct(ss?.threat_intercept_ratio)}</div>
-          <div className="s">200-episode mean · Pd</div>
+          <div className="s">50-episode mean · Pd</div>
           <div className="meter"><i className="good" style={{
             width: `${Math.min(100, (ss?.threat_intercept_ratio ?? 0) * 100)}%` }} /></div>
         </div>
@@ -130,7 +130,7 @@ export default function Home({ meta, onStart, onGo }: Props) {
               </div>
             ))}
             <p className="tbl-note">
-              200 held-out episodes, identical seeds and battlefields per policy;
+              50 held-out episodes, identical seeds and battlefields per policy;
               95% confidence intervals in the Evaluation workspace.
             </p>
           </div>

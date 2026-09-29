@@ -126,7 +126,7 @@ for shape in slide3.shapes:
                 "Environment → Receiver Physics → 7 Schedulers → Metrics → KPP Gate → MES Score → Live Arena",
                 "",
                 "EVALUATION:",
-                "• 200-episode Monte Carlo with 95% confidence intervals",
+                "• 50-episode Monte Carlo with 95% confidence intervals",
                 "• Paired permutation tests + Holm-Bonferroni correction (p < 1e-4)",
                 "• Sensitivity sweep across bands, SNR, agility, density",
                 "• 62 automated tests · Docker · Reproducible seeds",

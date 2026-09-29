@@ -122,7 +122,7 @@ requires. The main gap is the depth of each individual algorithm (see Section 3)
 
 2. **The evaluation framework is defence-grade.** KPP gating, MES composite
    scoring, paired permutation tests with multiple-comparison correction,
-   200-episode Monte Carlo with 95% CIs. This is more rigorous than most
+   50-episode Monte Carlo with 95% CIs. This is more rigorous than most
    academic papers in the field.
 
 3. **The exploit-trap demonstration.** UCB bandit has the highest raw reward
@@ -251,7 +251,7 @@ expecting a formal cost-benefit framework will not find one.
 | **Receiver model** | 7/10 | Clean abstraction. Missing: antenna patterns, elevation, hardware nonlinearities. |
 | **Environment model** | 8/10 | Five emitter types including evasive. Missing: terrain, multipath, jamming. |
 | **Figures of merit** | 9/10 | 6/7 fully implemented; sensitivity partially. KPP-gated MES is defence-grade. |
-| **Statistical evaluation** | 9/10 | 200-episode Monte Carlo, permutation tests, Holm correction, ablation. Could use larger samples. |
+| **Statistical evaluation** | 9/10 | 50-episode Monte Carlo, permutation tests, Holm correction, ablation. Could use larger samples. |
 | **ML depth** | 5/10 | SmartScan is the star but is hand-designed. DQN declines. Linear Q improves but underperforms. No PPO, no transformer, no advanced RL. |
 | **Identification** | 6/10 | Architecture is solid. Library is placeholder. Accuracy claim is misleading without real data. |
 | **Geolocation** | 7/10 | AOA triangulation works. 2D only. CEP improves with receivers. |
