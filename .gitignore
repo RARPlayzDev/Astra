@@ -106,3 +106,18 @@ ASTRA_SIH2026_Presentation_v3.pptx
 .env
 .venv/
 venv/
+
+# ── Stray scratch / editor junk ────────────────────────────────────────
+# Files that appear in the working copy but never belong in the repo:
+# Windows redirection mistakes, office lock files, editor backups. Ignored,
+# never deleted — same policy as the scratch notes above.
+nul
+$null
+*.tmp
+*.bak
+*.orig
+*.rej
+*.err
+~$*
+.mypy_cache/
+.ruff_cache/
